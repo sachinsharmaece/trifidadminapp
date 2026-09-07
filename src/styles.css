@@ -15,3 +15,34 @@ main {
 a {
   color: #1261a0;
 }
+.page-state {
+  padding: 24px;
+  color: #4b5a68;
+}
+.page-state--error {
+  color: #9b1c1c;
+}
+.page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.auth-page {
+  max-width: 360px;
+  margin: 96px auto;
+}
+.auth-page form {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+th,
+td {
+  text-align: left;
+  padding: 8px 12px;
+  border-bottom: 1px solid #d8dee4;
+}

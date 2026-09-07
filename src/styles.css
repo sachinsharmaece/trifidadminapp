@@ -39,10 +39,68 @@ a {
 table {
   width: 100%;
   border-collapse: collapse;
+  margin-bottom: 16px;
 }
 th,
 td {
   text-align: left;
   padding: 8px 12px;
   border-bottom: 1px solid #d8dee4;
+}
+main {
+  max-width: 960px;
+}
+section {
+  margin-bottom: 32px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #e5eaef;
+}
+.hint {
+  color: #6b7280;
+  font-size: 0.9em;
+}
+.inline-form {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.stacked-form,
+form {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-width: 480px;
+}
+form.inline-form {
+  flex-direction: row;
+  max-width: none;
+}
+.checkbox-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-direction: row;
+}
+fieldset {
+  border: 1px solid #d8dee4;
+  border-radius: 4px;
+  padding: 8px 12px;
+}
+.detail-panel {
+  border: 1px solid #d8dee4;
+  border-radius: 4px;
+  padding: 16px;
+  margin-top: 16px;
+}
+.app-nav {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  padding: 16px 24px 0;
+  max-width: 960px;
+  margin: 0 auto;
+}
+.note {
+  color: #1a7f37;
 }

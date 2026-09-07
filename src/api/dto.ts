@@ -22,3 +22,65 @@ export interface EmployeeListItem {
   active: boolean;
   mfaEnabled: boolean;
 }
+
+export interface TehsilDto {
+  tehsilId: string;
+  name: string;
+  district: string;
+  state: string;
+}
+
+export interface ManufacturerDto {
+  manufacturerId: string;
+  name: string;
+}
+
+export interface ProductDto {
+  productId: string;
+  brand: string;
+  hsn: string;
+  class: 'A' | 'B' | 'C';
+}
+
+export interface SkuDto {
+  skuId: string;
+  packLabel: string;
+  packSize: number;
+  baseUnit: 'LTR' | 'KG' | 'PC';
+  unitsPerBox: number;
+  baseUnitsPerBox: number;
+}
+
+export interface SkuImportRowResult {
+  index: number;
+  accepted: boolean;
+  skuId?: string;
+  reason?: string;
+}
+
+export interface RegistrationListItem {
+  registrationId: string;
+  firm?: string;
+  gstin?: string;
+  kind: 'buyer' | 'seller' | 'both';
+  status: 'pending' | 'active' | 'rejected' | 'blacklisted';
+  createdAt: string;
+}
+
+export interface RegistrationStatusDto {
+  registrationId: string;
+  kind: string;
+  status: string;
+  rejectionReason?: string;
+}
+
+export interface LaneBoardItem {
+  laneKey: string;
+  funnel: string;
+  label: string;
+  holderEmployeeId?: string;
+  holderName?: string;
+  isCovered: boolean;
+  effectiveHolderEmployeeId?: string;
+  effectiveHolderName?: string;
+}

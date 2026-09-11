@@ -5,6 +5,11 @@ import { RequireAuth } from '../auth/RequireAuth';
 import { TeamPage } from '../desks/admin/TeamPage';
 import { MastersPage } from '../desks/admin/MastersPage';
 import { RegistrationsPage } from '../desks/admin/RegistrationsPage';
+import { ChainDeskPage } from '../desks/chain/ChainDeskPage';
+import { AccountsDeskPage } from '../desks/accounts/AccountsDeskPage';
+import { MargDeskPage } from '../desks/marg/MargDeskPage';
+import { DockDeskPage } from '../desks/dock/DockDeskPage';
+import { RegistersPage } from '../desks/registers/RegistersPage';
 import { PERMISSIONS } from '../lib/permissions';
 
 function Nav() {
@@ -14,6 +19,11 @@ function Nav() {
       <Link to="/">Team</Link>
       <Link to="/masters">Masters</Link>
       <Link to="/registrations">Registrations</Link>
+      <Link to="/chain">Trade chain</Link>
+      <Link to="/accounts">Accounts</Link>
+      <Link to="/marg">Marg</Link>
+      <Link to="/dock">Dock &amp; movements</Link>
+      <Link to="/registers">Registers</Link>
       <button type="button" onClick={() => void logout()}>
         Sign out
       </button>
@@ -50,6 +60,51 @@ export function App() {
             <RequireAuth permission={PERMISSIONS.ONBOARDING_READ}>
               <Nav />
               <RegistrationsPage />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/chain"
+          element={
+            <RequireAuth permission={PERMISSIONS.CHAIN_READ}>
+              <Nav />
+              <ChainDeskPage />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/accounts"
+          element={
+            <RequireAuth permission={PERMISSIONS.RECEIPT_READ}>
+              <Nav />
+              <AccountsDeskPage />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/marg"
+          element={
+            <RequireAuth permission={PERMISSIONS.MARG_KEY}>
+              <Nav />
+              <MargDeskPage />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/dock"
+          element={
+            <RequireAuth permission={PERMISSIONS.DOCK_INSPECT}>
+              <Nav />
+              <DockDeskPage />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/registers"
+          element={
+            <RequireAuth permission={PERMISSIONS.REGISTER_READ}>
+              <Nav />
+              <RegistersPage />
             </RequireAuth>
           }
         />

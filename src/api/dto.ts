@@ -74,6 +74,68 @@ export interface RegistrationStatusDto {
   rejectionReason?: string;
 }
 
+// M4 — BUSINESS_RULES.md §2–§4, §17.
+
+export interface MarginMatrixCellDto {
+  marginMatrixId: string;
+  class: 'A' | 'B' | 'C';
+  tier: 'Distributor' | 'Dealer' | 'Retailer' | 'Trader';
+  pct: number;
+  creditPct: number;
+  effectiveFrom: string;
+}
+
+export interface CreateSoResult {
+  soId: string;
+  soNo: string;
+}
+
+export interface ChainViewDto {
+  chainNo: string;
+  stage: 'so' | 'payment' | 'po' | 'leg1' | 'marg' | 'dispatch' | 'done';
+  so: {
+    soNo: string;
+    state: string;
+    totalPaise: number;
+    buyerId: string;
+    sellerId: string;
+    payDeadline: string;
+  } | null;
+  po: {
+    poNo: string;
+    state: string;
+    sellerId: string;
+    dispatchDueDate: string;
+  } | null;
+  events: Array<{
+    type: string;
+    summary: string;
+    at: string;
+    reason?: string;
+  }>;
+}
+
+export interface UpcomingReceiptListItem {
+  upcomingReceiptId: string;
+  buyerId: string;
+  amountPaise: number;
+  claimedAt: string;
+}
+
+export interface SalesRegisterRow {
+  soId: string;
+  soNo: string;
+  buyerId: string;
+  totalPaise: number;
+}
+
+export interface PurchaseRegisterRow {
+  poId: string;
+  poNo: string;
+  sellerId: string;
+  billed: boolean;
+}
+
 export interface LaneBoardItem {
   laneKey: string;
   funnel: string;

@@ -39,3 +39,12 @@ export function logout(accessToken: string): Promise<{ loggedOut: boolean }> {
 export function getMe(accessToken: string): Promise<StaffMeDto> {
   return apiFetch('/me', { accessToken });
 }
+
+// API-007 — CH §24.2, required immediately before a money-moving action.
+export function reauth(
+  accessToken: string,
+  password: string,
+  mfaCode?: string,
+): Promise<{ reauthToken: string; expiresIn: number }> {
+  return apiFetch('/auth/reauth', { method: 'POST', body: { password, mfaCode }, accessToken });
+}

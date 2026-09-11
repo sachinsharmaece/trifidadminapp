@@ -21,6 +21,8 @@ interface RequestOptions {
   method?: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
   body?: unknown;
   accessToken?: string;
+  // CH §24.2 — presented again on the money-moving call itself (requireReauth.ts).
+  reauthToken?: string;
 }
 
 /**
@@ -38,6 +40,7 @@ export async function apiFetch<T>(path: string, options: RequestOptions = {}): P
       headers: {
         'Content-Type': 'application/json',
         ...(options.accessToken ? { Authorization: `Bearer ${options.accessToken}` } : {}),
+        ...(options.reauthToken ? { 'X-Reauth-Token': options.reauthToken } : {}),
       },
       body: options.body !== undefined ? JSON.stringify(options.body) : undefined,
     });

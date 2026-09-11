@@ -10,6 +10,26 @@ export const PERMISSIONS = {
   TERRITORY_WRITE: 'territory:write',
   ONBOARDING_READ: 'onboarding:read',
   ONBOARDING_APPROVE: 'onboarding:approve',
+  // M4 additions.
+  MARGIN_MATRIX_READ: 'margin_matrix:read',
+  MARGIN_MATRIX_WRITE: 'margin_matrix:write',
+  CHAIN_READ: 'chain:read',
+  SO_CREATE: 'so:create',
+  SO_REDUCE_QUANTITY: 'so:reduce_quantity',
+  PO_CREATE: 'po:create',
+  PO_EDIT: 'po:edit',
+  RECEIPT_READ: 'receipt:read',
+  RECEIPT_ALLOCATE: 'receipt:allocate',
+  BANK_POST: 'bank:post',
+  BANK_REPOST: 'bank:repost',
+  PAYOUT_BUILD: 'payout:build',
+  PAYOUT_RELEASE: 'payout:release',
+  PAYOUT_READ: 'payout:read',
+  MARG_KEY: 'marg:key',
+  DAY_CLOSE_RUN: 'day_close:run',
+  DOCK_INSPECT: 'dock:inspect',
+  MOVEMENT_WRITE: 'movement:write',
+  REGISTER_READ: 'register:read',
 } as const;
 
 // Copied from trifid-serverapp/src/config/permissions.ts (BR-260). There is

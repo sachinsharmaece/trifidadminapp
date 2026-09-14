@@ -3,6 +3,9 @@ import type { FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from './AuthContext';
 import { ApiError } from '../api/errors';
+import { Button } from '../components/ui/Button';
+import { Input } from '../components/ui/Input';
+import { Card } from '../components/ui/Card';
 
 type Step = 'credentials' | 'mfa';
 
@@ -80,52 +83,58 @@ export function LoginPage() {
 
   if (step === 'mfa') {
     return (
-      <main className="auth-page">
-        <h1>Enter your authenticator code</h1>
-        <form onSubmit={handleMfaSubmit}>
-          <label htmlFor="mfa-code">6-digit code</label>
-          <input
-            id="mfa-code"
-            inputMode="numeric"
-            maxLength={6}
-            autoFocus
-            value={code}
-            onChange={(event) => setCode(event.target.value)}
-          />
-          {error && <p role="alert">{error}</p>}
-          <button type="submit" disabled={submitting || code.length !== 6}>
-            {submitting ? 'Checking…' : 'Verify'}
-          </button>
-        </form>
+      <main className="flex min-h-screen items-center justify-center bg-slate-50 p-4">
+        <Card className="w-full max-w-sm">
+          <h1 className="mb-4 text-lg font-semibold text-slate-900">
+            Enter your authenticator code
+          </h1>
+          <form onSubmit={handleMfaSubmit} className="flex flex-col gap-4">
+            <Input
+              id="mfa-code"
+              label="6-digit code"
+              inputMode="numeric"
+              maxLength={6}
+              autoFocus
+              value={code}
+              onChange={(event) => setCode(event.target.value)}
+              error={error ?? undefined}
+            />
+            <Button type="submit" loading={submitting} disabled={code.length !== 6}>
+              Verify
+            </Button>
+          </form>
+        </Card>
       </main>
     );
   }
 
   return (
-    <main className="auth-page">
-      <h1>Sign in</h1>
-      <form onSubmit={handleCredentialsSubmit}>
-        <label htmlFor="email">Email</label>
-        <input
-          id="email"
-          type="email"
-          autoComplete="username"
-          value={email}
-          onChange={(event) => setEmail(event.target.value)}
-        />
-        <label htmlFor="password">Password</label>
-        <input
-          id="password"
-          type="password"
-          autoComplete="current-password"
-          value={password}
-          onChange={(event) => setPassword(event.target.value)}
-        />
-        {error && <p role="alert">{error}</p>}
-        <button type="submit" disabled={submitting || !email || !password}>
-          {submitting ? 'Signing in…' : 'Sign in'}
-        </button>
-      </form>
+    <main className="flex min-h-screen items-center justify-center bg-slate-50 p-4">
+      <Card className="w-full max-w-sm">
+        <h1 className="mb-4 text-lg font-semibold text-slate-900">Sign in</h1>
+        <form onSubmit={handleCredentialsSubmit} className="flex flex-col gap-4">
+          <Input
+            id="email"
+            label="Email"
+            type="email"
+            autoComplete="username"
+            value={email}
+            onChange={(event) => setEmail(event.target.value)}
+          />
+          <Input
+            id="password"
+            label="Password"
+            type="password"
+            autoComplete="current-password"
+            value={password}
+            onChange={(event) => setPassword(event.target.value)}
+            error={error ?? undefined}
+          />
+          <Button type="submit" loading={submitting} disabled={!email || !password}>
+            Sign in
+          </Button>
+        </form>
+      </Card>
     </main>
   );
 }

@@ -1,5 +1,6 @@
 import { useCallback, useState } from 'react';
 import type { FormEvent } from 'react';
+import { FiCheck, FiSearch, FiPlay, FiRefreshCw, FiLock, FiMoon } from 'react-icons/fi';
 import {
   allocateUpcomingReceipt,
   buildPaymentRun,
@@ -17,6 +18,11 @@ import { AsyncBoundary } from '../../components/AsyncBoundary';
 import { ReauthPrompt } from '../../components/ReauthPrompt';
 import { useAsyncData } from '../../lib/useAsyncData';
 import { useAuth } from '../../auth/AuthContext';
+import { Card } from '../../components/ui/Card';
+import { Table, Th, Td } from '../../components/ui/Table';
+import { Input, Select } from '../../components/ui/Input';
+import { Button } from '../../components/ui/Button';
+import { Badge } from '../../components/ui/Badge';
 import type { UpcomingReceiptListItem } from '../../api/dto';
 
 /**
@@ -29,8 +35,8 @@ import type { UpcomingReceiptListItem } from '../../api/dto';
  */
 export function AccountsDeskPage() {
   return (
-    <main>
-      <h1>Accounts</h1>
+    <div className="flex flex-col gap-6">
+      <h1 className="text-xl font-semibold text-slate-900">Accounts</h1>
       <UpcomingReceiptsSection />
       <PostBankCreditSection />
       <PayablesSection />
@@ -38,7 +44,7 @@ export function AccountsDeskPage() {
       <RepostSection />
       <DayCloseSection />
       <LedgersSection />
-    </main>
+    </div>
   );
 }
 
@@ -48,38 +54,37 @@ function UpcomingReceiptsSection() {
   const { state, retry } = useAsyncData(loader, (items) => items.length === 0, [loader]);
 
   return (
-    <section>
-      <h2>Upcoming receipts</h2>
-      <p className="note">
-        BR-011/INV-15 — a buyer's claim. Not money yet — it touches no bank book and no ledger until
-        it is allocated and posted below.
+    <Card title="Upcoming receipts">
+      <p className="mb-4 text-sm text-slate-500">
+        BR-011/INV-15 — a buyer&apos;s claim. Not money yet — it touches no bank book and no ledger
+        until it is allocated and posted below.
       </p>
       <AsyncBoundary state={state} onRetry={retry} emptyMessage="Nothing waiting.">
         {(items: UpcomingReceiptListItem[]) => (
-          <table>
+          <Table className="mb-4">
             <thead>
               <tr>
-                <th>ID</th>
-                <th>Buyer</th>
-                <th>Amount</th>
-                <th>Claimed</th>
+                <Th>ID</Th>
+                <Th>Buyer</Th>
+                <Th>Amount</Th>
+                <Th>Claimed</Th>
               </tr>
             </thead>
             <tbody>
               {items.map((item) => (
                 <tr key={item.upcomingReceiptId}>
-                  <td>{item.upcomingReceiptId}</td>
-                  <td>{item.buyerId}</td>
-                  <td>₹{(item.amountPaise / 100).toFixed(2)}</td>
-                  <td>{new Date(item.claimedAt).toLocaleString()}</td>
+                  <Td>{item.upcomingReceiptId}</Td>
+                  <Td>{item.buyerId}</Td>
+                  <Td>₹{(item.amountPaise / 100).toFixed(2)}</Td>
+                  <Td>{new Date(item.claimedAt).toLocaleString()}</Td>
                 </tr>
               ))}
             </tbody>
-          </table>
+          </Table>
         )}
       </AsyncBoundary>
       <AllocateForm onDone={retry} />
-    </section>
+    </Card>
   );
 }
 
@@ -111,30 +116,35 @@ function AllocateForm({ onDone }: { onDone: () => void }) {
   }
 
   return (
-    <form onSubmit={handleSubmit}>
-      <h3>Allocate — BR-012, Sales knows which order he meant</h3>
-      <label htmlFor="al-receipt">Upcoming receipt ID</label>
-      <input
+    <form
+      onSubmit={handleSubmit}
+      className="flex max-w-md flex-col gap-4 rounded-md border border-slate-200 p-4"
+    >
+      <h3 className="text-sm font-semibold text-slate-900">
+        Allocate — BR-012, Sales knows which order he meant
+      </h3>
+      <Input
         id="al-receipt"
+        label="Upcoming receipt ID"
         value={receiptId}
         onChange={(e) => setReceiptId(e.target.value)}
         required
       />
-      <label htmlFor="al-sos">SO IDs (comma-separated)</label>
-      <input
+      <Input
         id="al-sos"
+        label="SO IDs (comma-separated)"
         value={soIdsText}
         onChange={(e) => setSoIdsText(e.target.value)}
         required
       />
       {error && (
-        <p className="note-urgent" role="alert">
+        <p role="alert" className="text-sm text-danger-500">
           {error}
         </p>
       )}
-      <button type="submit" disabled={submitting}>
+      <Button type="submit" loading={submitting} icon={<FiCheck />}>
         Allocate
-      </button>
+      </Button>
     </form>
   );
 }
@@ -169,47 +179,51 @@ function PostBankCreditSection() {
   }
 
   return (
-    <section>
-      <h2>Post a bank credit</h2>
-      <p className="note">
+    <Card title="Post a bank credit">
+      <p className="mb-4 text-sm text-slate-500">
         BR-027 — only Accounts may mark a payment verified, and every mark carries a UTR and a
         person. Matched against the bank statement by hand at the 13:00/16:00/19:00 run.
       </p>
-      <form onSubmit={handleSubmit}>
-        <label htmlFor="pb-receipt">Upcoming receipt ID (must be allocated first)</label>
-        <input
+      <form onSubmit={handleSubmit} className="flex max-w-md flex-col gap-4">
+        <Input
           id="pb-receipt"
+          label="Upcoming receipt ID (must be allocated first)"
           value={receiptId}
           onChange={(e) => setReceiptId(e.target.value)}
           required
         />
-        <label htmlFor="pb-utr">Statement UTR</label>
-        <input id="pb-utr" value={utr} onChange={(e) => setUtr(e.target.value)} required />
-        <label htmlFor="pb-account">Remitter account number</label>
-        <input
+        <Input
+          id="pb-utr"
+          label="Statement UTR"
+          value={utr}
+          onChange={(e) => setUtr(e.target.value)}
+          required
+        />
+        <Input
           id="pb-account"
+          label="Remitter account number"
           value={remitterAccountNumber}
           onChange={(e) => setRemitterAccountNumber(e.target.value)}
           required
         />
-        <label htmlFor="pb-ifsc">Remitter IFSC</label>
-        <input
+        <Input
           id="pb-ifsc"
+          label="Remitter IFSC"
           value={remitterIfsc}
           onChange={(e) => setRemitterIfsc(e.target.value)}
           required
         />
         {error && (
-          <p className="note-urgent" role="alert">
+          <p role="alert" className="text-sm text-danger-500">
             {error}
           </p>
         )}
-        {result && <p className="note">Posted as {result.bankbookId}.</p>}
-        <button type="submit" disabled={submitting}>
-          {submitting ? 'Posting…' : 'Post credit'}
-        </button>
+        {result && <p className="text-sm text-success-600">Posted as {result.bankbookId}.</p>}
+        <Button type="submit" loading={submitting} icon={<FiCheck />}>
+          Post credit
+        </Button>
       </form>
-    </section>
+    </Card>
   );
 }
 
@@ -230,23 +244,30 @@ function PayablesSection() {
   }
 
   return (
-    <section>
-      <h2>Is this PO payable?</h2>
-      <p className="note">
+    <Card title="Is this PO payable?">
+      <p className="mb-4 text-sm text-slate-500">
         INV-17 — derived from the three chain gates and from `bank_detail`, never a typed hold note.
       </p>
-      <label htmlFor="pay-po">PO ID</label>
-      <input id="pay-po" value={poId} onChange={(e) => setPoId(e.target.value)} />
-      <button type="button" onClick={() => void check()} disabled={!poId}>
-        Check
-      </button>
-      {payable !== null && <p className="note">{payable ? 'Payable.' : 'Not payable.'}</p>}
+      <div className="flex max-w-md flex-wrap items-end gap-3">
+        <Input id="pay-po" label="PO ID" value={poId} onChange={(e) => setPoId(e.target.value)} />
+        <Button
+          variant="secondary"
+          onClick={() => void check()}
+          disabled={!poId}
+          icon={<FiSearch />}
+        >
+          Check
+        </Button>
+        {payable !== null && (
+          <Badge tone={payable ? 'good' : 'bad'}>{payable ? 'Payable' : 'Not payable'}</Badge>
+        )}
+      </div>
       {error && (
-        <p className="note-urgent" role="alert">
+        <p role="alert" className="mt-2 text-sm text-danger-500">
           {error}
         </p>
       )}
-    </section>
+    </Card>
   );
 }
 
@@ -288,49 +309,68 @@ function PaymentRunSection() {
   }
 
   return (
-    <section>
-      <h2>Payment runs</h2>
-      <p className="note">
+    <Card title="Payment runs">
+      <p className="mb-4 text-sm text-slate-500">
         BR-016/INV-16 — built by one person, released by another, whatever their role. The 13:00 /
         16:00 / 19:00 runs (BR-020) release every payable lot since the previous run; this builds
         and releases one run on demand for review.
       </p>
 
-      <label htmlFor="pr-kind">Kind</label>
-      <select id="pr-kind" value={kind} onChange={(e) => setKind(e.target.value as typeof kind)}>
-        <option value="payout">Payout (seller)</option>
-        <option value="refund">Refund (buyer)</option>
-      </select>
-      <label htmlFor="pr-ref">PO ID (payout) or Refund ID (refund)</label>
-      <input id="pr-ref" value={refId} onChange={(e) => setRefId(e.target.value)} />
-      <button type="button" onClick={() => void handleBuild()} disabled={!refId}>
-        Build run
-      </button>
+      <div className="mb-4 flex max-w-md flex-wrap items-end gap-3">
+        <Select
+          id="pr-kind"
+          label="Kind"
+          value={kind}
+          onChange={(e) => setKind(e.target.value as typeof kind)}
+        >
+          <option value="payout">Payout (seller)</option>
+          <option value="refund">Refund (buyer)</option>
+        </Select>
+        <Input
+          id="pr-ref"
+          label="PO ID (payout) or Refund ID (refund)"
+          value={refId}
+          onChange={(e) => setRefId(e.target.value)}
+        />
+        <Button
+          variant="secondary"
+          onClick={() => void handleBuild()}
+          disabled={!refId}
+          icon={<FiPlay />}
+        >
+          Build run
+        </Button>
+      </div>
       {buildError && (
-        <p className="note-urgent" role="alert">
+        <p role="alert" className="mb-2 text-sm text-danger-500">
           {buildError}
         </p>
       )}
-      {paymentRunId && <p className="note">Built run {paymentRunId}.</p>}
+      {paymentRunId && <p className="mb-2 text-sm text-success-600">Built run {paymentRunId}.</p>}
 
       {paymentRunId && !released && (
-        <div>
+        <div className="flex flex-col gap-3">
           {!showReauth ? (
-            <button type="button" onClick={() => setShowReauth(true)}>
+            <Button
+              variant="danger"
+              onClick={() => setShowReauth(true)}
+              icon={<FiLock />}
+              className="self-start"
+            >
               Release this run
-            </button>
+            </Button>
           ) : (
             <ReauthPrompt onReauthed={(token) => void handleRelease(token)} />
           )}
           {releaseError && (
-            <p className="note-urgent" role="alert">
+            <p role="alert" className="text-sm text-danger-500">
               {releaseError}
             </p>
           )}
         </div>
       )}
-      {released && <p className="note">Released.</p>}
-    </section>
+      {released && <p className="text-sm text-success-600">Released.</p>}
+    </Card>
   );
 }
 
@@ -368,58 +408,73 @@ function RepostSection() {
   }
 
   return (
-    <section>
-      <h2>Reverse and repost</h2>
-      <p className="note">
+    <Card title="Reverse and repost">
+      <p className="mb-4 text-sm text-slate-500">
         BR-015 — Controller only. A wrong entry is never edited or deleted: a reversal is posted,
         then the correct entry on top.
       </p>
-      <label htmlFor="rp-entry">Bank book entry ID</label>
-      <input id="rp-entry" value={bankbookId} onChange={(e) => setBankbookId(e.target.value)} />
-      <label htmlFor="rp-reason">Reason</label>
-      <input id="rp-reason" value={reason} onChange={(e) => setReason(e.target.value)} />
-      <label htmlFor="rp-party">Corrected party ID</label>
-      <input id="rp-party" value={partyId} onChange={(e) => setPartyId(e.target.value)} />
-      <label htmlFor="rp-party-type">Corrected party type</label>
-      <select
-        id="rp-party-type"
-        value={partyType}
-        onChange={(e) => setPartyType(e.target.value as typeof partyType)}
-      >
-        <option value="buyer">Buyer</option>
-        <option value="seller">Seller</option>
-      </select>
-      <label htmlFor="rp-amount">Corrected amount (₹)</label>
-      <input
-        id="rp-amount"
-        type="number"
-        step="0.01"
-        value={amountRupees}
-        onChange={(e) => setAmountRupees(e.target.value)}
-      />
-
-      {!showReauth ? (
-        <button
-          type="button"
-          onClick={() => setShowReauth(true)}
-          disabled={!bankbookId || !reason || !partyId || !amountRupees}
+      <div className="flex max-w-md flex-col gap-4">
+        <Input
+          id="rp-entry"
+          label="Bank book entry ID"
+          value={bankbookId}
+          onChange={(e) => setBankbookId(e.target.value)}
+        />
+        <Input
+          id="rp-reason"
+          label="Reason"
+          value={reason}
+          onChange={(e) => setReason(e.target.value)}
+        />
+        <Input
+          id="rp-party"
+          label="Corrected party ID"
+          value={partyId}
+          onChange={(e) => setPartyId(e.target.value)}
+        />
+        <Select
+          id="rp-party-type"
+          label="Corrected party type"
+          value={partyType}
+          onChange={(e) => setPartyType(e.target.value as typeof partyType)}
         >
-          Repost
-        </button>
-      ) : (
-        <ReauthPrompt onReauthed={(token) => void handleRepost(token)} />
-      )}
-      {error && (
-        <p className="note-urgent" role="alert">
-          {error}
-        </p>
-      )}
-      {result && (
-        <p className="note">
-          Reversal {result.reversalId}, corrected entry {result.correctedId}.
-        </p>
-      )}
-    </section>
+          <option value="buyer">Buyer</option>
+          <option value="seller">Seller</option>
+        </Select>
+        <Input
+          id="rp-amount"
+          label="Corrected amount (₹)"
+          type="number"
+          step="0.01"
+          value={amountRupees}
+          onChange={(e) => setAmountRupees(e.target.value)}
+        />
+
+        {!showReauth ? (
+          <Button
+            variant="danger"
+            onClick={() => setShowReauth(true)}
+            disabled={!bankbookId || !reason || !partyId || !amountRupees}
+            icon={<FiRefreshCw />}
+            className="self-start"
+          >
+            Repost
+          </Button>
+        ) : (
+          <ReauthPrompt onReauthed={(token) => void handleRepost(token)} />
+        )}
+        {error && (
+          <p role="alert" className="text-sm text-danger-500">
+            {error}
+          </p>
+        )}
+        {result && (
+          <p className="text-sm text-success-600">
+            Reversal {result.reversalId}, corrected entry {result.correctedId}.
+          </p>
+        )}
+      </div>
+    </Card>
   );
 }
 
@@ -447,29 +502,38 @@ function DayCloseSection() {
   }
 
   return (
-    <section>
-      <h2>Day close</h2>
-      <p className="note">
+    <Card title="Day close">
+      <p className="mb-4 text-sm text-slate-500">
         BR-308 — a non-zero difference is the only thing that blocks a day close.
       </p>
-      <label htmlFor="dc-closing">Statement closing balance (₹)</label>
-      <input
-        id="dc-closing"
-        type="number"
-        step="0.01"
-        value={statementClosingRupees}
-        onChange={(e) => setStatementClosingRupees(e.target.value)}
-      />
-      <button type="button" onClick={() => void handleRun()} disabled={!statementClosingRupees}>
-        Close day
-      </button>
+      <div className="flex max-w-md flex-wrap items-end gap-3">
+        <Input
+          id="dc-closing"
+          label="Statement closing balance (₹)"
+          type="number"
+          step="0.01"
+          value={statementClosingRupees}
+          onChange={(e) => setStatementClosingRupees(e.target.value)}
+        />
+        <Button
+          onClick={() => void handleRun()}
+          disabled={!statementClosingRupees}
+          icon={<FiMoon />}
+        >
+          Close day
+        </Button>
+      </div>
       {error && (
-        <p className="note-urgent" role="alert">
+        <p role="alert" className="mt-2 text-sm text-danger-500">
           {error}
         </p>
       )}
-      {result && <p className="note">Closed at ₹{(result.closingPaise / 100).toFixed(2)}.</p>}
-    </section>
+      {result && (
+        <p className="mt-2 text-sm text-success-600">
+          Closed at ₹{(result.closingPaise / 100).toFixed(2)}.
+        </p>
+      )}
+    </Card>
   );
 }
 
@@ -481,40 +545,59 @@ function LedgersSection() {
   const [sellerLedger, setSellerLedger] = useState<number | null>(null);
 
   return (
-    <section>
-      <h2>Ledgers — computed, never typed (BR-014)</h2>
-      <div>
-        <label htmlFor="lg-buyer">Buyer ID</label>
-        <input id="lg-buyer" value={buyerId} onChange={(e) => setBuyerId(e.target.value)} />
-        <button
-          type="button"
-          onClick={() =>
-            void callApi((token) => getBuyerLedger(token, buyerId)).then((r) =>
-              setBuyerLedger(r.ledgerPaise),
-            )
-          }
-          disabled={!buyerId}
-        >
-          Look up
-        </button>
-        {buyerLedger !== null && <span> ₹{(buyerLedger / 100).toFixed(2)}</span>}
+    <Card title="Ledgers — computed, never typed (BR-014)">
+      <div className="flex flex-col gap-4">
+        <div className="flex max-w-md flex-wrap items-end gap-3">
+          <Input
+            id="lg-buyer"
+            label="Buyer ID"
+            value={buyerId}
+            onChange={(e) => setBuyerId(e.target.value)}
+          />
+          <Button
+            variant="secondary"
+            onClick={() =>
+              void callApi((token) => getBuyerLedger(token, buyerId)).then((r) =>
+                setBuyerLedger(r.ledgerPaise),
+              )
+            }
+            disabled={!buyerId}
+            icon={<FiSearch />}
+          >
+            Look up
+          </Button>
+          {buyerLedger !== null && (
+            <span className="text-sm font-medium text-slate-700">
+              ₹{(buyerLedger / 100).toFixed(2)}
+            </span>
+          )}
+        </div>
+        <div className="flex max-w-md flex-wrap items-end gap-3">
+          <Input
+            id="lg-seller"
+            label="Seller ID"
+            value={sellerId}
+            onChange={(e) => setSellerId(e.target.value)}
+          />
+          <Button
+            variant="secondary"
+            onClick={() =>
+              void callApi((token) => getSellerLedger(token, sellerId)).then((r) =>
+                setSellerLedger(r.ledgerPaise),
+              )
+            }
+            disabled={!sellerId}
+            icon={<FiSearch />}
+          >
+            Look up
+          </Button>
+          {sellerLedger !== null && (
+            <span className="text-sm font-medium text-slate-700">
+              ₹{(sellerLedger / 100).toFixed(2)}
+            </span>
+          )}
+        </div>
       </div>
-      <div>
-        <label htmlFor="lg-seller">Seller ID</label>
-        <input id="lg-seller" value={sellerId} onChange={(e) => setSellerId(e.target.value)} />
-        <button
-          type="button"
-          onClick={() =>
-            void callApi((token) => getSellerLedger(token, sellerId)).then((r) =>
-              setSellerLedger(r.ledgerPaise),
-            )
-          }
-          disabled={!sellerId}
-        >
-          Look up
-        </button>
-        {sellerLedger !== null && <span> ₹{(sellerLedger / 100).toFixed(2)}</span>}
-      </div>
-    </section>
+    </Card>
   );
 }

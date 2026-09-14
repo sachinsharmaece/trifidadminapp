@@ -1,11 +1,17 @@
 import { useCallback, useState } from 'react';
 import type { FormEvent } from 'react';
+import { FiUserPlus, FiCalendar } from 'react-icons/fi';
 import { getEmployees, createEmployee, getLaneBoard, createAbsence } from '../../api/admin';
 import { ApiError } from '../../api/errors';
 import { AsyncBoundary } from '../../components/AsyncBoundary';
 import { useAsyncData } from '../../lib/useAsyncData';
 import { useAuth } from '../../auth/AuthContext';
 import { ROLE_KEYS } from '../../lib/permissions';
+import { Card } from '../../components/ui/Card';
+import { Table, Th, Td } from '../../components/ui/Table';
+import { Input, Select } from '../../components/ui/Input';
+import { Button } from '../../components/ui/Button';
+import { Badge } from '../../components/ui/Badge';
 import type { EmployeeListItem, LaneBoardItem } from '../../api/dto';
 
 /**
@@ -30,11 +36,10 @@ export function TeamPage() {
   };
 
   return (
-    <main>
-      <h1>Team</h1>
+    <div className="flex flex-col gap-6">
+      <h1 className="text-xl font-semibold text-slate-900">Team</h1>
 
-      <section>
-        <h2>Employees</h2>
+      <Card title="Employees">
         <AsyncBoundary
           state={employees.state}
           onRetry={employees.retry}
@@ -42,91 +47,90 @@ export function TeamPage() {
         >
           {(items) => <EmployeeTable items={items} />}
         </AsyncBoundary>
-      </section>
+      </Card>
 
-      <section>
-        <h2>Lane board</h2>
-        <p className="hint">
-          {'CH §17.12.5 — read-only. Allocation happens by creating an employee with lanes below.'}
+      <Card title="Lane board">
+        <p className="mb-4 text-sm text-slate-500">
+          CH §17.12.5 — read-only. Allocation happens by creating an employee with lanes below.
         </p>
         <AsyncBoundary state={lanes.state} onRetry={lanes.retry} emptyMessage="No lanes seeded.">
           {(items) => <LaneTable items={items} />}
         </AsyncBoundary>
-      </section>
+      </Card>
 
-      <section>
-        <h2>Create employee</h2>
+      <Card title="Create employee">
         <CreateEmployeeForm
           laneOptions={lanes.state.status === 'success' ? lanes.state.data : []}
           onCreated={reloadAll}
         />
-      </section>
+      </Card>
 
-      <section>
-        <h2>Record an absence</h2>
+      <Card title="Record an absence">
         <AbsenceForm
           key={reloadKey}
           employees={employees.state.status === 'success' ? employees.state.data : []}
           onRecorded={reloadAll}
         />
-      </section>
-    </main>
+      </Card>
+    </div>
   );
 }
 
 function EmployeeTable({ items }: { items: EmployeeListItem[] }) {
   return (
-    <table>
+    <Table>
       <thead>
         <tr>
-          <th>Name</th>
-          <th>Email</th>
-          <th>Roles</th>
-          <th>Active</th>
+          <Th>Name</Th>
+          <Th>Email</Th>
+          <Th>Roles</Th>
+          <Th>Active</Th>
         </tr>
       </thead>
       <tbody>
         {items.map((employee) => (
           <tr key={employee.employeeId}>
-            <td>{employee.person}</td>
-            <td>{employee.email}</td>
-            <td>{employee.roleKeys.join(', ')}</td>
-            <td>{employee.active ? 'Yes' : 'No'}</td>
+            <Td>{employee.person}</Td>
+            <Td>{employee.email}</Td>
+            <Td>{employee.roleKeys.join(', ')}</Td>
+            <Td>
+              <Badge tone={employee.active ? 'good' : 'neutral'}>
+                {employee.active ? 'Yes' : 'No'}
+              </Badge>
+            </Td>
           </tr>
         ))}
       </tbody>
-    </table>
+    </Table>
   );
 }
 
 function LaneTable({ items }: { items: LaneBoardItem[] }) {
   return (
-    <table>
+    <Table>
       <thead>
         <tr>
-          <th>Lane</th>
-          <th>Label</th>
-          <th>Holder</th>
-          <th>Currently covered by</th>
+          <Th>Lane</Th>
+          <Th>Label</Th>
+          <Th>Holder</Th>
+          <Th>Currently covered by</Th>
         </tr>
       </thead>
       <tbody>
         {items.map((lane) => (
           <tr key={lane.laneKey}>
-            <td>{lane.laneKey}</td>
-            <td>{lane.label}</td>
-            <td>
-              {lane.isCovered ? lane.holderName : <span className="note-urgent">Unheld</span>}
-            </td>
-            <td>
+            <Td>{lane.laneKey}</Td>
+            <Td>{lane.label}</Td>
+            <Td>{lane.isCovered ? lane.holderName : <Badge tone="bad">Unheld</Badge>}</Td>
+            <Td>
               {lane.isCovered && lane.effectiveHolderEmployeeId !== lane.holderEmployeeId
                 ? lane.effectiveHolderName
                 : '—'}
-            </td>
+            </Td>
           </tr>
         ))}
       </tbody>
-    </table>
+    </Table>
   );
 }
 
@@ -184,67 +188,81 @@ function CreateEmployeeForm({
   }
 
   return (
-    <form onSubmit={handleSubmit}>
-      <label htmlFor="ce-person">Name</label>
-      <input id="ce-person" value={person} onChange={(e) => setPerson(e.target.value)} required />
-
-      <label htmlFor="ce-email">Email</label>
-      <input
+    <form onSubmit={handleSubmit} className="flex max-w-md flex-col gap-4">
+      <Input
+        id="ce-person"
+        label="Name"
+        value={person}
+        onChange={(e) => setPerson(e.target.value)}
+        required
+      />
+      <Input
         id="ce-email"
+        label="Email"
         type="email"
         value={email}
         onChange={(e) => setEmail(e.target.value)}
         required
       />
-
-      <label htmlFor="ce-password">Password</label>
-      <input
+      <Input
         id="ce-password"
+        label="Password"
         type="password"
         value={password}
         onChange={(e) => setPassword(e.target.value)}
         required
       />
 
-      <fieldset>
-        <legend>Roles</legend>
-        {ROLE_KEYS.map((key) => (
-          <label key={key} className="checkbox-row">
-            <input
-              type="checkbox"
-              checked={roleKeys.includes(key)}
-              onChange={() => toggle(roleKeys, setRoleKeys, key)}
-            />
-            {key}
-          </label>
-        ))}
+      <fieldset className="rounded-md border border-slate-300 p-3">
+        <legend className="px-1 text-sm font-medium text-slate-700">Roles</legend>
+        <div className="flex flex-col gap-2">
+          {ROLE_KEYS.map((key) => (
+            <label key={key} className="flex items-center gap-2 text-sm text-slate-700">
+              <input
+                type="checkbox"
+                className="h-4 w-4 rounded border-slate-300"
+                checked={roleKeys.includes(key)}
+                onChange={() => toggle(roleKeys, setRoleKeys, key)}
+              />
+              {key}
+            </label>
+          ))}
+        </div>
       </fieldset>
 
-      <fieldset>
-        <legend>Lanes (optional)</legend>
-        {laneOptions.map((lane) => (
-          <label key={lane.laneKey} className="checkbox-row">
-            <input
-              type="checkbox"
-              disabled={lane.isCovered}
-              checked={laneKeys.includes(lane.laneKey)}
-              onChange={() => toggle(laneKeys, setLaneKeys, lane.laneKey)}
-            />
-            {lane.laneKey} — {lane.label} {lane.isCovered ? '(held)' : ''}
-          </label>
-        ))}
+      <fieldset className="rounded-md border border-slate-300 p-3">
+        <legend className="px-1 text-sm font-medium text-slate-700">Lanes (optional)</legend>
+        <div className="flex flex-col gap-2">
+          {laneOptions.map((lane) => (
+            <label key={lane.laneKey} className="flex items-center gap-2 text-sm text-slate-700">
+              <input
+                type="checkbox"
+                className="h-4 w-4 rounded border-slate-300"
+                disabled={lane.isCovered}
+                checked={laneKeys.includes(lane.laneKey)}
+                onChange={() => toggle(laneKeys, setLaneKeys, lane.laneKey)}
+              />
+              {lane.laneKey} — {lane.label} {lane.isCovered ? '(held)' : ''}
+            </label>
+          ))}
+        </div>
       </fieldset>
 
       {error && (
-        <p className="note-urgent" role="alert">
+        <p role="alert" className="text-sm text-danger-500">
           {error}
         </p>
       )}
-      {success && <p className="note">{success}</p>}
+      {success && <p className="text-sm text-success-600">{success}</p>}
 
-      <button type="submit" disabled={submitting || roleKeys.length === 0}>
-        {submitting ? 'Creating…' : 'Create employee'}
-      </button>
+      <Button
+        type="submit"
+        loading={submitting}
+        disabled={roleKeys.length === 0}
+        icon={<FiUserPlus />}
+      >
+        Create employee
+      </Button>
     </form>
   );
 }
@@ -291,10 +309,10 @@ function AbsenceForm({
   }
 
   return (
-    <form onSubmit={handleSubmit}>
-      <label htmlFor="ab-employee">Who is away</label>
-      <select
+    <form onSubmit={handleSubmit} className="flex max-w-md flex-col gap-4">
+      <Select
         id="ab-employee"
+        label="Who is away"
         value={employeeId}
         onChange={(e) => setEmployeeId(e.target.value)}
         required
@@ -305,11 +323,11 @@ function AbsenceForm({
             {employee.person}
           </option>
         ))}
-      </select>
+      </Select>
 
-      <label htmlFor="ab-coveredby">Covered by</label>
-      <select
+      <Select
         id="ab-coveredby"
+        label="Covered by"
         value={coveredBy}
         onChange={(e) => setCoveredBy(e.target.value)}
         required
@@ -322,20 +340,19 @@ function AbsenceForm({
               {employee.person}
             </option>
           ))}
-      </select>
+      </Select>
 
-      <label htmlFor="ab-from">From</label>
-      <input
+      <Input
         id="ab-from"
+        label="From"
         type="date"
         value={from}
         onChange={(e) => setFrom(e.target.value)}
         required
       />
-
-      <label htmlFor="ab-return">Return date</label>
-      <input
+      <Input
         id="ab-return"
+        label="Return date"
         type="date"
         value={returnDate}
         onChange={(e) => setReturnDate(e.target.value)}
@@ -343,15 +360,15 @@ function AbsenceForm({
       />
 
       {error && (
-        <p className="note-urgent" role="alert">
+        <p role="alert" className="text-sm text-danger-500">
           {error}
         </p>
       )}
-      {success && <p className="note">Recorded.</p>}
+      {success && <p className="text-sm text-success-600">Recorded.</p>}
 
-      <button type="submit" disabled={submitting}>
-        {submitting ? 'Saving…' : 'Record absence'}
-      </button>
+      <Button type="submit" loading={submitting} icon={<FiCalendar />}>
+        Record absence
+      </Button>
     </form>
   );
 }

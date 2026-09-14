@@ -1,5 +1,6 @@
 import { useCallback, useState } from 'react';
 import type { FormEvent } from 'react';
+import { FiCheck, FiX } from 'react-icons/fi';
 import {
   approveBuyer,
   approveSeller,
@@ -12,7 +13,18 @@ import { ApiError } from '../../api/errors';
 import { AsyncBoundary } from '../../components/AsyncBoundary';
 import { useAsyncData } from '../../lib/useAsyncData';
 import { useAuth } from '../../auth/AuthContext';
+import { Card } from '../../components/ui/Card';
+import { Table, Th, Td } from '../../components/ui/Table';
+import { Button } from '../../components/ui/Button';
+import { Input, Select, Textarea } from '../../components/ui/Input';
+import { Badge, type BadgeTone } from '../../components/ui/Badge';
 import type { RegistrationListItem, RegistrationStatusDto, TehsilDto } from '../../api/dto';
+
+const STATUS_TONE: Record<string, BadgeTone> = {
+  pending: 'warn',
+  active: 'good',
+  rejected: 'bad',
+};
 
 export function RegistrationsPage() {
   const { callApi } = useAuth();
@@ -29,46 +41,61 @@ export function RegistrationsPage() {
   const tehsils = useAsyncData(tehsilsLoader, (items) => items.length === 0, [tehsilsLoader]);
 
   return (
-    <main>
-      <h1>Registrations</h1>
+    <div className="flex flex-col gap-6">
+      <div className="flex items-center justify-between">
+        <h1 className="text-xl font-semibold text-slate-900">Registrations</h1>
+      </div>
 
-      <label htmlFor="stage">Stage</label>
-      <select id="stage" value={stage} onChange={(e) => setStage(e.target.value)}>
-        <option value="pending">Pending</option>
-        <option value="active">Active</option>
-        <option value="rejected">Rejected</option>
-      </select>
+      <Card>
+        <div className="mb-4 max-w-xs">
+          <Select id="stage" label="Stage" value={stage} onChange={(e) => setStage(e.target.value)}>
+            <option value="pending">Pending</option>
+            <option value="active">Active</option>
+            <option value="rejected">Rejected</option>
+          </Select>
+        </div>
 
-      <AsyncBoundary state={list.state} onRetry={list.retry} emptyMessage="Nothing in this stage.">
-        {(items: RegistrationListItem[]) => (
-          <table>
-            <thead>
-              <tr>
-                <th>Firm</th>
-                <th>GSTIN</th>
-                <th>Kind</th>
-                <th>Status</th>
-                <th></th>
-              </tr>
-            </thead>
-            <tbody>
-              {items.map((item) => (
-                <tr key={item.registrationId}>
-                  <td>{item.firm}</td>
-                  <td>{item.gstin}</td>
-                  <td>{item.kind}</td>
-                  <td>{item.status}</td>
-                  <td>
-                    <button type="button" onClick={() => setSelectedId(item.registrationId)}>
-                      Open
-                    </button>
-                  </td>
+        <AsyncBoundary
+          state={list.state}
+          onRetry={list.retry}
+          emptyMessage="Nothing in this stage."
+        >
+          {(items: RegistrationListItem[]) => (
+            <Table>
+              <thead>
+                <tr>
+                  <Th>Firm</Th>
+                  <Th>GSTIN</Th>
+                  <Th>Kind</Th>
+                  <Th>Status</Th>
+                  <Th />
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-      </AsyncBoundary>
+              </thead>
+              <tbody>
+                {items.map((item) => (
+                  <tr key={item.registrationId}>
+                    <Td>{item.firm}</Td>
+                    <Td>{item.gstin}</Td>
+                    <Td className="capitalize">{item.kind}</Td>
+                    <Td>
+                      <Badge tone={STATUS_TONE[item.status] ?? 'neutral'}>{item.status}</Badge>
+                    </Td>
+                    <Td>
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        onClick={() => setSelectedId(item.registrationId)}
+                      >
+                        Open
+                      </Button>
+                    </Td>
+                  </tr>
+                ))}
+              </tbody>
+            </Table>
+          )}
+        </AsyncBoundary>
+      </Card>
 
       {selectedId && (
         <RegistrationDetail
@@ -80,7 +107,7 @@ export function RegistrationsPage() {
           }}
         />
       )}
-    </main>
+    </div>
   );
 }
 
@@ -101,12 +128,11 @@ function RegistrationDetail({
   const { state, retry } = useAsyncData(loader, () => false, [loader]);
 
   return (
-    <section className="detail-panel">
-      <h2>Registration detail</h2>
+    <Card title="Registration detail">
       <AsyncBoundary state={state} onRetry={retry}>
         {(registration: RegistrationStatusDto) => (
-          <>
-            <p>
+          <div className="flex flex-col gap-4">
+            <p className="text-sm text-slate-700">
               Status: <strong>{registration.status}</strong>
               {registration.rejectionReason ? ` — ${registration.rejectionReason}` : ''}
             </p>
@@ -127,10 +153,10 @@ function RegistrationDetail({
             {registration.status === 'pending' && (
               <RejectForm registrationId={registrationId} onDecided={onDecided} />
             )}
-          </>
+          </div>
         )}
       </AsyncBoundary>
-    </section>
+    </Card>
   );
 }
 
@@ -169,13 +195,15 @@ function ApproveBuyerForm({
   }
 
   return (
-    <form onSubmit={handleSubmit}>
-      <h3>Approve buyer</h3>
-      <label htmlFor="ab-tehsil">
-        Tehsil (BR-081 — required; the resolver cannot work without it)
-      </label>
-      <select
+    <form
+      onSubmit={handleSubmit}
+      className="flex max-w-md flex-col gap-4 rounded-md border border-slate-200 p-4"
+    >
+      <h3 className="text-sm font-semibold text-slate-900">Approve buyer</h3>
+      <Select
         id="ab-tehsil"
+        label="Tehsil"
+        hint="BR-081 — required; the resolver cannot work without it"
         value={tehsilId}
         onChange={(e) => setTehsilId(e.target.value)}
         required
@@ -186,32 +214,37 @@ function ApproveBuyerForm({
             {tehsil.name} ({tehsil.district})
           </option>
         ))}
-      </select>
+      </Select>
 
-      <label htmlFor="ab-position">Trade position</label>
-      <select
+      <Select
         id="ab-position"
+        label="Trade position"
         value={tradePosition}
         onChange={(e) => setTradePosition(e.target.value as typeof tradePosition)}
       >
         <option value="distributor">Distributor</option>
         <option value="dealer">Dealer</option>
         <option value="retailer">Retailer</option>
-      </select>
+      </Select>
 
-      <label className="checkbox-row">
-        <input type="checkbox" checked={isTrader} onChange={(e) => setIsTrader(e.target.checked)} />
+      <label className="flex items-center gap-2 text-sm text-slate-700">
+        <input
+          type="checkbox"
+          className="h-4 w-4 rounded border-slate-300"
+          checked={isTrader}
+          onChange={(e) => setIsTrader(e.target.checked)}
+        />
         Is trader
       </label>
 
       {error && (
-        <p className="note-urgent" role="alert">
+        <p role="alert" className="text-sm text-danger-500">
           {error}
         </p>
       )}
-      <button type="submit" disabled={submitting || !tehsilId}>
+      <Button type="submit" loading={submitting} disabled={!tehsilId} icon={<FiCheck />}>
         Approve
-      </button>
+      </Button>
     </form>
   );
 }
@@ -254,25 +287,33 @@ function ApproveSellerForm({
   }
 
   return (
-    <form onSubmit={handleSubmit}>
-      <h3>Approve seller</h3>
-      <fieldset>
-        <legend>Area (BR-083 — required; no area, no listing)</legend>
-        {tehsils.map((tehsil) => (
-          <label key={tehsil.tehsilId} className="checkbox-row">
-            <input
-              type="checkbox"
-              checked={tehsilIds.includes(tehsil.tehsilId)}
-              onChange={() => toggle(tehsil.tehsilId)}
-            />
-            {tehsil.name} ({tehsil.district})
-          </label>
-        ))}
+    <form
+      onSubmit={handleSubmit}
+      className="flex max-w-md flex-col gap-4 rounded-md border border-slate-200 p-4"
+    >
+      <h3 className="text-sm font-semibold text-slate-900">Approve seller</h3>
+      <fieldset className="rounded-md border border-slate-300 p-3">
+        <legend className="px-1 text-sm font-medium text-slate-700">
+          Area (BR-083 — required; no area, no listing)
+        </legend>
+        <div className="flex flex-col gap-2">
+          {tehsils.map((tehsil) => (
+            <label key={tehsil.tehsilId} className="flex items-center gap-2 text-sm text-slate-700">
+              <input
+                type="checkbox"
+                className="h-4 w-4 rounded border-slate-300"
+                checked={tehsilIds.includes(tehsil.tehsilId)}
+                onChange={() => toggle(tehsil.tehsilId)}
+              />
+              {tehsil.name} ({tehsil.district})
+            </label>
+          ))}
+        </div>
       </fieldset>
 
-      <label htmlFor="as-cutoff">Dispatch cut-off time</label>
-      <input
+      <Input
         id="as-cutoff"
+        label="Dispatch cut-off time"
         type="time"
         value={dispatchCutoffTime}
         onChange={(e) => setDispatchCutoffTime(e.target.value)}
@@ -280,13 +321,18 @@ function ApproveSellerForm({
       />
 
       {error && (
-        <p className="note-urgent" role="alert">
+        <p role="alert" className="text-sm text-danger-500">
           {error}
         </p>
       )}
-      <button type="submit" disabled={submitting || tehsilIds.length === 0}>
+      <Button
+        type="submit"
+        loading={submitting}
+        disabled={tehsilIds.length === 0}
+        icon={<FiCheck />}
+      >
         Approve
-      </button>
+      </Button>
     </form>
   );
 }
@@ -318,23 +364,26 @@ function RejectForm({
   }
 
   return (
-    <form onSubmit={handleSubmit}>
-      <h3>Reject</h3>
-      <label htmlFor="reject-reason">Reason</label>
-      <textarea
+    <form
+      onSubmit={handleSubmit}
+      className="flex max-w-md flex-col gap-4 rounded-md border border-slate-200 p-4"
+    >
+      <h3 className="text-sm font-semibold text-slate-900">Reject</h3>
+      <Textarea
         id="reject-reason"
+        label="Reason"
         value={reason}
         onChange={(e) => setReason(e.target.value)}
         required
       />
       {error && (
-        <p className="note-urgent" role="alert">
+        <p role="alert" className="text-sm text-danger-500">
           {error}
         </p>
       )}
-      <button type="submit" disabled={submitting || !reason}>
+      <Button type="submit" variant="danger" loading={submitting} disabled={!reason} icon={<FiX />}>
         Reject
-      </button>
+      </Button>
     </form>
   );
 }

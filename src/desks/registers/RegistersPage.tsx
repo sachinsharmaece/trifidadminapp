@@ -3,16 +3,19 @@ import { getPurchaseRegister, getSalesRegister } from '../../api/payment';
 import { AsyncBoundary } from '../../components/AsyncBoundary';
 import { useAsyncData } from '../../lib/useAsyncData';
 import { useAuth } from '../../auth/AuthContext';
+import { Card } from '../../components/ui/Card';
+import { Table, Th, Td } from '../../components/ui/Table';
+import { Badge } from '../../components/ui/Badge';
 import type { PurchaseRegisterRow, SalesRegisterRow } from '../../api/dto';
 
 /** WF-08 — an SO enters the sales register the moment leg 2 dispatches. */
 export function RegistersPage() {
   return (
-    <main>
-      <h1>Registers</h1>
+    <div className="flex flex-col gap-6">
+      <h1 className="text-xl font-semibold text-slate-900">Registers</h1>
       <SalesRegisterSection />
       <PurchaseRegisterSection />
-    </main>
+    </div>
   );
 }
 
@@ -22,31 +25,30 @@ function SalesRegisterSection() {
   const { state, retry } = useAsyncData(loader, (items) => items.length === 0, [loader]);
 
   return (
-    <section>
-      <h2>Sales register</h2>
+    <Card title="Sales register">
       <AsyncBoundary state={state} onRetry={retry} emptyMessage="No dispatched SOs yet.">
         {(items: SalesRegisterRow[]) => (
-          <table>
+          <Table>
             <thead>
               <tr>
-                <th>SO</th>
-                <th>Buyer</th>
-                <th>Total</th>
+                <Th>SO</Th>
+                <Th>Buyer</Th>
+                <Th>Total</Th>
               </tr>
             </thead>
             <tbody>
               {items.map((row) => (
                 <tr key={row.soId}>
-                  <td>{row.soNo}</td>
-                  <td>{row.buyerId}</td>
-                  <td>₹{(row.totalPaise / 100).toFixed(2)}</td>
+                  <Td>{row.soNo}</Td>
+                  <Td>{row.buyerId}</Td>
+                  <Td>₹{(row.totalPaise / 100).toFixed(2)}</Td>
                 </tr>
               ))}
             </tbody>
-          </table>
+          </Table>
         )}
       </AsyncBoundary>
-    </section>
+    </Card>
   );
 }
 
@@ -56,30 +58,33 @@ function PurchaseRegisterSection() {
   const { state, retry } = useAsyncData(loader, (items) => items.length === 0, [loader]);
 
   return (
-    <section>
-      <h2>Purchase register</h2>
+    <Card title="Purchase register">
       <AsyncBoundary state={state} onRetry={retry} emptyMessage="No billed POs yet.">
         {(items: PurchaseRegisterRow[]) => (
-          <table>
+          <Table>
             <thead>
               <tr>
-                <th>PO</th>
-                <th>Seller</th>
-                <th>Billed</th>
+                <Th>PO</Th>
+                <Th>Seller</Th>
+                <Th>Billed</Th>
               </tr>
             </thead>
             <tbody>
               {items.map((row) => (
                 <tr key={row.poId}>
-                  <td>{row.poNo}</td>
-                  <td>{row.sellerId}</td>
-                  <td>{row.billed ? 'Yes' : 'No'}</td>
+                  <Td>{row.poNo}</Td>
+                  <Td>{row.sellerId}</Td>
+                  <Td>
+                    <Badge tone={row.billed ? 'good' : 'neutral'}>
+                      {row.billed ? 'Yes' : 'No'}
+                    </Badge>
+                  </Td>
                 </tr>
               ))}
             </tbody>
-          </table>
+          </Table>
         )}
       </AsyncBoundary>
-    </section>
+    </Card>
   );
 }

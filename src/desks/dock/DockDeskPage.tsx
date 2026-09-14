@@ -1,9 +1,13 @@
 import { useState } from 'react';
 import type { FormEvent } from 'react';
+import { FiClipboard, FiCheckCircle, FiTruck } from 'react-icons/fi';
 import { applyInspection, recordInspection } from '../../api/dock';
 import { recordMovement } from '../../api/movement';
 import { ApiError } from '../../api/errors';
 import { useAuth } from '../../auth/AuthContext';
+import { Card } from '../../components/ui/Card';
+import { Input, Select } from '../../components/ui/Input';
+import { Button } from '../../components/ui/Button';
 
 const REASON_CODES = [
   'case_count_short',
@@ -21,12 +25,12 @@ const REASON_CODES = [
  */
 export function DockDeskPage() {
   return (
-    <main>
-      <h1>Dock &amp; movements</h1>
+    <div className="flex flex-col gap-6">
+      <h1 className="text-xl font-semibold text-slate-900">Dock &amp; movements</h1>
       <InspectionSection />
       <ApplyInspectionSection />
       <MovementSection />
-    </main>
+    </div>
   );
 }
 
@@ -72,29 +76,31 @@ function InspectionSection() {
   }
 
   return (
-    <section>
-      <h2>Record an inspection</h2>
-      <p className="note">
+    <Card title="Record an inspection">
+      <p className="mb-4 text-sm text-slate-500">
         BR-182 — outer box only: case count, visible damage, leakage, batch and expiry against the
         PO. BR-184 — immutable once submitted; the dock head signs by submitting this.
       </p>
-      <form onSubmit={handleSubmit}>
-        <label htmlFor="in-po">PO ID</label>
-        <input id="in-po" value={poId} onChange={(e) => setPoId(e.target.value)} required />
-
-        <label htmlFor="in-accepted">Cases accepted</label>
-        <input
+      <form onSubmit={handleSubmit} className="flex max-w-md flex-col gap-4">
+        <Input
+          id="in-po"
+          label="PO ID"
+          value={poId}
+          onChange={(e) => setPoId(e.target.value)}
+          required
+        />
+        <Input
           id="in-accepted"
+          label="Cases accepted"
           type="number"
           min={0}
           value={casesAccepted}
           onChange={(e) => setCasesAccepted(Number(e.target.value))}
           required
         />
-
-        <label htmlFor="in-rejected">Cases rejected</label>
-        <input
+        <Input
           id="in-rejected"
+          label="Cases rejected"
           type="number"
           min={0}
           value={casesRejected}
@@ -102,39 +108,44 @@ function InspectionSection() {
           required
         />
 
-        <fieldset>
-          <legend>Rejection reasons (fixed codes)</legend>
-          {REASON_CODES.map((code) => (
-            <label key={code} className="checkbox-row">
-              <input
-                type="checkbox"
-                checked={reasons.includes(code)}
-                onChange={() => toggleReason(code)}
-              />
-              {code.replaceAll('_', ' ')}
-            </label>
-          ))}
+        <fieldset className="rounded-md border border-slate-300 p-3">
+          <legend className="px-1 text-sm font-medium text-slate-700">
+            Rejection reasons (fixed codes)
+          </legend>
+          <div className="flex flex-col gap-2">
+            {REASON_CODES.map((code) => (
+              <label key={code} className="flex items-center gap-2 text-sm text-slate-700">
+                <input
+                  type="checkbox"
+                  className="h-4 w-4 rounded border-slate-300"
+                  checked={reasons.includes(code)}
+                  onChange={() => toggleReason(code)}
+                />
+                {code.replaceAll('_', ' ')}
+              </label>
+            ))}
+          </div>
         </fieldset>
 
-        <label htmlFor="in-photo">Photo reference</label>
-        <input
+        <Input
           id="in-photo"
+          label="Photo reference"
           value={photoRef}
           onChange={(e) => setPhotoRef(e.target.value)}
           required
         />
 
         {error && (
-          <p className="note-urgent" role="alert">
+          <p role="alert" className="text-sm text-danger-500">
             {error}
           </p>
         )}
-        {result && <p className="note">Recorded as {result.inspectionId}.</p>}
-        <button type="submit" disabled={submitting}>
-          {submitting ? 'Submitting…' : 'Submit inspection'}
-        </button>
+        {result && <p className="text-sm text-success-600">Recorded as {result.inspectionId}.</p>}
+        <Button type="submit" loading={submitting} icon={<FiClipboard />}>
+          Submit inspection
+        </Button>
       </form>
-    </section>
+    </Card>
   );
 }
 
@@ -165,32 +176,37 @@ function ApplyInspectionSection() {
   }
 
   return (
-    <section>
-      <h2>Apply the inspection (Purchase)</h2>
-      <p className="note">
+    <Card title="Apply the inspection (Purchase)">
+      <p className="mb-4 text-sm text-slate-500">
         BR-190 — the dock records; Purchase converts the finding into a payment consequence: a
         seller bill on the accepted quantity (Q5a), a debit note for any rejected value (Q5b), or,
         on a whole-lot rejection, a supply failure with a full refund (BR-186).
       </p>
-      <label htmlFor="ap-po">PO ID</label>
-      <input id="ap-po" value={poId} onChange={(e) => setPoId(e.target.value)} />
-      <button type="button" onClick={() => void handleApply()} disabled={!poId || submitting}>
-        {submitting ? 'Applying…' : 'Apply'}
-      </button>
-      {error && (
-        <p className="note-urgent" role="alert">
-          {error}
-        </p>
-      )}
-      {result && (
-        <p className="note">
-          SO state: {result.soState}
-          {result.sellerBillId ? ` · Seller bill ${result.sellerBillId}` : ''}
-          {result.debitNoteId ? ` · Debit note ${result.debitNoteId}` : ''}
-          {result.refundId ? ` · Refund ${result.refundId}` : ''}
-        </p>
-      )}
-    </section>
+      <div className="flex max-w-md flex-col gap-4">
+        <Input id="ap-po" label="PO ID" value={poId} onChange={(e) => setPoId(e.target.value)} />
+        <Button
+          onClick={() => void handleApply()}
+          disabled={!poId}
+          loading={submitting}
+          icon={<FiCheckCircle />}
+        >
+          Apply
+        </Button>
+        {error && (
+          <p role="alert" className="text-sm text-danger-500">
+            {error}
+          </p>
+        )}
+        {result && (
+          <p className="text-sm text-success-600">
+            SO state: {result.soState}
+            {result.sellerBillId ? ` · Seller bill ${result.sellerBillId}` : ''}
+            {result.debitNoteId ? ` · Debit note ${result.debitNoteId}` : ''}
+            {result.refundId ? ` · Refund ${result.refundId}` : ''}
+          </p>
+        )}
+      </div>
+    </Card>
   );
 }
 
@@ -242,59 +258,76 @@ function MovementSection() {
   }
 
   return (
-    <section>
-      <h2>Record a dispatch</h2>
-      <p className="note">
+    <Card title="Record a dispatch">
+      <p className="mb-4 text-sm text-slate-500">
         BR-176 — two dispatch modes, both legs; LR mandatory on transport mode. Leg 2 refuses
         without a matched Marg invoice (INV-04) — no exceptions.
       </p>
-      <form onSubmit={handleSubmit}>
-        <label htmlFor="mv-chain">Chain ID</label>
-        <input
+      <form onSubmit={handleSubmit} className="flex max-w-md flex-col gap-4">
+        <Input
           id="mv-chain"
+          label="Chain ID"
           value={chainId}
           onChange={(e) => setChainId(e.target.value)}
           required
         />
 
-        <label htmlFor="mv-leg">Leg</label>
-        <select id="mv-leg" value={leg} onChange={(e) => setLeg(Number(e.target.value) as 1 | 2)}>
+        <Select
+          id="mv-leg"
+          label="Leg"
+          value={leg}
+          onChange={(e) => setLeg(Number(e.target.value) as 1 | 2)}
+        >
           <option value={1}>Leg 1 (seller → Indore)</option>
           <option value={2}>Leg 2 (Indore → buyer)</option>
-        </select>
+        </Select>
 
-        <label htmlFor="mv-mode">Mode</label>
-        <select id="mv-mode" value={mode} onChange={(e) => setMode(e.target.value as typeof mode)}>
+        <Select
+          id="mv-mode"
+          label="Mode"
+          value={mode}
+          onChange={(e) => setMode(e.target.value as typeof mode)}
+        >
           <option value="bus">Bus</option>
           <option value="transport">Transport</option>
-        </select>
+        </Select>
 
         {mode === 'transport' ? (
           <>
-            <label htmlFor="mv-transporter">Transporter</label>
-            <input
+            <Input
               id="mv-transporter"
+              label="Transporter"
               value={transporter}
               onChange={(e) => setTransporter(e.target.value)}
               required
             />
-            <label htmlFor="mv-lr">LR number (mandatory)</label>
-            <input id="mv-lr" value={lr} onChange={(e) => setLr(e.target.value)} required />
+            <Input
+              id="mv-lr"
+              label="LR number (mandatory)"
+              value={lr}
+              onChange={(e) => setLr(e.target.value)}
+              required
+            />
           </>
         ) : (
           <>
-            <label htmlFor="mv-bus">Bus number</label>
-            <input id="mv-bus" value={busNo} onChange={(e) => setBusNo(e.target.value)} required />
-            <label htmlFor="mv-driver">Driver name</label>
-            <input
+            <Input
+              id="mv-bus"
+              label="Bus number"
+              value={busNo}
+              onChange={(e) => setBusNo(e.target.value)}
+              required
+            />
+            <Input
               id="mv-driver"
+              label="Driver name"
               value={driver}
               onChange={(e) => setDriver(e.target.value)}
               required
             />
-            <label htmlFor="mv-driver-mobile">Driver mobile</label>
-            <input
+            <Input
               id="mv-driver-mobile"
+              label="Driver mobile"
               value={driverMobile}
               onChange={(e) => setDriverMobile(e.target.value)}
               required
@@ -302,18 +335,18 @@ function MovementSection() {
           </>
         )}
 
-        <label htmlFor="mv-freight-terms">Freight</label>
-        <select
+        <Select
           id="mv-freight-terms"
+          label="Freight"
           value={freightTerms}
           onChange={(e) => setFreightTerms(e.target.value as typeof freightTerms)}
         >
           <option value="to_pay">To pay</option>
           <option value="prepaid">Prepaid</option>
-        </select>
-        <label htmlFor="mv-freight-amount">Freight amount (₹)</label>
-        <input
+        </Select>
+        <Input
           id="mv-freight-amount"
+          label="Freight amount (₹)"
           type="number"
           step="0.01"
           value={freightRupees}
@@ -321,15 +354,15 @@ function MovementSection() {
         />
 
         {error && (
-          <p className="note-urgent" role="alert">
+          <p role="alert" className="text-sm text-danger-500">
             {error}
           </p>
         )}
-        {result && <p className="note">Recorded as {result.movementId}.</p>}
-        <button type="submit" disabled={submitting}>
-          {submitting ? 'Recording…' : 'Record dispatch'}
-        </button>
+        {result && <p className="text-sm text-success-600">Recorded as {result.movementId}.</p>}
+        <Button type="submit" loading={submitting} icon={<FiTruck />}>
+          Record dispatch
+        </Button>
       </form>
-    </section>
+    </Card>
   );
 }

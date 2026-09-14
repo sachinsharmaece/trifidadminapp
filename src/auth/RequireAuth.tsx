@@ -1,6 +1,8 @@
 import type { ReactNode } from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from './AuthContext';
+import { Loader } from '../components/ui/Loader';
+import { ErrorState } from '../components/ui/ErrorState';
 
 interface RequireAuthProps {
   children: ReactNode;
@@ -20,8 +22,8 @@ export function RequireAuth({ children, permission }: RequireAuthProps) {
 
   if (status === 'loading') {
     return (
-      <main className="page-state">
-        <p>Loading…</p>
+      <main className="flex min-h-screen items-center justify-center">
+        <Loader />
       </main>
     );
   }
@@ -32,9 +34,11 @@ export function RequireAuth({ children, permission }: RequireAuthProps) {
 
   if (permission && !hasPermission(permission)) {
     return (
-      <main className="page-state">
-        <h1>Not permitted</h1>
-        <p>Your account does not have access to this screen.</p>
+      <main className="flex min-h-screen items-center justify-center p-6">
+        <div className="w-full max-w-md">
+          <h1 className="mb-3 text-lg font-semibold text-slate-900">Not permitted</h1>
+          <ErrorState message="Your account does not have access to this screen." />
+        </div>
       </main>
     );
   }

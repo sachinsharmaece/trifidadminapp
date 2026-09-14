@@ -1,8 +1,13 @@
 import { useState } from 'react';
 import type { FormEvent } from 'react';
+import { FiKey } from 'react-icons/fi';
 import { keyMargInvoice } from '../../api/marg';
 import { ApiError } from '../../api/errors';
 import { useAuth } from '../../auth/AuthContext';
+import { Card } from '../../components/ui/Card';
+import { Input } from '../../components/ui/Input';
+import { Button } from '../../components/ui/Button';
+import { Badge } from '../../components/ui/Badge';
 
 /**
  * WF-08 — billing in Marg is a desk queue, not a background job. The
@@ -51,66 +56,77 @@ export function MargDeskPage() {
   }
 
   return (
-    <main>
-      <h1>Billing in Marg</h1>
-      <p className="note">
-        Raise the invoice and e-way bill in Marg first, then key the figures back here. A ₹5
-        difference from the SO total auto-matches (BR-033/Q3b); anything more queries and stops the
-        chain — there is no way to force it through from this screen.
-      </p>
-      <form onSubmit={handleSubmit}>
-        <label htmlFor="mg-so">SO ID</label>
-        <input id="mg-so" value={soId} onChange={(e) => setSoId(e.target.value)} required />
+    <div className="flex flex-col gap-6">
+      <h1 className="text-xl font-semibold text-slate-900">Billing in Marg</h1>
+      <Card>
+        <p className="mb-4 text-sm text-slate-500">
+          Raise the invoice and e-way bill in Marg first, then key the figures back here. A ₹5
+          difference from the SO total auto-matches (BR-033/Q3b); anything more queries and stops
+          the chain — there is no way to force it through from this screen.
+        </p>
+        <form onSubmit={handleSubmit} className="flex max-w-md flex-col gap-4">
+          <Input
+            id="mg-so"
+            label="SO ID"
+            value={soId}
+            onChange={(e) => setSoId(e.target.value)}
+            required
+          />
+          <Input
+            id="mg-invoice"
+            label="Marg invoice number"
+            value={margInvoiceNo}
+            onChange={(e) => setMargInvoiceNo(e.target.value)}
+            required
+          />
+          <Input
+            id="mg-date"
+            label="Date"
+            type="date"
+            value={date}
+            onChange={(e) => setDate(e.target.value)}
+            required
+          />
+          <Input
+            id="mg-value"
+            label="Invoice value (₹)"
+            type="number"
+            step="0.01"
+            value={valueRupees}
+            onChange={(e) => setValueRupees(e.target.value)}
+            required
+          />
+          <Input
+            id="mg-eway"
+            label="E-way bill number"
+            value={ewayNo}
+            onChange={(e) => setEwayNo(e.target.value)}
+            required
+          />
 
-        <label htmlFor="mg-invoice">Marg invoice number</label>
-        <input
-          id="mg-invoice"
-          value={margInvoiceNo}
-          onChange={(e) => setMargInvoiceNo(e.target.value)}
-          required
-        />
-
-        <label htmlFor="mg-date">Date</label>
-        <input
-          id="mg-date"
-          type="date"
-          value={date}
-          onChange={(e) => setDate(e.target.value)}
-          required
-        />
-
-        <label htmlFor="mg-value">Invoice value (₹)</label>
-        <input
-          id="mg-value"
-          type="number"
-          step="0.01"
-          value={valueRupees}
-          onChange={(e) => setValueRupees(e.target.value)}
-          required
-        />
-
-        <label htmlFor="mg-eway">E-way bill number</label>
-        <input id="mg-eway" value={ewayNo} onChange={(e) => setEwayNo(e.target.value)} required />
-
-        {error && (
-          <p className="note-urgent" role="alert">
-            {error}
-          </p>
-        )}
-        {result && (
-          <p
-            className={result.state === 'matched' ? 'note' : 'note-urgent'}
-            role={result.state === 'query' ? 'alert' : undefined}
-          >
-            {result.state === 'matched'
-              ? `Matched (${result.margBillId}). Chain advances to dispatch.`
-              : `Query (${result.margBillId}). Books nothing anywhere — the chain stops here (BR-033).`}
-          </p>
-        )}
-        <button type="submit" disabled={submitting}>
-          {submitting ? 'Keying…' : 'Key invoice'}
-        </button>
-      </form>
-    </main>
+          {error && (
+            <p role="alert" className="text-sm text-danger-500">
+              {error}
+            </p>
+          )}
+          {result && (
+            <div
+              role={result.state === 'query' ? 'alert' : undefined}
+              className="flex items-start gap-2 text-sm"
+            >
+              <Badge tone={result.state === 'matched' ? 'good' : 'bad'}>{result.state}</Badge>
+              <span className="text-slate-700">
+                {result.state === 'matched'
+                  ? `Matched (${result.margBillId}). Chain advances to dispatch.`
+                  : `Query (${result.margBillId}). Books nothing anywhere — the chain stops here (BR-033).`}
+              </span>
+            </div>
+          )}
+          <Button type="submit" loading={submitting} icon={<FiKey />}>
+            Key invoice
+          </Button>
+        </form>
+      </Card>
+    </div>
   );
 }

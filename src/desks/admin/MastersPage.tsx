@@ -1,5 +1,6 @@
 import { useCallback, useState } from 'react';
 import type { FormEvent } from 'react';
+import { FiPlus, FiSearch, FiUpload } from 'react-icons/fi';
 import {
   createManufacturer,
   createProduct,
@@ -14,16 +15,21 @@ import { ApiError } from '../../api/errors';
 import { AsyncBoundary } from '../../components/AsyncBoundary';
 import { useAsyncData } from '../../lib/useAsyncData';
 import { useAuth } from '../../auth/AuthContext';
+import { Card } from '../../components/ui/Card';
+import { Table, Th, Td } from '../../components/ui/Table';
+import { Input, Select, Textarea } from '../../components/ui/Input';
+import { Button } from '../../components/ui/Button';
+import { Badge } from '../../components/ui/Badge';
 import type { ManufacturerDto, ProductDto, SkuDto, SkuImportRowResult } from '../../api/dto';
 
 export function MastersPage() {
   return (
-    <main>
-      <h1>Masters</h1>
+    <div className="flex flex-col gap-6">
+      <h1 className="text-xl font-semibold text-slate-900">Masters</h1>
       <TehsilsSection />
       <ManufacturersSection />
       <ProductsSection />
-    </main>
+    </div>
   );
 }
 
@@ -58,57 +64,56 @@ function TehsilsSection() {
   }
 
   return (
-    <section>
-      <h2>Tehsils</h2>
-      <p className="hint">
-        {'BR-080 — name is not a unique key; every picker disambiguates by district.'}
+    <Card title="Tehsils">
+      <p className="mb-4 text-sm text-slate-500">
+        BR-080 — name is not a unique key; every picker disambiguates by district.
       </p>
       <AsyncBoundary state={state} onRetry={retry} emptyMessage="No tehsils yet.">
         {(items) => (
-          <table>
+          <Table className="mb-4">
             <thead>
               <tr>
-                <th>Name</th>
-                <th>District</th>
-                <th>State</th>
+                <Th>Name</Th>
+                <Th>District</Th>
+                <Th>State</Th>
               </tr>
             </thead>
             <tbody>
               {items.map((tehsil) => (
                 <tr key={tehsil.tehsilId}>
-                  <td>{tehsil.name}</td>
-                  <td>{tehsil.district}</td>
-                  <td>{tehsil.state}</td>
+                  <Td>{tehsil.name}</Td>
+                  <Td>{tehsil.district}</Td>
+                  <Td>{tehsil.state}</Td>
                 </tr>
               ))}
             </tbody>
-          </table>
+          </Table>
         )}
       </AsyncBoundary>
-      <form onSubmit={handleSubmit} className="inline-form">
-        <input placeholder="Name" value={name} onChange={(e) => setName(e.target.value)} required />
-        <input
-          placeholder="District"
+      <form onSubmit={handleSubmit} className="flex flex-wrap items-end gap-3">
+        <Input label="Name" value={name} onChange={(e) => setName(e.target.value)} required />
+        <Input
+          label="District"
           value={district}
           onChange={(e) => setDistrict(e.target.value)}
           required
         />
-        <input
-          placeholder="State"
+        <Input
+          label="State"
           value={stateName}
           onChange={(e) => setStateName(e.target.value)}
           required
         />
-        <button type="submit" disabled={submitting}>
+        <Button type="submit" loading={submitting} icon={<FiPlus />}>
           Add tehsil
-        </button>
+        </Button>
       </form>
       {error && (
-        <p className="note-urgent" role="alert">
+        <p role="alert" className="mt-2 text-sm text-danger-500">
           {error}
         </p>
       )}
-    </section>
+    </Card>
   );
 }
 
@@ -141,29 +146,30 @@ function ManufacturersSection() {
   }
 
   return (
-    <section>
-      <h2>Manufacturers</h2>
+    <Card title="Manufacturers">
       <AsyncBoundary state={state} onRetry={retry} emptyMessage="No manufacturers yet.">
         {(items) => (
-          <ul>
+          <ul className="mb-4 flex flex-wrap gap-2">
             {items.map((manufacturer) => (
-              <li key={manufacturer.manufacturerId}>{manufacturer.name}</li>
+              <li key={manufacturer.manufacturerId}>
+                <Badge>{manufacturer.name}</Badge>
+              </li>
             ))}
           </ul>
         )}
       </AsyncBoundary>
-      <form onSubmit={handleSubmit} className="inline-form">
-        <input placeholder="Name" value={name} onChange={(e) => setName(e.target.value)} required />
-        <button type="submit" disabled={submitting}>
+      <form onSubmit={handleSubmit} className="flex flex-wrap items-end gap-3">
+        <Input label="Name" value={name} onChange={(e) => setName(e.target.value)} required />
+        <Button type="submit" loading={submitting} icon={<FiPlus />}>
           Add manufacturer
-        </button>
+        </Button>
       </form>
       {error && (
-        <p className="note-urgent" role="alert">
+        <p role="alert" className="mt-2 text-sm text-danger-500">
           {error}
         </p>
       )}
-    </section>
+    </Card>
   );
 }
 
@@ -200,60 +206,64 @@ function ProductsSection() {
   }
 
   return (
-    <section>
-      <h2>Products &amp; SKUs</h2>
-      <p className="hint">
-        {'BR-111 — technical is the primary axis everywhere; there is no "list all products".'}
+    <Card title="Products & SKUs">
+      <p className="mb-4 text-sm text-slate-500">
+        BR-111 — technical is the primary axis everywhere; there is no &quot;list all
+        products&quot;.
       </p>
 
-      <form onSubmit={handleBrowse} className="inline-form">
-        <input
-          list="technicals"
-          placeholder="Technical"
-          value={browseTechnical}
-          onChange={(e) => setBrowseTechnical(e.target.value)}
-          required
-        />
-        {technicals.state.status === 'success' && (
-          <datalist id="technicals">
-            {technicals.state.data.map((technical) => (
-              <option key={technical} value={technical} />
-            ))}
-          </datalist>
-        )}
-        <button type="submit">Browse</button>
+      <form onSubmit={handleBrowse} className="mb-4 flex flex-wrap items-end gap-3">
+        <div>
+          <Input
+            label="Technical"
+            list="technicals"
+            value={browseTechnical}
+            onChange={(e) => setBrowseTechnical(e.target.value)}
+            required
+          />
+          {technicals.state.status === 'success' && (
+            <datalist id="technicals">
+              {technicals.state.data.map((technical) => (
+                <option key={technical} value={technical} />
+              ))}
+            </datalist>
+          )}
+        </div>
+        <Button type="submit" variant="secondary" icon={<FiSearch />}>
+          Browse
+        </Button>
       </form>
       {browseError && (
-        <p className="note-urgent" role="alert">
+        <p role="alert" className="mb-4 text-sm text-danger-500">
           {browseError}
         </p>
       )}
 
       {products && (
-        <table>
+        <Table className="mb-4">
           <thead>
             <tr>
-              <th>Brand</th>
-              <th>HSN</th>
-              <th>Class</th>
-              <th></th>
+              <Th>Brand</Th>
+              <Th>HSN</Th>
+              <Th>Class</Th>
+              <Th />
             </tr>
           </thead>
           <tbody>
             {products.map((product) => (
               <tr key={product.productId}>
-                <td>{product.brand}</td>
-                <td>{product.hsn}</td>
-                <td>{product.class}</td>
-                <td>
-                  <button type="button" onClick={() => setSelectedProduct(product)}>
+                <Td>{product.brand}</Td>
+                <Td>{product.hsn}</Td>
+                <Td>{product.class}</Td>
+                <Td>
+                  <Button variant="secondary" size="sm" onClick={() => setSelectedProduct(product)}>
                     View SKUs
-                  </button>
-                </td>
+                  </Button>
+                </Td>
               </tr>
             ))}
           </tbody>
-        </table>
+        </Table>
       )}
 
       <CreateProductForm
@@ -266,7 +276,7 @@ function ProductsSection() {
       />
 
       {selectedProduct && <SkusSection product={selectedProduct} />}
-    </section>
+    </Card>
   );
 }
 
@@ -309,22 +319,28 @@ function CreateProductForm({
   }
 
   return (
-    <form onSubmit={handleSubmit} className="stacked-form">
-      <h3>Create product</h3>
-      <label htmlFor="p-brand">Brand</label>
-      <input id="p-brand" value={brand} onChange={(e) => setBrand(e.target.value)} required />
-
-      <label htmlFor="p-technical">Technical</label>
-      <input
+    <form
+      onSubmit={handleSubmit}
+      className="mb-6 flex max-w-md flex-col gap-4 rounded-md border border-slate-200 p-4"
+    >
+      <h3 className="text-sm font-semibold text-slate-900">Create product</h3>
+      <Input
+        id="p-brand"
+        label="Brand"
+        value={brand}
+        onChange={(e) => setBrand(e.target.value)}
+        required
+      />
+      <Input
         id="p-technical"
+        label="Technical"
         value={technical}
         onChange={(e) => setTechnical(e.target.value)}
         required
       />
-
-      <label htmlFor="p-manufacturer">Manufacturer</label>
-      <select
+      <Select
         id="p-manufacturer"
+        label="Manufacturer"
         value={manufacturerId}
         onChange={(e) => setManufacturerId(e.target.value)}
         required
@@ -335,31 +351,28 @@ function CreateProductForm({
             {manufacturer.name}
           </option>
         ))}
-      </select>
-
-      <label htmlFor="p-hsn">HSN</label>
-      <input id="p-hsn" value={hsn} onChange={(e) => setHsn(e.target.value)} required />
-
-      <label htmlFor="p-class">Class</label>
-      <select
+      </Select>
+      <Input id="p-hsn" label="HSN" value={hsn} onChange={(e) => setHsn(e.target.value)} required />
+      <Select
         id="p-class"
+        label="Class"
         value={productClass}
         onChange={(e) => setProductClass(e.target.value as 'A' | 'B' | 'C')}
       >
         <option value="A">A</option>
         <option value="B">B</option>
         <option value="C">C</option>
-      </select>
+      </Select>
 
       {error && (
-        <p className="note-urgent" role="alert">
+        <p role="alert" className="text-sm text-danger-500">
           {error}
         </p>
       )}
 
-      <button type="submit" disabled={submitting}>
+      <Button type="submit" loading={submitting} icon={<FiPlus />}>
         Create product
-      </button>
+      </Button>
     </form>
   );
 }
@@ -405,68 +418,74 @@ function SkusSection({ product }: { product: ProductDto }) {
   }
 
   return (
-    <div>
-      <h3>SKUs for {product.brand}</h3>
+    <div className="flex flex-col gap-4 border-t border-slate-200 pt-4">
+      <h3 className="text-sm font-semibold text-slate-900">SKUs for {product.brand}</h3>
       <AsyncBoundary state={state} onRetry={retry} emptyMessage="No SKUs yet.">
         {(items: SkuDto[]) => (
-          <table>
+          <Table>
             <thead>
               <tr>
-                <th>Pack</th>
-                <th>Base unit</th>
-                <th>Units/box</th>
-                <th>Base units/box</th>
+                <Th>Pack</Th>
+                <Th>Base unit</Th>
+                <Th>Units/box</Th>
+                <Th>Base units/box</Th>
               </tr>
             </thead>
             <tbody>
               {items.map((sku) => (
                 <tr key={sku.skuId}>
-                  <td>{sku.packLabel}</td>
-                  <td>{sku.baseUnit}</td>
-                  <td>{sku.unitsPerBox}</td>
-                  <td>{sku.baseUnitsPerBox}</td>
+                  <Td>{sku.packLabel}</Td>
+                  <Td>{sku.baseUnit}</Td>
+                  <Td>{sku.unitsPerBox}</Td>
+                  <Td>{sku.baseUnitsPerBox}</Td>
                 </tr>
               ))}
             </tbody>
-          </table>
+          </Table>
         )}
       </AsyncBoundary>
 
-      <form onSubmit={handleImport}>
-        <label htmlFor="sku-csv">
-          Import rows (BR-055 — a row failing the baseUnitsPerBox rule is rejected, not imported)
-        </label>
-        <textarea id="sku-csv" rows={6} value={csv} onChange={(e) => setCsv(e.target.value)} />
-        <button type="submit" disabled={submitting}>
-          {submitting ? 'Importing…' : 'Import'}
-        </button>
+      <form onSubmit={handleImport} className="flex max-w-lg flex-col gap-3">
+        <Textarea
+          id="sku-csv"
+          label="Import rows"
+          hint="BR-055 — a row failing the baseUnitsPerBox rule is rejected, not imported"
+          rows={6}
+          value={csv}
+          onChange={(e) => setCsv(e.target.value)}
+        />
+        <Button type="submit" loading={submitting} icon={<FiUpload />} className="self-start">
+          Import
+        </Button>
       </form>
       {importError && (
-        <p className="note-urgent" role="alert">
+        <p role="alert" className="text-sm text-danger-500">
           {importError}
         </p>
       )}
       {results && (
-        <table>
+        <Table>
           <thead>
             <tr>
-              <th>Row</th>
-              <th>Result</th>
-              <th>Detail</th>
+              <Th>Row</Th>
+              <Th>Result</Th>
+              <Th>Detail</Th>
             </tr>
           </thead>
           <tbody>
             {results.map((row) => (
               <tr key={row.index}>
-                <td>{row.index + 1}</td>
-                <td className={row.accepted ? '' : 'note-urgent'}>
-                  {row.accepted ? 'Accepted' : 'Rejected'}
-                </td>
-                <td>{row.accepted ? row.skuId : row.reason}</td>
+                <Td>{row.index + 1}</Td>
+                <Td>
+                  <Badge tone={row.accepted ? 'good' : 'bad'}>
+                    {row.accepted ? 'Accepted' : 'Rejected'}
+                  </Badge>
+                </Td>
+                <Td>{row.accepted ? row.skuId : row.reason}</Td>
               </tr>
             ))}
           </tbody>
-        </table>
+        </Table>
       )}
     </div>
   );

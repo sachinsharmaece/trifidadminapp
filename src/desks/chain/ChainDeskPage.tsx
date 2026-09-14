@@ -1,10 +1,15 @@
 import { useCallback, useState } from 'react';
 import type { FormEvent } from 'react';
+import { FiCheckCircle, FiSend, FiEdit2, FiMinusCircle, FiSearch } from 'react-icons/fi';
 import { createPo, createSo, editPo, getChain, reduceSoQuantity } from '../../api/chain';
 import { ApiError } from '../../api/errors';
 import { AsyncBoundary } from '../../components/AsyncBoundary';
 import { useAsyncData } from '../../lib/useAsyncData';
 import { useAuth } from '../../auth/AuthContext';
+import { Card } from '../../components/ui/Card';
+import { Table, Th, Td } from '../../components/ui/Table';
+import { Input, Select, Textarea } from '../../components/ui/Input';
+import { Button } from '../../components/ui/Button';
 import type { ChainViewDto } from '../../api/dto';
 
 const OVERRIDE_REASON_CODES = [
@@ -15,6 +20,8 @@ const OVERRIDE_REASON_CODES = [
   'matching_competitor_quote',
   'clearing_slow_stock',
 ];
+
+const CHAIN_STAGES = ['so', 'payment', 'po', 'leg1', 'marg', 'dispatch', 'done'];
 
 /**
  * BR-031 — the six-stage chain strip is a required UI element on every SO,
@@ -28,14 +35,14 @@ export function ChainDeskPage() {
   const [lastChainId, setLastChainId] = useState('');
 
   return (
-    <main>
-      <h1>Trade chain</h1>
+    <div className="flex flex-col gap-6">
+      <h1 className="text-xl font-semibold text-slate-900">Trade chain</h1>
       <CreateSoSection onCreated={(soId) => setLastSoId(soId)} />
       {lastSoId && <CreatePoSection soId={lastSoId} />}
       <EditPoSection />
       <ReduceSoQuantitySection />
       <ChainViewSection chainId={lastChainId} onChainIdChange={setLastChainId} />
-    </main>
+    </div>
   );
 }
 
@@ -85,45 +92,46 @@ function CreateSoSection({ onCreated }: { onCreated: (soId: string) => void }) {
   }
 
   return (
-    <section>
-      <h2>Raise a sales order</h2>
-      <p className="note">
-        The margin matrix pre-fills the buyer's rate from the seller's net (BR-048). Override it
-        with a reason from the fixed dropdown when a desk decision calls for it.
+    <Card title="Raise a sales order">
+      <p className="mb-4 text-sm text-slate-500">
+        The margin matrix pre-fills the buyer&apos;s rate from the seller&apos;s net (BR-048).
+        Override it with a reason from the fixed dropdown when a desk decision calls for it.
       </p>
-      <form onSubmit={handleSubmit}>
-        <label htmlFor="cs-buyer">Buyer ID</label>
-        <input
+      <form onSubmit={handleSubmit} className="flex max-w-md flex-col gap-4">
+        <Input
           id="cs-buyer"
+          label="Buyer ID"
           value={buyerId}
           onChange={(e) => setBuyerId(e.target.value)}
           required
         />
-
-        <label htmlFor="cs-seller">Seller ID</label>
-        <input
+        <Input
           id="cs-seller"
+          label="Seller ID"
           value={sellerId}
           onChange={(e) => setSellerId(e.target.value)}
           required
         />
-
-        <label htmlFor="cs-sku">SKU ID</label>
-        <input id="cs-sku" value={skuId} onChange={(e) => setSkuId(e.target.value)} required />
-
-        <label htmlFor="cs-boxes">Boxes (BR-051 — minimum one)</label>
-        <input
+        <Input
+          id="cs-sku"
+          label="SKU ID"
+          value={skuId}
+          onChange={(e) => setSkuId(e.target.value)}
+          required
+        />
+        <Input
           id="cs-boxes"
+          label="Boxes"
+          hint="BR-051 — minimum one"
           type="number"
           min={1}
           value={boxes}
           onChange={(e) => setBoxes(Number(e.target.value))}
           required
         />
-
-        <label htmlFor="cs-seller-net">Seller net rate, per base unit (₹)</label>
-        <input
+        <Input
           id="cs-seller-net"
+          label="Seller net rate, per base unit (₹)"
           type="number"
           step="0.01"
           min="0"
@@ -131,20 +139,20 @@ function CreateSoSection({ onCreated }: { onCreated: (soId: string) => void }) {
           onChange={(e) => setSellerNetRupees(e.target.value)}
           required
         />
-
-        <label htmlFor="cs-pos">Place of supply</label>
-        <select
+        <Select
           id="cs-pos"
+          label="Place of supply"
           value={placeOfSupply}
           onChange={(e) => setPlaceOfSupply(e.target.value as typeof placeOfSupply)}
         >
           <option value="intra_state">Intra-state (CGST + SGST)</option>
           <option value="inter_state">Inter-state (IGST)</option>
-        </select>
+        </Select>
 
-        <label className="checkbox-row">
+        <label className="flex items-center gap-2 text-sm text-slate-700">
           <input
             type="checkbox"
+            className="h-4 w-4 rounded border-slate-300"
             checked={useOverride}
             onChange={(e) => setUseOverride(e.target.checked)}
           />
@@ -152,9 +160,9 @@ function CreateSoSection({ onCreated }: { onCreated: (soId: string) => void }) {
         </label>
         {useOverride && (
           <>
-            <label htmlFor="cs-override-rate">Override rate, per base unit (₹)</label>
-            <input
+            <Input
               id="cs-override-rate"
+              label="Override rate, per base unit (₹)"
               type="number"
               step="0.01"
               min="0"
@@ -162,9 +170,9 @@ function CreateSoSection({ onCreated }: { onCreated: (soId: string) => void }) {
               onChange={(e) => setOverrideRateRupees(e.target.value)}
               required={useOverride}
             />
-            <label htmlFor="cs-override-reason">Override reason</label>
-            <select
+            <Select
               id="cs-override-reason"
+              label="Override reason"
               value={overrideReasonCode}
               onChange={(e) => setOverrideReasonCode(e.target.value)}
             >
@@ -173,25 +181,25 @@ function CreateSoSection({ onCreated }: { onCreated: (soId: string) => void }) {
                   {code.replaceAll('_', ' ')}
                 </option>
               ))}
-            </select>
+            </Select>
           </>
         )}
 
         {error && (
-          <p className="note-urgent" role="alert">
+          <p role="alert" className="text-sm text-danger-500">
             {error}
           </p>
         )}
         {result && (
-          <p className="note">
+          <p className="text-sm text-success-600">
             Raised <strong>{result.soNo}</strong>.
           </p>
         )}
-        <button type="submit" disabled={submitting}>
-          {submitting ? 'Raising…' : 'Raise SO'}
-        </button>
+        <Button type="submit" loading={submitting} icon={<FiSend />}>
+          Raise SO
+        </Button>
       </form>
-    </section>
+    </Card>
   );
 }
 
@@ -218,26 +226,25 @@ function CreatePoSection({ soId }: { soId: string }) {
   }
 
   return (
-    <section>
-      <h2>Raise the PO for {soId}</h2>
-      <p className="note">
+    <Card title={`Raise the PO for ${soId}`}>
+      <p className="mb-4 text-sm text-slate-500">
         409 unless posted receipts have reached the SO total (INV-01) — there is no partial PO on
         partial payment.
       </p>
       {error && (
-        <p className="note-urgent" role="alert">
+        <p role="alert" className="mb-2 text-sm text-danger-500">
           {error}
         </p>
       )}
       {result && (
-        <p className="note">
+        <p className="mb-2 text-sm text-success-600">
           Raised <strong>{result.poNo}</strong>.
         </p>
       )}
-      <button type="button" onClick={() => void handleCreate()} disabled={submitting}>
-        {submitting ? 'Raising…' : 'Raise PO'}
-      </button>
-    </section>
+      <Button onClick={() => void handleCreate()} loading={submitting} icon={<FiCheckCircle />}>
+        Raise PO
+      </Button>
+    </Card>
   );
 }
 
@@ -269,55 +276,56 @@ function EditPoSection() {
   }
 
   return (
-    <section>
-      <h2>Edit a PO</h2>
-      <p className="note">
+    <Card title="Edit a PO">
+      <p className="mb-4 text-sm text-slate-500">
         BR-036 — only rate or quantity are ever editable, every edit carries a reason, and never
         after billing.
       </p>
-      <form onSubmit={handleSubmit}>
-        <label htmlFor="ep-po">PO ID</label>
-        <input id="ep-po" value={poId} onChange={(e) => setPoId(e.target.value)} required />
-
-        <label htmlFor="ep-field">Field</label>
-        <select
+      <form onSubmit={handleSubmit} className="flex max-w-md flex-col gap-4">
+        <Input
+          id="ep-po"
+          label="PO ID"
+          value={poId}
+          onChange={(e) => setPoId(e.target.value)}
+          required
+        />
+        <Select
           id="ep-field"
+          label="Field"
           value={field}
           onChange={(e) => setField(e.target.value as typeof field)}
         >
           <option value="rate">Rate (₹ per base unit)</option>
           <option value="qty">Quantity (boxes)</option>
-        </select>
-
-        <label htmlFor="ep-to">New value</label>
-        <input
+        </Select>
+        <Input
           id="ep-to"
+          label="New value"
           type="number"
           step={field === 'rate' ? '0.01' : '1'}
           value={to}
           onChange={(e) => setTo(e.target.value)}
           required
         />
-
-        <label htmlFor="ep-reason">Reason</label>
-        <textarea
+        <Textarea
           id="ep-reason"
+          label="Reason"
           value={reason}
           onChange={(e) => setReason(e.target.value)}
           required
         />
 
         {error && (
-          <p className="note-urgent" role="alert">
+          <p role="alert" className="text-sm text-danger-500">
             {error}
           </p>
         )}
-        {done && <p className="note">Edit recorded.</p>}
-        <button type="submit" disabled={submitting}>
-          {submitting ? 'Saving…' : 'Save edit'}
-        </button>
+        {done && <p className="text-sm text-success-600">Edit recorded.</p>}
+        <Button type="submit" loading={submitting} icon={<FiEdit2 />}>
+          Save edit
+        </Button>
       </form>
-    </section>
+    </Card>
   );
 }
 
@@ -349,57 +357,82 @@ function ReduceSoQuantitySection() {
   }
 
   return (
-    <section>
-      <h2>Part rejection — reduce SO quantity</h2>
-      <p className="note">
+    <Card title="Part rejection — reduce SO quantity">
+      <p className="mb-4 text-sm text-slate-500">
         Q6 — reduces the SO to the accepted quantity from the inspection, raises the refund for the
         difference, and cannot run once a Marg bill exists for this SO.
       </p>
-      <form onSubmit={handleSubmit}>
-        <label htmlFor="rq-so">SO ID</label>
-        <input id="rq-so" value={soId} onChange={(e) => setSoId(e.target.value)} required />
-
-        <label htmlFor="rq-inspection">Inspection ID</label>
-        <input
+      <form onSubmit={handleSubmit} className="flex max-w-md flex-col gap-4">
+        <Input
+          id="rq-so"
+          label="SO ID"
+          value={soId}
+          onChange={(e) => setSoId(e.target.value)}
+          required
+        />
+        <Input
           id="rq-inspection"
+          label="Inspection ID"
           value={inspectionId}
           onChange={(e) => setInspectionId(e.target.value)}
           required
         />
-
-        <label htmlFor="rq-boxes">Accepted boxes</label>
-        <input
+        <Input
           id="rq-boxes"
+          label="Accepted boxes"
           type="number"
           min={0}
           value={newBoxes}
           onChange={(e) => setNewBoxes(Number(e.target.value))}
           required
         />
-
-        <label htmlFor="rq-reason">Reason</label>
-        <textarea
+        <Textarea
           id="rq-reason"
+          label="Reason"
           value={reason}
           onChange={(e) => setReason(e.target.value)}
           required
         />
 
         {error && (
-          <p className="note-urgent" role="alert">
+          <p role="alert" className="text-sm text-danger-500">
             {error}
           </p>
         )}
         {result && (
-          <p className="note">
+          <p className="text-sm text-success-600">
             SO reduced. Refund <strong>{result.refundId}</strong> raised.
           </p>
         )}
-        <button type="submit" disabled={submitting}>
-          {submitting ? 'Saving…' : 'Reduce quantity'}
-        </button>
+        <Button type="submit" loading={submitting} icon={<FiMinusCircle />}>
+          Reduce quantity
+        </Button>
       </form>
-    </section>
+    </Card>
+  );
+}
+
+function ChainStrip({ currentStage }: { currentStage: string }) {
+  const currentIndex = CHAIN_STAGES.indexOf(currentStage);
+  return (
+    <ol className="flex flex-wrap items-center gap-2 text-sm">
+      {CHAIN_STAGES.map((stage, index) => (
+        <li key={stage} className="flex items-center gap-2">
+          <span
+            className={`rounded-full px-3 py-1 font-medium ${
+              index < currentIndex
+                ? 'bg-success-50 text-success-600'
+                : index === currentIndex
+                  ? 'bg-brand-500 text-white'
+                  : 'bg-slate-100 text-slate-500'
+            }`}
+          >
+            {stage}
+          </span>
+          {index < CHAIN_STAGES.length - 1 && <span className="text-slate-300">→</span>}
+        </li>
+      ))}
+    </ol>
   );
 }
 
@@ -420,43 +453,38 @@ function ChainViewSection({
   const { state, retry } = useAsyncData(loader, () => false, [loader]);
 
   return (
-    <section>
-      <h2>Chain view</h2>
-      <p className="note">
+    <Card title="Chain view">
+      <p className="mb-4 text-sm text-slate-500">
         BR-031 — the six-stage strip; BR-037 — every document opens in full with its complete event
         log.
       </p>
-      <label htmlFor="cv-chain">Chain ID</label>
-      <input
-        id="cv-chain"
-        value={lookupId}
-        onChange={(e) => {
-          setLookupId(e.target.value);
-          onChainIdChange(e.target.value);
-        }}
-      />
-      <button type="button" onClick={retry} disabled={!lookupId}>
-        Open
-      </button>
+      <div className="mb-4 flex flex-wrap items-end gap-3">
+        <Input
+          id="cv-chain"
+          label="Chain ID"
+          value={lookupId}
+          onChange={(e) => {
+            setLookupId(e.target.value);
+            onChainIdChange(e.target.value);
+          }}
+        />
+        <Button variant="secondary" onClick={retry} disabled={!lookupId} icon={<FiSearch />}>
+          Open
+        </Button>
+      </div>
 
       {lookupId && (
         <AsyncBoundary state={state} onRetry={retry}>
           {(chain: ChainViewDto) => (
-            <div className="chain-strip">
-              <p>
+            <div className="flex flex-col gap-4">
+              <p className="text-sm text-slate-700">
                 <strong>{chain.chainNo}</strong> — stage: <code>{chain.stage}</code>
               </p>
-              <ol className="stage-strip">
-                {['so', 'payment', 'po', 'leg1', 'marg', 'dispatch', 'done'].map((stage) => (
-                  <li key={stage} className={stage === chain.stage ? 'stage-current' : ''}>
-                    {stage}
-                  </li>
-                ))}
-              </ol>
+              <ChainStrip currentStage={chain.stage} />
 
               {chain.so && (
-                <div>
-                  <h3>SO {chain.so.soNo}</h3>
+                <div className="text-sm text-slate-700">
+                  <h3 className="font-semibold text-slate-900">SO {chain.so.soNo}</h3>
                   <p>
                     State: {chain.so.state} · Total: ₹{(chain.so.totalPaise / 100).toFixed(2)} · Pay
                     deadline: {new Date(chain.so.payDeadline).toLocaleString()}
@@ -464,8 +492,8 @@ function ChainViewSection({
                 </div>
               )}
               {chain.po && (
-                <div>
-                  <h3>PO {chain.po.poNo}</h3>
+                <div className="text-sm text-slate-700">
+                  <h3 className="font-semibold text-slate-900">PO {chain.po.poNo}</h3>
                   <p>
                     State: {chain.po.state} · Dispatch due:{' '}
                     {new Date(chain.po.dispatchDueDate).toLocaleString()}
@@ -473,29 +501,29 @@ function ChainViewSection({
                 </div>
               )}
 
-              <h3>Event log</h3>
-              <table>
+              <h3 className="text-sm font-semibold text-slate-900">Event log</h3>
+              <Table>
                 <thead>
                   <tr>
-                    <th>When</th>
-                    <th>Type</th>
-                    <th>Summary</th>
+                    <Th>When</Th>
+                    <Th>Type</Th>
+                    <Th>Summary</Th>
                   </tr>
                 </thead>
                 <tbody>
                   {chain.events.map((event, index) => (
                     <tr key={index}>
-                      <td>{new Date(event.at).toLocaleString()}</td>
-                      <td>{event.type}</td>
-                      <td>{event.summary}</td>
+                      <Td>{new Date(event.at).toLocaleString()}</Td>
+                      <Td>{event.type}</Td>
+                      <Td>{event.summary}</Td>
                     </tr>
                   ))}
                 </tbody>
-              </table>
+              </Table>
             </div>
           )}
         </AsyncBoundary>
       )}
-    </section>
+    </Card>
   );
 }

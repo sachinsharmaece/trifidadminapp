@@ -1,7 +1,8 @@
-import { Link, Route, Routes } from 'react-router-dom';
-import { AuthProvider, useAuth } from '../auth/AuthContext';
+import { Route, Routes } from 'react-router-dom';
+import { AuthProvider } from '../auth/AuthContext';
 import { LoginPage } from '../auth/LoginPage';
 import { RequireAuth } from '../auth/RequireAuth';
+import { AppShell } from '../components/AppShell';
 import { TeamPage } from '../desks/admin/TeamPage';
 import { MastersPage } from '../desks/admin/MastersPage';
 import { RegistrationsPage } from '../desks/admin/RegistrationsPage';
@@ -12,25 +13,6 @@ import { DockDeskPage } from '../desks/dock/DockDeskPage';
 import { RegistersPage } from '../desks/registers/RegistersPage';
 import { PERMISSIONS } from '../lib/permissions';
 
-function Nav() {
-  const { logout } = useAuth();
-  return (
-    <nav className="app-nav">
-      <Link to="/">Team</Link>
-      <Link to="/masters">Masters</Link>
-      <Link to="/registrations">Registrations</Link>
-      <Link to="/chain">Trade chain</Link>
-      <Link to="/accounts">Accounts</Link>
-      <Link to="/marg">Marg</Link>
-      <Link to="/dock">Dock &amp; movements</Link>
-      <Link to="/registers">Registers</Link>
-      <button type="button" onClick={() => void logout()}>
-        Sign out
-      </button>
-    </nav>
-  );
-}
-
 export function App() {
   return (
     <AuthProvider>
@@ -40,8 +22,9 @@ export function App() {
           path="/"
           element={
             <RequireAuth permission={PERMISSIONS.EMPLOYEE_READ}>
-              <Nav />
-              <TeamPage />
+              <AppShell>
+                <TeamPage />
+              </AppShell>
             </RequireAuth>
           }
         />
@@ -49,8 +32,9 @@ export function App() {
           path="/masters"
           element={
             <RequireAuth permission={PERMISSIONS.CATALOG_WRITE}>
-              <Nav />
-              <MastersPage />
+              <AppShell>
+                <MastersPage />
+              </AppShell>
             </RequireAuth>
           }
         />
@@ -58,8 +42,9 @@ export function App() {
           path="/registrations"
           element={
             <RequireAuth permission={PERMISSIONS.ONBOARDING_READ}>
-              <Nav />
-              <RegistrationsPage />
+              <AppShell>
+                <RegistrationsPage />
+              </AppShell>
             </RequireAuth>
           }
         />
@@ -67,8 +52,9 @@ export function App() {
           path="/chain"
           element={
             <RequireAuth permission={PERMISSIONS.CHAIN_READ}>
-              <Nav />
-              <ChainDeskPage />
+              <AppShell>
+                <ChainDeskPage />
+              </AppShell>
             </RequireAuth>
           }
         />
@@ -76,8 +62,9 @@ export function App() {
           path="/accounts"
           element={
             <RequireAuth permission={PERMISSIONS.RECEIPT_READ}>
-              <Nav />
-              <AccountsDeskPage />
+              <AppShell>
+                <AccountsDeskPage />
+              </AppShell>
             </RequireAuth>
           }
         />
@@ -85,8 +72,9 @@ export function App() {
           path="/marg"
           element={
             <RequireAuth permission={PERMISSIONS.MARG_KEY}>
-              <Nav />
-              <MargDeskPage />
+              <AppShell>
+                <MargDeskPage />
+              </AppShell>
             </RequireAuth>
           }
         />
@@ -94,8 +82,9 @@ export function App() {
           path="/dock"
           element={
             <RequireAuth permission={PERMISSIONS.DOCK_INSPECT}>
-              <Nav />
-              <DockDeskPage />
+              <AppShell>
+                <DockDeskPage />
+              </AppShell>
             </RequireAuth>
           }
         />
@@ -103,8 +92,9 @@ export function App() {
           path="/registers"
           element={
             <RequireAuth permission={PERMISSIONS.REGISTER_READ}>
-              <Nav />
-              <RegistersPage />
+              <AppShell>
+                <RegistersPage />
+              </AppShell>
             </RequireAuth>
           }
         />

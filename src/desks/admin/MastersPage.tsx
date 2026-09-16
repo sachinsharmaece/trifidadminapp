@@ -13,6 +13,7 @@ import {
 import { createTehsil, getTehsils } from '../../api/territory';
 import { ApiError } from '../../api/errors';
 import { AsyncBoundary } from '../../components/AsyncBoundary';
+import { DevNote } from '../../components/dev/DevNote';
 import { useAsyncData } from '../../lib/useAsyncData';
 import { useAuth } from '../../auth/AuthContext';
 import { Card } from '../../components/ui/Card';
@@ -26,6 +27,7 @@ export function MastersPage() {
   return (
     <div className="flex flex-col gap-6">
       <h1 className="text-xl font-semibold text-slate-900">Masters</h1>
+      <DevNote screen="admin_masters" />
       <TehsilsSection />
       <ManufacturersSection />
       <ProductsSection />

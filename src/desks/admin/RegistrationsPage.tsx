@@ -11,6 +11,7 @@ import {
 import { getTehsils } from '../../api/territory';
 import { ApiError } from '../../api/errors';
 import { AsyncBoundary } from '../../components/AsyncBoundary';
+import { DevNote } from '../../components/dev/DevNote';
 import { useAsyncData } from '../../lib/useAsyncData';
 import { useAuth } from '../../auth/AuthContext';
 import { Card } from '../../components/ui/Card';
@@ -45,6 +46,7 @@ export function RegistrationsPage() {
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-semibold text-slate-900">Registrations</h1>
       </div>
+      <DevNote screen="admin_registrations" />
 
       <Card>
         <div className="mb-4 max-w-xs">

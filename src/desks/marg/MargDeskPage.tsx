@@ -5,6 +5,7 @@ import { keyMargInvoice } from '../../api/marg';
 import { ApiError } from '../../api/errors';
 import { useAuth } from '../../auth/AuthContext';
 import { Card } from '../../components/ui/Card';
+import { DevNote } from '../../components/dev/DevNote';
 import { Input } from '../../components/ui/Input';
 import { Button } from '../../components/ui/Button';
 import { Badge } from '../../components/ui/Badge';
@@ -58,6 +59,7 @@ export function MargDeskPage() {
   return (
     <div className="flex flex-col gap-6">
       <h1 className="text-xl font-semibold text-slate-900">Billing in Marg</h1>
+      <DevNote screen="admin_marg" />
       <Card>
         <p className="mb-4 text-sm text-slate-500">
           Raise the invoice and e-way bill in Marg first, then key the figures back here. A ₹5

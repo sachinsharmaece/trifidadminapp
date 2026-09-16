@@ -4,6 +4,7 @@ import { FiCheckCircle, FiSend, FiEdit2, FiMinusCircle, FiSearch } from 'react-i
 import { createPo, createSo, editPo, getChain, reduceSoQuantity } from '../../api/chain';
 import { ApiError } from '../../api/errors';
 import { AsyncBoundary } from '../../components/AsyncBoundary';
+import { DevNote } from '../../components/dev/DevNote';
 import { useAsyncData } from '../../lib/useAsyncData';
 import { useAuth } from '../../auth/AuthContext';
 import { Card } from '../../components/ui/Card';
@@ -37,6 +38,7 @@ export function ChainDeskPage() {
   return (
     <div className="flex flex-col gap-6">
       <h1 className="text-xl font-semibold text-slate-900">Trade chain</h1>
+      <DevNote screen="admin_chain" />
       <CreateSoSection onCreated={(soId) => setLastSoId(soId)} />
       {lastSoId && <CreatePoSection soId={lastSoId} />}
       <EditPoSection />

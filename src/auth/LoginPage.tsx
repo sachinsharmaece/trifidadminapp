@@ -6,6 +6,7 @@ import { ApiError } from '../api/errors';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Card } from '../components/ui/Card';
+import { DevNote } from '../components/dev/DevNote';
 
 type Step = 'credentials' | 'mfa';
 
@@ -112,6 +113,7 @@ export function LoginPage() {
     <main className="flex min-h-screen items-center justify-center bg-slate-50 p-4">
       <Card className="w-full max-w-sm">
         <h1 className="mb-4 text-lg font-semibold text-slate-900">Sign in</h1>
+        <DevNote screen="admin_login" />
         <form onSubmit={handleCredentialsSubmit} className="flex flex-col gap-4">
           <Input
             id="email"

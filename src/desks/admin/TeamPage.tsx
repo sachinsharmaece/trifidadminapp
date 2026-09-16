@@ -4,6 +4,7 @@ import { FiUserPlus, FiCalendar } from 'react-icons/fi';
 import { getEmployees, createEmployee, getLaneBoard, createAbsence } from '../../api/admin';
 import { ApiError } from '../../api/errors';
 import { AsyncBoundary } from '../../components/AsyncBoundary';
+import { DevNote } from '../../components/dev/DevNote';
 import { useAsyncData } from '../../lib/useAsyncData';
 import { useAuth } from '../../auth/AuthContext';
 import { ROLE_KEYS } from '../../lib/permissions';
@@ -38,6 +39,7 @@ export function TeamPage() {
   return (
     <div className="flex flex-col gap-6">
       <h1 className="text-xl font-semibold text-slate-900">Team</h1>
+      <DevNote screen="admin_team" />
 
       <Card title="Employees">
         <AsyncBoundary

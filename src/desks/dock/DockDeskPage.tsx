@@ -6,6 +6,7 @@ import { recordMovement } from '../../api/movement';
 import { ApiError } from '../../api/errors';
 import { useAuth } from '../../auth/AuthContext';
 import { Card } from '../../components/ui/Card';
+import { DevNote } from '../../components/dev/DevNote';
 import { Input, Select } from '../../components/ui/Input';
 import { Button } from '../../components/ui/Button';
 
@@ -27,6 +28,7 @@ export function DockDeskPage() {
   return (
     <div className="flex flex-col gap-6">
       <h1 className="text-xl font-semibold text-slate-900">Dock &amp; movements</h1>
+      <DevNote screen="admin_dock" />
       <InspectionSection />
       <ApplyInspectionSection />
       <MovementSection />

@@ -10,6 +10,8 @@ import {
   FiFileText,
   FiTruck,
   FiBarChart2,
+  FiShoppingCart,
+  FiTrendingUp,
   FiLogOut,
   FiMenu,
   FiX,
@@ -34,6 +36,13 @@ const NAV_ITEMS: NavItem[] = [
     permission: PERMISSIONS.ONBOARDING_READ,
   },
   { to: '/chain', label: 'Trade chain', icon: <FiGitBranch />, permission: PERMISSIONS.CHAIN_READ },
+  {
+    to: '/purchase',
+    label: 'Purchase',
+    icon: <FiShoppingCart />,
+    permission: PERMISSIONS.DEMAND_READ,
+  },
+  { to: '/sales', label: 'Sales', icon: <FiTrendingUp />, permission: PERMISSIONS.CHAIN_READ },
   {
     to: '/accounts',
     label: 'Accounts',

@@ -73,6 +73,22 @@ export const devNotes = {
     tradeContext:
       'A read-only summary drawn from the accounts and chain desks; nothing is entered here directly.',
   },
+  purchase_desk: {
+    purpose:
+      'Where Purchase staff work the seller side of the business — which asks have no seller lined up yet, replacement sellers found after one fails to supply, and ageing on stock the dock has rejected.',
+    tradeContext:
+      "This is a staff-only working screen — buyers and sellers never see it, and by design it never shows a buyer's name or a rupee figure, only counts and codes.",
+    notBuiltYet:
+      'the coverage map (which companies are covered in which areas) and a full product-by-product breakdown are built as raw data only so far — there is no visual map or chart yet, just tables of numbers.',
+  },
+  sales_desk: {
+    purpose:
+      'Where Sales staff work the buyer side — who is waiting on a payment, who was promised a call-back, who is waiting on a rate, and where demand is picking up.',
+    tradeContext:
+      'A new buyer is automatically assigned to a staff member here the moment his first order is placed — before that, he sits in a general queue nobody owns yet.',
+    notBuiltYet:
+      "the 'market is picking up' signal only looks at the last two weeks of activity and does not yet suggest what to do about it — a staff member still has to decide who to call.",
+  },
 } satisfies Record<string, DevNoteContent>;
 
 export type DevNoteKey = keyof typeof devNotes;

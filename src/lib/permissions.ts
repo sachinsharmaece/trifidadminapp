@@ -30,6 +30,17 @@ export const PERMISSIONS = {
   DOCK_INSPECT: 'dock:inspect',
   MOVEMENT_WRITE: 'movement:write',
   REGISTER_READ: 'register:read',
+  // M6 additions.
+  DEMAND_READ: 'demand:read',
+  ABSORPTION_READ: 'absorption:read',
+  NON_ORDER_REASON_RECORD: 'non_order_reason:record',
+  PULSE_READ: 'pulse:read',
+  RETENTION_READ: 'retention:read',
+  COMPLAINT_READ: 'complaint:read',
+  MSP_RESPOND: 'msp:respond',
+  CONDUCT_RECORD: 'conduct:record',
+  CONDUCT_ADVANCE: 'conduct:advance',
+  CONDUCT_DISPUTES_READ: 'conduct:disputes_read',
 } as const;
 
 // Copied from trifid-serverapp/src/config/permissions.ts (BR-260). There is

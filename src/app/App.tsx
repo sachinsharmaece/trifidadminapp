@@ -11,6 +11,8 @@ import { AccountsDeskPage } from '../desks/accounts/AccountsDeskPage';
 import { MargDeskPage } from '../desks/marg/MargDeskPage';
 import { DockDeskPage } from '../desks/dock/DockDeskPage';
 import { RegistersPage } from '../desks/registers/RegistersPage';
+import { PurchaseDeskPage } from '../desks/purchase/PurchaseDeskPage';
+import { SalesDeskPage } from '../desks/sales/SalesDeskPage';
 import { PERMISSIONS } from '../lib/permissions';
 
 export function App() {
@@ -84,6 +86,26 @@ export function App() {
             <RequireAuth permission={PERMISSIONS.DOCK_INSPECT}>
               <AppShell>
                 <DockDeskPage />
+              </AppShell>
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/purchase"
+          element={
+            <RequireAuth permission={PERMISSIONS.DEMAND_READ}>
+              <AppShell>
+                <PurchaseDeskPage />
+              </AppShell>
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/sales"
+          element={
+            <RequireAuth permission={PERMISSIONS.CHAIN_READ}>
+              <AppShell>
+                <SalesDeskPage />
               </AppShell>
             </RequireAuth>
           }

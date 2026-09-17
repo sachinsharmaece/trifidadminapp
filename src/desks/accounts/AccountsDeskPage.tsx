@@ -2,7 +2,6 @@ import { useCallback, useState } from 'react';
 import type { FormEvent } from 'react';
 import { FiCheck, FiSearch, FiPlay, FiRefreshCw, FiLock, FiMoon } from 'react-icons/fi';
 import {
-  allocateUpcomingReceipt,
   buildPaymentRun,
   getBuyerLedger,
   getPoPayable,
@@ -59,11 +58,11 @@ function UpcomingReceiptsSection() {
     <Card title="Upcoming receipts">
       <p className="mb-4 text-sm text-slate-500">
         BR-011/INV-15 — a buyer&apos;s claim. Not money yet — it touches no bank book and no ledger
-        until it is allocated and posted below.
+        until Sales allocates it to specific SOs (see the Sales desk, IC-13) and it is posted below.
       </p>
       <AsyncBoundary state={state} onRetry={retry} emptyMessage="Nothing waiting.">
         {(items: UpcomingReceiptListItem[]) => (
-          <Table className="mb-4">
+          <Table>
             <thead>
               <tr>
                 <Th>ID</Th>
@@ -85,69 +84,7 @@ function UpcomingReceiptsSection() {
           </Table>
         )}
       </AsyncBoundary>
-      <AllocateForm onDone={retry} />
     </Card>
-  );
-}
-
-function AllocateForm({ onDone }: { onDone: () => void }) {
-  const { callApi } = useAuth();
-  const [receiptId, setReceiptId] = useState('');
-  const [soIdsText, setSoIdsText] = useState('');
-  const [error, setError] = useState<string | null>(null);
-  const [submitting, setSubmitting] = useState(false);
-
-  async function handleSubmit(event: FormEvent): Promise<void> {
-    event.preventDefault();
-    setError(null);
-    setSubmitting(true);
-    try {
-      const soIds = soIdsText
-        .split(',')
-        .map((id) => id.trim())
-        .filter(Boolean);
-      await callApi((token) => allocateUpcomingReceipt(token, receiptId, soIds));
-      setReceiptId('');
-      setSoIdsText('');
-      onDone();
-    } catch (submitError) {
-      setError(submitError instanceof ApiError ? submitError.message : 'Could not allocate.');
-    } finally {
-      setSubmitting(false);
-    }
-  }
-
-  return (
-    <form
-      onSubmit={handleSubmit}
-      className="flex max-w-md flex-col gap-4 rounded-md border border-slate-200 p-4"
-    >
-      <h3 className="text-sm font-semibold text-slate-900">
-        Allocate — BR-012, Sales knows which order he meant
-      </h3>
-      <Input
-        id="al-receipt"
-        label="Upcoming receipt ID"
-        value={receiptId}
-        onChange={(e) => setReceiptId(e.target.value)}
-        required
-      />
-      <Input
-        id="al-sos"
-        label="SO IDs (comma-separated)"
-        value={soIdsText}
-        onChange={(e) => setSoIdsText(e.target.value)}
-        required
-      />
-      {error && (
-        <p role="alert" className="text-sm text-danger-500">
-          {error}
-        </p>
-      )}
-      <Button type="submit" loading={submitting} icon={<FiCheck />}>
-        Allocate
-      </Button>
-    </form>
   );
 }
 

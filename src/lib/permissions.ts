@@ -54,6 +54,10 @@ export const PERMISSIONS = {
   DISPUTE_RECOVERY_READ: 'dispute:recovery_read',
   LIFELINE_GRANT: 'lifeline:grant',
   EXCEPTION_READ: 'exception:read',
+  // M8 additions.
+  NOTIFICATION_LOG_READ: 'notification:log_read',
+  FUNNEL_READ: 'funnel:read',
+  FOUNDER_OVERVIEW_READ: 'founder:overview_read',
 } as const;
 
 // Copied from trifid-serverapp/src/config/permissions.ts (BR-260). There is

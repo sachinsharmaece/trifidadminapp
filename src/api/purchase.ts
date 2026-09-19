@@ -104,3 +104,28 @@ export interface SellerRecoveryItem {
 export function getSellerRecoveryQueue(accessToken: string): Promise<SellerRecoveryItem[]> {
   return apiFetch('/staff/purchase/dispute-recovery', { accessToken });
 }
+
+// M8, BR-275 — funnel and leak analytics. Counts, hours and percentages only:
+// no rupee figure and no buyer identity on any Purchase surface (BR-067/BR-069).
+// Every metric carries its own plain-words formula, which the screen shows.
+export interface FunnelMetric {
+  key: string;
+  label: string;
+  formula: string;
+  unit: 'count' | 'percent' | 'hours';
+  value: number | null;
+  numerator: number | null;
+  denominator: number | null;
+  caveat: string | null;
+}
+
+export interface FunnelReport {
+  windowDays: number;
+  from: string;
+  to: string;
+  metrics: FunnelMetric[];
+}
+
+export function getFunnelReport(accessToken: string): Promise<FunnelReport> {
+  return apiFetch('/staff/purchase/funnel', { accessToken });
+}

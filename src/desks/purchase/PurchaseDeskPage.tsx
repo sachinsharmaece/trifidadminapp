@@ -3,11 +3,14 @@ import { FiFlag } from 'react-icons/fi';
 import {
   getActiveDemandList,
   getAbsorptionQueue,
+  getFunnelReport,
   getReturnNoteAgeing,
   getSellerRecoveryQueue,
   postNonOrderReason,
   type ActiveDemandItem,
 } from '../../api/purchase';
+import { PERMISSIONS } from '../../lib/permissions';
+import { FunnelMetricsGrid } from './FunnelMetrics';
 import { AsyncBoundary } from '../../components/AsyncBoundary';
 import { useAsyncData } from '../../lib/useAsyncData';
 import { useAuth } from '../../auth/AuthContext';
@@ -34,15 +37,43 @@ const SUPPLY_GAP_CODES = [
  * page ever shows a buyer's identity or a rupee figure.
  */
 export function PurchaseDeskPage() {
+  const { hasPermission } = useAuth();
   return (
     <div className="flex flex-col gap-6">
       <h1 className="text-xl font-semibold text-slate-900">Purchase</h1>
       <DevNote screen="purchase_desk" />
+      {hasPermission(PERMISSIONS.FUNNEL_READ) && <FunnelSection />}
       <ActiveDemandSection />
       <AbsorptionQueueSection />
       <ReturnAgeingSection />
       <SellerRecoverySection />
     </div>
+  );
+}
+
+/**
+ * New — M8, BR-275. "Purchase is measured on leaks closed, not orders placed."
+ * Each figure states its own formula; the window is fixed, not a setting.
+ */
+function FunnelSection() {
+  const { callApi } = useAuth();
+  const loader = useCallback(() => callApi((token) => getFunnelReport(token)), [callApi]);
+  const { state, retry } = useAsyncData(loader, () => false, [loader]);
+
+  return (
+    <Card title="Leaks closed — funnel and leak analytics (BR-275)">
+      <AsyncBoundary state={state} onRetry={retry}>
+        {(report) => (
+          <>
+            <p className="mb-4 text-sm text-slate-500">
+              The last {report.windowDays} days, counted from live data. Counts, hours and
+              percentages only — no rupee figure and no buyer identity (BR-067, BR-069).
+            </p>
+            <FunnelMetricsGrid report={report} />
+          </>
+        )}
+      </AsyncBoundary>
+    </Card>
   );
 }
 

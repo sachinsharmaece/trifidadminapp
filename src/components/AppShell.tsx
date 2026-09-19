@@ -14,6 +14,8 @@ import {
   FiTrendingUp,
   FiPackage,
   FiSliders,
+  FiBell,
+  FiEye,
   FiLogOut,
   FiMenu,
   FiX,
@@ -75,6 +77,18 @@ const NAV_ITEMS: NavItem[] = [
     label: 'Controller',
     icon: <FiSliders />,
     permission: PERMISSIONS.EXCEPTION_READ,
+  },
+  {
+    to: '/notifications',
+    label: 'Notifications',
+    icon: <FiBell />,
+    permission: PERMISSIONS.NOTIFICATION_LOG_READ,
+  },
+  {
+    to: '/founder',
+    label: 'Founder',
+    icon: <FiEye />,
+    permission: PERMISSIONS.FOUNDER_OVERVIEW_READ,
   },
 ];
 

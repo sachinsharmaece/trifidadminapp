@@ -117,3 +117,28 @@ export function getSellerLedger(
 ): Promise<{ ledgerPaise: number }> {
   return apiFetch(`/staff/sellers/${sellerId}/ledger`, { accessToken });
 }
+
+// M7, BR-023 — the one genuine new Accounts gap: the field existed since M4
+// with nothing reading it.
+export interface GstUnfiledItem {
+  sellerBillId: string;
+  billNo: string;
+  sellerId: string;
+  totalPaise: number;
+  date: string;
+}
+
+export function getGstUnfiledQueue(accessToken: string): Promise<GstUnfiledItem[]> {
+  return apiFetch('/staff/accounts/gst-unfiled', { accessToken });
+}
+
+export function markSellerBillFiled(
+  accessToken: string,
+  sellerBillId: string,
+): Promise<{ filed: boolean }> {
+  return apiFetch(`/staff/accounts/seller-bills/${sellerBillId}/mark-filed`, {
+    method: 'POST',
+    body: {},
+    accessToken,
+  });
+}

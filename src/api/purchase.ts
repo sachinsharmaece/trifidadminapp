@@ -91,3 +91,16 @@ export interface ReturnNoteAgeingItem {
 export function getReturnNoteAgeing(accessToken: string): Promise<ReturnNoteAgeingItem[]> {
   return apiFetch('/staff/purchase/return-notes/ageing', { accessToken });
 }
+
+// M7, BR-206 — the seller-recovery half of a Controller-decided dispute.
+// Never the buyer, never the buyer's own note (see purchase.service.ts).
+export interface SellerRecoveryItem {
+  complaintId: string;
+  sellerId: string;
+  debitNoteId: string | null;
+  decidedAt: string | null;
+}
+
+export function getSellerRecoveryQueue(accessToken: string): Promise<SellerRecoveryItem[]> {
+  return apiFetch('/staff/purchase/dispute-recovery', { accessToken });
+}

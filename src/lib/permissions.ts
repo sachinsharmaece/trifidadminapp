@@ -41,6 +41,19 @@ export const PERMISSIONS = {
   CONDUCT_RECORD: 'conduct:record',
   CONDUCT_ADVANCE: 'conduct:advance',
   CONDUCT_DISPUTES_READ: 'conduct:disputes_read',
+  // M7 additions.
+  LOGISTICS_READ: 'logistics:read',
+  TRANSPORTER_READ: 'transporter:read',
+  TRANSPORTER_WRITE: 'transporter:write',
+  CONSOLIDATION_WRITE: 'consolidation:write',
+  RETURN_NOTE_CLOSE: 'return_note:close',
+  GST_UNFILED_READ: 'gst_unfiled:read',
+  GST_MARK_FILED: 'gst_unfiled:mark_filed',
+  DISPUTE_READ: 'dispute:read',
+  DISPUTE_DECIDE: 'dispute:decide',
+  DISPUTE_RECOVERY_READ: 'dispute:recovery_read',
+  LIFELINE_GRANT: 'lifeline:grant',
+  EXCEPTION_READ: 'exception:read',
 } as const;
 
 // Copied from trifid-serverapp/src/config/permissions.ts (BR-260). There is

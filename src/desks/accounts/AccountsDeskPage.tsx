@@ -4,9 +4,11 @@ import { FiCheck, FiSearch, FiPlay, FiRefreshCw, FiLock, FiMoon } from 'react-ic
 import {
   buildPaymentRun,
   getBuyerLedger,
+  getGstUnfiledQueue,
   getPoPayable,
   getSellerLedger,
   getUpcomingReceipts,
+  markSellerBillFiled,
   postBankCredit,
   releasePaymentRun,
   repostBankEntry,
@@ -45,6 +47,7 @@ export function AccountsDeskPage() {
       <RepostSection />
       <DayCloseSection />
       <LedgersSection />
+      <GstUnfiledSection />
     </div>
   );
 }
@@ -537,6 +540,57 @@ function LedgersSection() {
           )}
         </div>
       </div>
+    </Card>
+  );
+}
+
+// New — M7, BR-023. The one genuine new Accounts gap: the field existed
+// since M4 (SellerBill.filed) with nothing reading it until now.
+function GstUnfiledSection() {
+  const { callApi } = useAuth();
+  const loader = useCallback(() => callApi((token) => getGstUnfiledQueue(token)), [callApi]);
+  const { state, retry } = useAsyncData(loader, (items) => items.length === 0, [loader]);
+
+  return (
+    <Card title="GST — unfiled bills (BR-023)">
+      <AsyncBoundary state={state} onRetry={retry} emptyMessage="Nothing unfiled.">
+        {(items) => (
+          <Table>
+            <thead>
+              <tr>
+                <Th>Bill</Th>
+                <Th>Seller</Th>
+                <Th>Amount</Th>
+                <Th>Date</Th>
+                <Th />
+              </tr>
+            </thead>
+            <tbody>
+              {items.map((item) => (
+                <tr key={item.sellerBillId}>
+                  <Td>{item.billNo}</Td>
+                  <Td>{item.sellerId.slice(-6)}</Td>
+                  <Td>₹{(item.totalPaise / 100).toFixed(2)}</Td>
+                  <Td>{new Date(item.date).toLocaleDateString()}</Td>
+                  <Td>
+                    <Button
+                      variant="secondary"
+                      icon={<FiCheck />}
+                      onClick={() =>
+                        void callApi((token) => markSellerBillFiled(token, item.sellerBillId)).then(
+                          () => retry(),
+                        )
+                      }
+                    >
+                      Mark filed
+                    </Button>
+                  </Td>
+                </tr>
+              ))}
+            </tbody>
+          </Table>
+        )}
+      </AsyncBoundary>
     </Card>
   );
 }

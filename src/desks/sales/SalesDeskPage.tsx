@@ -242,35 +242,45 @@ function MspQueueSection() {
   );
 }
 
+// Corrected M7 (QR-048/BR-206) — Controller decides fault; this is the
+// buyer-conversation half only, never the seller or the seller's number.
+// `transit_damage` (`'unhandled'`) is shown separately, visibly unresolved
+// (QR-050).
 function ComplaintQueueSection() {
   const { callApi } = useAuth();
   const loader = useCallback(() => callApi((token) => getComplaintQueue(token)), [callApi]);
   const { state, retry } = useAsyncData(loader, (items) => items.length === 0, [loader]);
 
   return (
-    <Card title="Complaints routed here (BR-201)">
-      <AsyncBoundary state={state} onRetry={retry} emptyMessage="Nothing routed to Sales.">
+    <Card title="Complaints — buyer conversation (BR-201/BR-206)">
+      <AsyncBoundary state={state} onRetry={retry} emptyMessage="No complaints on file.">
         {(items) => (
           <Table>
             <thead>
               <tr>
                 <Th>Order</Th>
                 <Th>Category</Th>
-                <Th>Destination</Th>
+                <Th>Status</Th>
+                <Th>Outcome to relay</Th>
               </tr>
             </thead>
             <tbody>
-              {items
-                .filter((i) => i.destination === 'sales')
-                .map((item) => (
-                  <tr key={item.complaintId}>
-                    <Td>{item.soId.slice(-6)}</Td>
-                    <Td>{item.category.replaceAll('_', ' ')}</Td>
-                    <Td>
-                      <Badge>{item.destination}</Badge>
-                    </Td>
-                  </tr>
-                ))}
+              {items.map((item) => (
+                <tr key={item.complaintId}>
+                  <Td>{item.soId.slice(-6)}</Td>
+                  <Td>{item.category.replaceAll('_', ' ')}</Td>
+                  <Td>
+                    <Badge>
+                      {item.destination === 'unhandled'
+                        ? 'unhandled — QR-050'
+                        : item.disposition
+                          ? 'decided'
+                          : 'awaiting Controller'}
+                    </Badge>
+                  </Td>
+                  <Td>{item.resolutionNote ?? '—'}</Td>
+                </tr>
+              ))}
             </tbody>
           </Table>
         )}

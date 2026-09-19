@@ -13,6 +13,8 @@ import { DockDeskPage } from '../desks/dock/DockDeskPage';
 import { RegistersPage } from '../desks/registers/RegistersPage';
 import { PurchaseDeskPage } from '../desks/purchase/PurchaseDeskPage';
 import { SalesDeskPage } from '../desks/sales/SalesDeskPage';
+import { LogisticsDeskPage } from '../desks/logistics/LogisticsDeskPage';
+import { ControllerDeskPage } from '../desks/controller/ControllerDeskPage';
 import { PERMISSIONS } from '../lib/permissions';
 
 export function App() {
@@ -116,6 +118,26 @@ export function App() {
             <RequireAuth permission={PERMISSIONS.REGISTER_READ}>
               <AppShell>
                 <RegistersPage />
+              </AppShell>
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/logistics"
+          element={
+            <RequireAuth permission={PERMISSIONS.LOGISTICS_READ}>
+              <AppShell>
+                <LogisticsDeskPage />
+              </AppShell>
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/controller"
+          element={
+            <RequireAuth permission={PERMISSIONS.EXCEPTION_READ}>
+              <AppShell>
+                <ControllerDeskPage />
               </AppShell>
             </RequireAuth>
           }

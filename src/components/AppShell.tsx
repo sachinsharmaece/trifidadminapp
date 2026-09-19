@@ -12,6 +12,8 @@ import {
   FiBarChart2,
   FiShoppingCart,
   FiTrendingUp,
+  FiPackage,
+  FiSliders,
   FiLogOut,
   FiMenu,
   FiX,
@@ -61,6 +63,18 @@ const NAV_ITEMS: NavItem[] = [
     label: 'Registers',
     icon: <FiBarChart2 />,
     permission: PERMISSIONS.REGISTER_READ,
+  },
+  {
+    to: '/logistics',
+    label: 'Logistics',
+    icon: <FiPackage />,
+    permission: PERMISSIONS.LOGISTICS_READ,
+  },
+  {
+    to: '/controller',
+    label: 'Controller',
+    icon: <FiSliders />,
+    permission: PERMISSIONS.EXCEPTION_READ,
   },
 ];
 

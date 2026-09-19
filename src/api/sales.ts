@@ -35,13 +35,17 @@ export function getRetention(accessToken: string): Promise<RetentionCohort[]> {
   return apiFetch('/staff/sales/retention', { accessToken });
 }
 
+// Corrected M7 (QR-048/BR-206) — Controller decides disputes, not an
+// execution desk directly; `'unhandled'` is `transit_damage` (QR-050).
 export interface ComplaintQueueItem {
   complaintId: string;
   soId: string;
   category: string;
-  destination: 'purchase' | 'sales' | 'logistics';
+  destination: 'controller' | 'unhandled';
   state: string;
   createdAt: string;
+  disposition: string | null;
+  resolutionNote: string | null;
 }
 
 export function getComplaintQueue(accessToken: string): Promise<ComplaintQueueItem[]> {

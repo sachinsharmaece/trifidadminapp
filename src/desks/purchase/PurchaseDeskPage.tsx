@@ -4,6 +4,7 @@ import {
   getActiveDemandList,
   getAbsorptionQueue,
   getReturnNoteAgeing,
+  getSellerRecoveryQueue,
   postNonOrderReason,
   type ActiveDemandItem,
 } from '../../api/purchase';
@@ -40,6 +41,7 @@ export function PurchaseDeskPage() {
       <ActiveDemandSection />
       <AbsorptionQueueSection />
       <ReturnAgeingSection />
+      <SellerRecoverySection />
     </div>
   );
 }
@@ -234,6 +236,42 @@ function ReturnAgeingSection() {
                       </Badge>
                     )}
                   </Td>
+                </tr>
+              ))}
+            </tbody>
+          </Table>
+        )}
+      </AsyncBoundary>
+    </Card>
+  );
+}
+
+// New — M7, BR-206. The seller-recovery half of a Controller-decided
+// dispute: never the buyer, never the buyer's own note (that is Sales's
+// complaint queue).
+function SellerRecoverySection() {
+  const { callApi } = useAuth();
+  const loader = useCallback(() => callApi((token) => getSellerRecoveryQueue(token)), [callApi]);
+  const { state, retry } = useAsyncData(loader, (items) => items.length === 0, [loader]);
+
+  return (
+    <Card title="Seller recovery — Controller-decided disputes (BR-206)">
+      <AsyncBoundary state={state} onRetry={retry} emptyMessage="Nothing to recover.">
+        {(items) => (
+          <Table>
+            <thead>
+              <tr>
+                <Th>Seller</Th>
+                <Th>Debit note</Th>
+                <Th>Decided</Th>
+              </tr>
+            </thead>
+            <tbody>
+              {items.map((item) => (
+                <tr key={item.complaintId}>
+                  <Td>{item.sellerId.slice(-6)}</Td>
+                  <Td>{item.debitNoteId ? item.debitNoteId.slice(-6) : '—'}</Td>
+                  <Td>{item.decidedAt ? new Date(item.decidedAt).toLocaleDateString() : '—'}</Td>
                 </tr>
               ))}
             </tbody>

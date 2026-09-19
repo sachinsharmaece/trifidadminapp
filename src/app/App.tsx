@@ -15,6 +15,8 @@ import { PurchaseDeskPage } from '../desks/purchase/PurchaseDeskPage';
 import { SalesDeskPage } from '../desks/sales/SalesDeskPage';
 import { LogisticsDeskPage } from '../desks/logistics/LogisticsDeskPage';
 import { ControllerDeskPage } from '../desks/controller/ControllerDeskPage';
+import { NotificationLogPage } from '../desks/notifications/NotificationLogPage';
+import { FounderDeskPage } from '../desks/founder/FounderDeskPage';
 import { PERMISSIONS } from '../lib/permissions';
 
 export function App() {
@@ -138,6 +140,26 @@ export function App() {
             <RequireAuth permission={PERMISSIONS.EXCEPTION_READ}>
               <AppShell>
                 <ControllerDeskPage />
+              </AppShell>
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/notifications"
+          element={
+            <RequireAuth permission={PERMISSIONS.NOTIFICATION_LOG_READ}>
+              <AppShell>
+                <NotificationLogPage />
+              </AppShell>
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/founder"
+          element={
+            <RequireAuth permission={PERMISSIONS.FOUNDER_OVERVIEW_READ}>
+              <AppShell>
+                <FounderDeskPage />
               </AppShell>
             </RequireAuth>
           }

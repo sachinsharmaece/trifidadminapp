@@ -488,8 +488,11 @@ function ChainViewSection({
                 <div className="text-sm text-slate-700">
                   <h3 className="font-semibold text-slate-900">SO {chain.so.soNo}</h3>
                   <p>
-                    State: {chain.so.state} · Total: ₹{(chain.so.totalPaise / 100).toFixed(2)} · Pay
-                    deadline: {new Date(chain.so.payDeadline).toLocaleString()}
+                    State: {chain.so.state}
+                    {chain.so.totalPaise !== undefined &&
+                      ` · Total: ₹${(chain.so.totalPaise / 100).toFixed(2)}`}
+                    {chain.so.payDeadline !== undefined &&
+                      ` · Pay deadline: ${new Date(chain.so.payDeadline).toLocaleString()}`}
                   </p>
                 </div>
               )}
@@ -517,7 +520,7 @@ function ChainViewSection({
                     <tr key={index}>
                       <Td>{new Date(event.at).toLocaleString()}</Td>
                       <Td>{event.type}</Td>
-                      <Td>{event.summary}</Td>
+                      <Td>{event.summary ?? '—'}</Td>
                     </tr>
                   ))}
                 </tbody>

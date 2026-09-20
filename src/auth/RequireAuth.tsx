@@ -7,7 +7,8 @@ import { ErrorState } from '../components/ui/ErrorState';
 interface RequireAuthProps {
   children: ReactNode;
   // TD-007 — checked as a permission string, never a role name.
-  permission?: string;
+  // Several strings means "any one of them" (e.g. the Registers screen, one register per desk).
+  permission?: string | string[];
 }
 
 /**
@@ -32,7 +33,8 @@ export function RequireAuth({ children, permission }: RequireAuthProps) {
     return <Navigate to="/login" replace />;
   }
 
-  if (permission && !hasPermission(permission)) {
+  const required = permission === undefined ? [] : [permission].flat();
+  if (required.length > 0 && !required.some((p) => hasPermission(p))) {
     return (
       <main className="flex min-h-screen items-center justify-center p-6">
         <div className="w-full max-w-md">

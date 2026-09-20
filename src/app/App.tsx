@@ -107,7 +107,7 @@ export function App() {
         <Route
           path="/sales"
           element={
-            <RequireAuth permission={PERMISSIONS.CHAIN_READ}>
+            <RequireAuth permission={PERMISSIONS.SALES_WORKLIST_READ}>
               <AppShell>
                 <SalesDeskPage />
               </AppShell>
@@ -117,7 +117,9 @@ export function App() {
         <Route
           path="/registers"
           element={
-            <RequireAuth permission={PERMISSIONS.REGISTER_READ}>
+            <RequireAuth
+              permission={[PERMISSIONS.REGISTER_SALES_READ, PERMISSIONS.REGISTER_PURCHASE_READ]}
+            >
               <AppShell>
                 <RegistersPage />
               </AppShell>

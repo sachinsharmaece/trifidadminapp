@@ -4,6 +4,7 @@ import { AsyncBoundary } from '../../components/AsyncBoundary';
 import { DevNote } from '../../components/dev/DevNote';
 import { useAsyncData } from '../../lib/useAsyncData';
 import { useAuth } from '../../auth/AuthContext';
+import { PERMISSIONS } from '../../lib/permissions';
 import { Card } from '../../components/ui/Card';
 import { Table, Th, Td } from '../../components/ui/Table';
 import { Badge } from '../../components/ui/Badge';
@@ -11,12 +12,14 @@ import type { PurchaseRegisterRow, SalesRegisterRow } from '../../api/dto';
 
 /** WF-08 — an SO enters the sales register the moment leg 2 dispatches. */
 export function RegistersPage() {
+  const { hasPermission } = useAuth();
+  // CH §17.3 — each desk sees only its own register; the server refuses the other one.
   return (
     <div className="flex flex-col gap-6">
       <h1 className="text-xl font-semibold text-slate-900">Registers</h1>
       <DevNote screen="admin_registers" />
-      <SalesRegisterSection />
-      <PurchaseRegisterSection />
+      {hasPermission(PERMISSIONS.REGISTER_SALES_READ) && <SalesRegisterSection />}
+      {hasPermission(PERMISSIONS.REGISTER_PURCHASE_READ) && <PurchaseRegisterSection />}
     </div>
   );
 }

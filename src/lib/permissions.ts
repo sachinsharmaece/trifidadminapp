@@ -14,6 +14,9 @@ export const PERMISSIONS = {
   MARGIN_MATRIX_READ: 'margin_matrix:read',
   MARGIN_MATRIX_WRITE: 'margin_matrix:write',
   CHAIN_READ: 'chain:read',
+  // M9 — the un-projected chain view; every other holder of `chain:read` gets only their own desk's side.
+  CHAIN_READ_FULL: 'chain:read_full',
+  SALES_WORKLIST_READ: 'sales_worklist:read',
   SO_CREATE: 'so:create',
   SO_REDUCE_QUANTITY: 'so:reduce_quantity',
   PO_CREATE: 'po:create',
@@ -30,6 +33,9 @@ export const PERMISSIONS = {
   DOCK_INSPECT: 'dock:inspect',
   MOVEMENT_WRITE: 'movement:write',
   REGISTER_READ: 'register:read',
+  // M9 — each desk sees only its own register (CH §17.3).
+  REGISTER_SALES_READ: 'register_sales:read',
+  REGISTER_PURCHASE_READ: 'register_purchase:read',
   // M6 additions.
   DEMAND_READ: 'demand:read',
   ABSORPTION_READ: 'absorption:read',

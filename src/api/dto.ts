@@ -93,23 +93,25 @@ export interface CreateSoResult {
 export interface ChainViewDto {
   chainNo: string;
   stage: 'so' | 'payment' | 'po' | 'leg1' | 'marg' | 'dispatch' | 'done';
+  // M9 — each desk receives only its own side (CH §17.3), so every side-specific
+  // field is optional here: Purchase gets no buyer/value, Sales no seller, Logistics neither.
   so: {
     soNo: string;
     state: string;
-    totalPaise: number;
-    buyerId: string;
-    sellerId: string;
-    payDeadline: string;
+    totalPaise?: number;
+    buyerId?: string;
+    sellerId?: string;
+    payDeadline?: string;
   } | null;
   po: {
     poNo: string;
     state: string;
-    sellerId: string;
+    sellerId?: string;
     dispatchDueDate: string;
   } | null;
   events: Array<{
     type: string;
-    summary: string;
+    summary?: string;
     at: string;
     reason?: string;
   }>;

@@ -40,6 +40,10 @@ export interface ProductDto {
   brand: string;
   hsn: string;
   class: 'A' | 'B' | 'C';
+  technical?: string;
+  manufacturerId?: string;
+  manufacturerName?: string;
+  active?: boolean;
 }
 
 export interface SkuDto {

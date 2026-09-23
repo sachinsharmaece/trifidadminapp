@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import type { ReactNode } from 'react';
-import { NavLink } from 'react-router-dom';
+import { NavLink, useLocation } from 'react-router-dom';
 import {
   FiUsers,
   FiDatabase,
@@ -19,21 +19,40 @@ import {
   FiLogOut,
   FiMenu,
   FiX,
+  FiChevronDown,
+  FiChevronRight,
 } from 'react-icons/fi';
 import { useAuth } from '../auth/AuthContext';
 import { PERMISSIONS } from '../lib/permissions';
 
-interface NavItem {
+interface NavChild {
   to: string;
+  label: string;
+}
+
+interface NavItem {
+  to?: string;
   label: string;
   icon: ReactNode;
   // Several strings means "any one of them".
   permission: string | string[];
+  // A group with no `to` of its own — expands to show its children instead
+  // of navigating (e.g. Manage → Products / Manufacturers / Tehsils).
+  children?: NavChild[];
 }
 
 const NAV_ITEMS: NavItem[] = [
   { to: '/', label: 'Team', icon: <FiUsers />, permission: PERMISSIONS.EMPLOYEE_READ },
-  { to: '/masters', label: 'Masters', icon: <FiDatabase />, permission: PERMISSIONS.CATALOG_WRITE },
+  {
+    label: 'Manage',
+    icon: <FiDatabase />,
+    permission: PERMISSIONS.CATALOG_WRITE,
+    children: [
+      { to: '/manage/products', label: 'Products' },
+      { to: '/manage/manufacturers', label: 'Manufacturers' },
+      { to: '/manage/tehsils', label: 'Tehsils' },
+    ],
+  },
   {
     to: '/registrations',
     label: 'Registrations',
@@ -98,31 +117,81 @@ const NAV_ITEMS: NavItem[] = [
   },
 ];
 
+const navLinkClasses = ({ isActive }: { isActive: boolean }) =>
+  `flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors ${
+    isActive
+      ? 'bg-brand-50 text-brand-700'
+      : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+  }`;
+
+function NavGroup({
+  item,
+  onNavigate,
+}: {
+  item: NavItem & { children: NavChild[] };
+  onNavigate?: () => void;
+}) {
+  const location = useLocation();
+  const containsActiveChild = item.children.some((child) => location.pathname.startsWith(child.to));
+  const [open, setOpen] = useState(containsActiveChild);
+
+  return (
+    <div>
+      <button
+        type="button"
+        onClick={() => setOpen((current) => !current)}
+        aria-expanded={open}
+        className={`flex w-full items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors ${
+          containsActiveChild
+            ? 'text-brand-700'
+            : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+        }`}
+      >
+        <span className="text-lg" aria-hidden>
+          {item.icon}
+        </span>
+        <span className="flex-1 text-left">{item.label}</span>
+        <span aria-hidden>{open ? <FiChevronDown /> : <FiChevronRight />}</span>
+      </button>
+      {open && (
+        <div className="ml-4 mt-1 flex flex-col gap-1 border-l border-slate-200 pl-3">
+          {item.children.map((child) => (
+            <NavLink key={child.to} to={child.to} onClick={onNavigate} className={navLinkClasses}>
+              {child.label}
+            </NavLink>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function SidebarLinks({ onNavigate }: { onNavigate?: () => void }) {
   const { hasPermission } = useAuth();
   return (
     <nav className="flex flex-1 flex-col gap-1 overflow-y-auto p-3">
       {NAV_ITEMS.filter((item) => [item.permission].flat().some((p) => hasPermission(p))).map(
-        (item) => (
-          <NavLink
-            key={item.to}
-            to={item.to}
-            end={item.to === '/'}
-            onClick={onNavigate}
-            className={({ isActive }) =>
-              `flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors ${
-                isActive
-                  ? 'bg-brand-50 text-brand-700'
-                  : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
-              }`
-            }
-          >
-            <span className="text-lg" aria-hidden>
-              {item.icon}
-            </span>
-            {item.label}
-          </NavLink>
-        ),
+        (item) =>
+          item.children ? (
+            <NavGroup
+              key={item.label}
+              item={item as NavItem & { children: NavChild[] }}
+              onNavigate={onNavigate}
+            />
+          ) : (
+            <NavLink
+              key={item.to}
+              to={item.to!}
+              end={item.to === '/'}
+              onClick={onNavigate}
+              className={navLinkClasses}
+            >
+              <span className="text-lg" aria-hidden>
+                {item.icon}
+              </span>
+              {item.label}
+            </NavLink>
+          ),
       )}
     </nav>
   );

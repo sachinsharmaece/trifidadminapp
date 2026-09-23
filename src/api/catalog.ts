@@ -6,17 +6,6 @@ export function getTechnicals(accessToken: string): Promise<string[]> {
   return apiFetch('/catalog/technicals', { accessToken });
 }
 
-// API-022 — the admin masters screen reuses the cascading picker (technical
-// first) rather than a separate "list all products" endpoint, which does
-// not exist (ARCHITECTURE.md §M3: "technical is always the first and only
-// required step").
-export function getProductsForTechnical(
-  accessToken: string,
-  technical: string,
-): Promise<ProductDto[]> {
-  return apiFetch(`/catalog/products?technical=${encodeURIComponent(technical)}`, { accessToken });
-}
-
 // API-023
 export function getSkusForProduct(accessToken: string, productId: string): Promise<SkuDto[]> {
   return apiFetch(`/catalog/products/${productId}/skus`, { accessToken });
@@ -34,6 +23,16 @@ export function createManufacturer(
   return apiFetch('/admin/manufacturers', { method: 'POST', body: { name }, accessToken });
 }
 
+// New — the Manage desk's own unfiltered product list (distinct from
+// API-022's technical-scoped picker, which BR-111 governs).
+export function getAllProducts(accessToken: string, limit = 100): Promise<ProductDto[]> {
+  return apiFetch(`/admin/products?limit=${limit}`, { accessToken });
+}
+
+export function getProductById(accessToken: string, productId: string): Promise<ProductDto> {
+  return apiFetch(`/admin/products/${productId}`, { accessToken });
+}
+
 // API-024
 export function createProduct(
   accessToken: string,
@@ -46,6 +45,22 @@ export function createProduct(
   },
 ): Promise<{ productId: string }> {
   return apiFetch('/admin/products', { method: 'POST', body: input, accessToken });
+}
+
+// API-024 PATCH — was built server-side but had no client function yet.
+export function updateProduct(
+  accessToken: string,
+  productId: string,
+  input: Partial<{
+    brand: string;
+    technical: string;
+    manufacturerId: string;
+    hsn: string;
+    class: 'A' | 'B' | 'C';
+    active: boolean;
+  }>,
+): Promise<{ productId: string }> {
+  return apiFetch(`/admin/products/${productId}`, { method: 'PATCH', body: input, accessToken });
 }
 
 // API-025

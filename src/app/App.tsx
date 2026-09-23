@@ -4,7 +4,11 @@ import { LoginPage } from '../auth/LoginPage';
 import { RequireAuth } from '../auth/RequireAuth';
 import { AppShell } from '../components/AppShell';
 import { TeamPage } from '../desks/admin/TeamPage';
-import { MastersPage } from '../desks/admin/MastersPage';
+import { ProductsPage } from '../desks/admin/ProductsPage';
+import { ProductCreatePage } from '../desks/admin/ProductCreatePage';
+import { ProductDetailPage } from '../desks/admin/ProductDetailPage';
+import { ManufacturersPage } from '../desks/admin/ManufacturersPage';
+import { TehsilsPage } from '../desks/admin/TehsilsPage';
 import { RegistrationsPage } from '../desks/admin/RegistrationsPage';
 import { ChainDeskPage } from '../desks/chain/ChainDeskPage';
 import { AccountsDeskPage } from '../desks/accounts/AccountsDeskPage';
@@ -35,11 +39,51 @@ export function App() {
           }
         />
         <Route
-          path="/masters"
+          path="/manage/products"
           element={
             <RequireAuth permission={PERMISSIONS.CATALOG_WRITE}>
               <AppShell>
-                <MastersPage />
+                <ProductsPage />
+              </AppShell>
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/manage/products/new"
+          element={
+            <RequireAuth permission={PERMISSIONS.CATALOG_WRITE}>
+              <AppShell>
+                <ProductCreatePage />
+              </AppShell>
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/manage/products/:productId"
+          element={
+            <RequireAuth permission={PERMISSIONS.CATALOG_WRITE}>
+              <AppShell>
+                <ProductDetailPage />
+              </AppShell>
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/manage/manufacturers"
+          element={
+            <RequireAuth permission={PERMISSIONS.CATALOG_WRITE}>
+              <AppShell>
+                <ManufacturersPage />
+              </AppShell>
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/manage/tehsils"
+          element={
+            <RequireAuth permission={PERMISSIONS.CATALOG_WRITE}>
+              <AppShell>
+                <TehsilsPage />
               </AppShell>
             </RequireAuth>
           }

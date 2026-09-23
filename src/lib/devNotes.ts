@@ -25,13 +25,28 @@ export const devNotes = {
     tradeContext:
       'This happens right after someone submits the registration form on the buyer or seller app, and before that firm can see any rates or listings.',
   },
-  admin_masters: {
+  admin_products: {
     purpose:
-      "Where staff set up the product catalogue (companies, products, pack sizes) and the tehsil map that decides which buyers can see which sellers' stock.",
+      'Every product in the catalogue, in one list — brand, technical, manufacturer, HSN, class and whether it is active — with a button to open any one for its full detail and pack sizes, and a button to add a new one.',
     tradeContext:
-      'Background setup work — it happens before any listing or order exists, and buyers and sellers never see this screen.',
+      'Background setup work — it happens before any listing or order exists, and buyers and sellers never see this screen. They only ever see one product at a time, picked by its technical first.',
     notBuiltYet:
       "the actual margin numbers — how much TriFid adds on top of a seller's rate for each class of buyer — are not final and have no screen to enter them yet. Twelve numbers are still needed from you before real pricing can go live; until they're supplied, the system will not price a real order.",
+  },
+  admin_products_create: {
+    purpose: 'Add a new product to the catalogue — brand, technical, manufacturer, HSN and class.',
+  },
+  admin_product_detail: {
+    purpose:
+      "One product's full detail, with an edit option, and its pack sizes (SKUs) below — including the box to add more packs by pasting a short list.",
+  },
+  admin_manufacturers: {
+    purpose:
+      'The list of manufacturers products can be filed under, with a button to add a new one.',
+  },
+  admin_tehsils: {
+    purpose:
+      "The tehsil map that decides which buyers can see which sellers' stock, with a button to add a new one.",
   },
   admin_team: {
     purpose:

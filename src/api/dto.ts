@@ -40,6 +40,10 @@ export interface ProductDto {
   brand: string;
   hsn: string;
   class: 'A' | 'B' | 'C';
+  technical?: string;
+  manufacturerId?: string;
+  manufacturerName?: string;
+  active?: boolean;
 }
 
 export interface SkuDto {
@@ -49,6 +53,7 @@ export interface SkuDto {
   baseUnit: 'LTR' | 'KG' | 'PC';
   unitsPerBox: number;
   baseUnitsPerBox: number;
+  active?: boolean;
 }
 
 export interface SkuImportRowResult {

@@ -64,6 +64,12 @@ export const PERMISSIONS = {
   NOTIFICATION_LOG_READ: 'notification:log_read',
   FUNNEL_READ: 'funnel:read',
   FOUNDER_OVERVIEW_READ: 'founder:overview_read',
+  // Staff-assisted enquiries.
+  ONBOARDING_STAFF_ASSIST_BUYER: 'onboarding:staff_assist_buyer',
+  ONBOARDING_STAFF_ASSIST_SELLER: 'onboarding:staff_assist_seller',
+  PROXY_BUYER_CALL: 'proxy:buyer_call',
+  PROXY_SELLER_CALL: 'proxy:seller_call',
+  ACCOUNTS_CONFIRM_RECEIPT: 'accounts:confirm_receipt',
 } as const;
 
 // Copied from trifid-serverapp/src/config/permissions.ts (BR-260). There is

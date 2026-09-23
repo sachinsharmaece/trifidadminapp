@@ -61,6 +61,20 @@ export function getPoPayable(accessToken: string, poId: string): Promise<{ payab
   return apiFetch(`/staff/payables/${poId}`, { accessToken });
 }
 
+// Staff-assisted enquiries, decision (B) — Accounts' own dedicated
+// confirmation, distinct from the dock's inspection record.
+export function recordReceiptConfirmation(
+  accessToken: string,
+  poId: string,
+  input: { productMatches: boolean; qtyMatches: boolean; notes?: string },
+): Promise<{ receiptConfirmationId: string }> {
+  return apiFetch(`/staff/pos/${poId}/receipt-confirmation`, {
+    method: 'POST',
+    body: input,
+    accessToken,
+  });
+}
+
 // API-085 build.
 export function buildPaymentRun(
   accessToken: string,

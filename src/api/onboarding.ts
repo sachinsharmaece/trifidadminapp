@@ -50,6 +50,42 @@ export function approveSeller(
   });
 }
 
+// Staff-assisted enquiries — new, not in the original API_CONTRACT.md.
+export function staffRegisterBuyer(
+  accessToken: string,
+  input: {
+    mobile: string;
+    firm: string;
+    gstin: string;
+    ownerName: string;
+    licenceNo: string;
+    gstPpobAddress: string;
+    dealerships?: Array<{ manufacturerId: string; isStrong?: boolean }>;
+    bankDetail: { accountNumber: string; ifsc: string; accountName: string };
+    consent: { noticeVersion: string; marketingOptIn: boolean };
+    callNote: string;
+  },
+): Promise<{ registrationId: string }> {
+  return apiFetch('/staff/registrations/buyer', { method: 'POST', body: input, accessToken });
+}
+
+export function staffRegisterSeller(
+  accessToken: string,
+  input: {
+    mobile: string;
+    firm: string;
+    gstin: string;
+    ownerName: string;
+    licenceNo: string;
+    references: Array<{ firm: string; phone: string; relationship: string; whatTheySaid: string }>;
+    bankDetail: { accountNumber: string; ifsc: string; accountName: string };
+    consent: { noticeVersion: string; marketingOptIn: boolean };
+    callNote: string;
+  },
+): Promise<{ registrationId: string }> {
+  return apiFetch('/staff/registrations/seller', { method: 'POST', body: input, accessToken });
+}
+
 // API-015
 export function rejectRegistration(
   accessToken: string,

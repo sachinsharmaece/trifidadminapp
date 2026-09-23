@@ -1,5 +1,6 @@
 import { useCallback, useState } from 'react';
-import { FiFlag } from 'react-icons/fi';
+import type { FormEvent } from 'react';
+import { FiFlag, FiCheck, FiX, FiPhoneCall } from 'react-icons/fi';
 import {
   getActiveDemandList,
   getAbsorptionQueue,
@@ -9,6 +10,14 @@ import {
   postNonOrderReason,
   type ActiveDemandItem,
 } from '../../api/purchase';
+import { staffRegisterSeller } from '../../api/onboarding';
+import {
+  proxyCreateListing,
+  proxyConfirmPile,
+  proxyRequotePile,
+  proxyDeclinePile,
+} from '../../api/proxy';
+import { ApiError } from '../../api/errors';
 import { PERMISSIONS } from '../../lib/permissions';
 import { FunnelMetricsGrid } from './FunnelMetrics';
 import { AsyncBoundary } from '../../components/AsyncBoundary';
@@ -17,7 +26,7 @@ import { useAuth } from '../../auth/AuthContext';
 import { Card } from '../../components/ui/Card';
 import { Table, Th, Td } from '../../components/ui/Table';
 import { Badge } from '../../components/ui/Badge';
-import { Select } from '../../components/ui/Input';
+import { Input, Select, Textarea } from '../../components/ui/Input';
 import { Button } from '../../components/ui/Button';
 import { DevNote } from '../../components/dev/DevNote';
 
@@ -42,12 +51,526 @@ export function PurchaseDeskPage() {
     <div className="flex flex-col gap-6">
       <h1 className="text-xl font-semibold text-slate-900">Purchase</h1>
       <DevNote screen="purchase_desk" />
+      <LogSellerCallSection />
+      <AdvancePileSection />
+      <StaffAssistedSellerRegistrationSection />
       {hasPermission(PERMISSIONS.FUNNEL_READ) && <FunnelSection />}
       <ActiveDemandSection />
       <AbsorptionQueueSection />
       <ReturnAgeingSection />
       <SellerRecoverySection />
     </div>
+  );
+}
+
+/**
+ * Staff-assisted enquiries — "log a seller call" (API-033, create-listing).
+ * Same fields, same validation as the seller's own POST /listings: the
+ * shelf-life floor, the two delivery bands with no provenance constraint,
+ * MOQ — nothing here bypasses any of it.
+ */
+function LogSellerCallSection() {
+  const { callApi } = useAuth();
+  const [sellerCounterpartyId, setSellerCounterpartyId] = useState('');
+  const [productId, setProductId] = useState('');
+  const [skuId, setSkuId] = useState('');
+  const [ratePaise, setRatePaise] = useState(0);
+  const [expiryBand, setExpiryBand] = useState<'over12' | 'under12'>('over12');
+  const [expiryExact, setExpiryExact] = useState('');
+  const [deliveryBand, setDeliveryBand] = useState<'48h' | '2-5d'>('48h');
+  const [provenance, setProvenance] = useState<'company' | 'auth'>('company');
+  const [batch, setBatch] = useState('');
+  const [qty, setQty] = useState(1);
+  const [callNote, setCallNote] = useState('');
+  const [result, setResult] = useState<{ listingId: string; lineIds: string[] } | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+
+  async function handleSubmit(event: FormEvent): Promise<void> {
+    event.preventDefault();
+    setError(null);
+    setSubmitting(true);
+    try {
+      setResult(
+        await callApi((token) =>
+          proxyCreateListing(token, {
+            sellerCounterpartyId,
+            productId,
+            scopeType: 'my_area',
+            lines: [
+              {
+                skuId,
+                ratePaise,
+                expiryBand,
+                expiryExact: expiryExact || undefined,
+                deliveryBand,
+                provenance,
+                batch: provenance === 'auth' ? batch : undefined,
+                qty,
+              },
+            ],
+            callNote,
+          }),
+        ),
+      );
+    } catch (submitError) {
+      setError(submitError instanceof ApiError ? submitError.message : 'Could not log this call.');
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  return (
+    <Card title="Log a seller call">
+      <p className="mb-4 text-sm text-slate-500">
+        Creates a listing on the seller&apos;s behalf — same fields, same validation as the
+        seller&apos;s own screen: the six-month shelf-life floor, the batch requirement on
+        auth-provenance stock, MOQ.
+      </p>
+      <form onSubmit={handleSubmit} className="grid max-w-2xl grid-cols-2 gap-4">
+        <Input
+          id="lsc-seller"
+          label="Seller counterparty ID"
+          value={sellerCounterpartyId}
+          onChange={(e) => setSellerCounterpartyId(e.target.value)}
+          required
+        />
+        <Input
+          id="lsc-product"
+          label="Product ID"
+          value={productId}
+          onChange={(e) => setProductId(e.target.value)}
+          required
+        />
+        <Input
+          id="lsc-sku"
+          label="SKU ID"
+          value={skuId}
+          onChange={(e) => setSkuId(e.target.value)}
+          required
+        />
+        <Input
+          id="lsc-rate"
+          label="Rate (paise)"
+          type="number"
+          min={1}
+          value={ratePaise}
+          onChange={(e) => setRatePaise(Number(e.target.value))}
+          required
+        />
+        <Select
+          id="lsc-expiry-band"
+          label="Expiry band"
+          value={expiryBand}
+          onChange={(e) => setExpiryBand(e.target.value as typeof expiryBand)}
+        >
+          <option value="over12">Over 12 months</option>
+          <option value="under12">Under 12 months</option>
+        </Select>
+        <Input
+          id="lsc-expiry-exact"
+          label="Expiry (MM/YYYY, optional)"
+          value={expiryExact}
+          onChange={(e) => setExpiryExact(e.target.value)}
+        />
+        <Select
+          id="lsc-delivery"
+          label="Delivery band"
+          value={deliveryBand}
+          onChange={(e) => setDeliveryBand(e.target.value as typeof deliveryBand)}
+        >
+          <option value="48h">48 hours</option>
+          <option value="2-5d">2–5 days</option>
+        </Select>
+        <Select
+          id="lsc-provenance"
+          label="Provenance"
+          value={provenance}
+          onChange={(e) => setProvenance(e.target.value as typeof provenance)}
+        >
+          <option value="company">Company</option>
+          <option value="auth">Authorised dealer</option>
+        </Select>
+        {provenance === 'auth' && (
+          <Input
+            id="lsc-batch"
+            label="Batch (mandatory on auth provenance)"
+            value={batch}
+            onChange={(e) => setBatch(e.target.value)}
+            required
+          />
+        )}
+        <Input
+          id="lsc-qty"
+          label="Quantity (boxes)"
+          type="number"
+          min={1}
+          value={qty}
+          onChange={(e) => setQty(Number(e.target.value))}
+          required
+        />
+        <div className="col-span-2">
+          <Textarea
+            id="lsc-note"
+            label="Call note"
+            hint="Who called, what was agreed — mandatory on every staff-assisted action."
+            value={callNote}
+            onChange={(e) => setCallNote(e.target.value)}
+            required
+          />
+        </div>
+        {error && (
+          <p role="alert" className="col-span-2 text-sm text-danger-500">
+            {error}
+          </p>
+        )}
+        {result && (
+          <p className="col-span-2 text-sm text-success-600">
+            Logged as listing {result.listingId}.
+          </p>
+        )}
+        <div className="col-span-2">
+          <Button type="submit" loading={submitting} icon={<FiPhoneCall />}>
+            Log call
+          </Button>
+        </div>
+      </form>
+    </Card>
+  );
+}
+
+/**
+ * Staff-assisted enquiries — advancing a listing/pile decision on a call
+ * (API-049 confirm / API-050 requote / decline). The exact-expiry-and-batch
+ * gate (IC-21) applies here exactly as it does on every other path — a
+ * phone-based confirm does not bypass it.
+ */
+function AdvancePileSection() {
+  const { callApi } = useAuth();
+  const [pileId, setPileId] = useState('');
+  const [sellerCounterpartyId, setSellerCounterpartyId] = useState('');
+  const [canSendBoxes, setCanSendBoxes] = useState(0);
+  const [expiryExact, setExpiryExact] = useState('');
+  const [batch, setBatch] = useState('');
+  const [callNote, setCallNote] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  const [message, setMessage] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+
+  async function handleConfirm(): Promise<void> {
+    setError(null);
+    setSubmitting(true);
+    try {
+      await callApi((token) =>
+        proxyConfirmPile(token, pileId, {
+          sellerCounterpartyId,
+          canSendBoxes,
+          expiryExact,
+          batch: batch || undefined,
+          callNote,
+        }),
+      );
+      setMessage('Confirmed — each buyer gets his own order.');
+    } catch (submitError) {
+      setError(submitError instanceof ApiError ? submitError.message : 'Could not confirm.');
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  async function handleRequote(): Promise<void> {
+    setError(null);
+    setSubmitting(true);
+    try {
+      await callApi((token) => proxyRequotePile(token, pileId, { sellerCounterpartyId, callNote }));
+      setMessage('Requoted — every buyer on the line is asked to accept or cancel.');
+    } catch (submitError) {
+      setError(submitError instanceof ApiError ? submitError.message : 'Could not requote.');
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  async function handleDecline(): Promise<void> {
+    setError(null);
+    setSubmitting(true);
+    try {
+      await callApi((token) => proxyDeclinePile(token, pileId, { sellerCounterpartyId, callNote }));
+      setMessage('Declined — free before payment.');
+    } catch (submitError) {
+      setError(submitError instanceof ApiError ? submitError.message : 'Could not decline.');
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  return (
+    <Card title="Advance a listing/pile decision on a call">
+      <p className="mb-4 text-sm text-slate-500">
+        Confirm will not submit without the exact expiry month, and the batch where provenance is
+        auth-stock — the same gate that applies on every other confirm path (IC-21).
+      </p>
+      <div className="flex max-w-md flex-col gap-4">
+        <Input
+          id="ap-pile"
+          label="Pile ID"
+          value={pileId}
+          onChange={(e) => setPileId(e.target.value)}
+          required
+        />
+        <Input
+          id="ap-seller"
+          label="Seller counterparty ID"
+          value={sellerCounterpartyId}
+          onChange={(e) => setSellerCounterpartyId(e.target.value)}
+          required
+        />
+        <Input
+          id="ap-boxes"
+          label="Boxes he can send"
+          type="number"
+          min={0}
+          value={canSendBoxes}
+          onChange={(e) => setCanSendBoxes(Number(e.target.value))}
+        />
+        <Input
+          id="ap-expiry"
+          label="Exact expiry (MM/YYYY)"
+          value={expiryExact}
+          onChange={(e) => setExpiryExact(e.target.value)}
+        />
+        <Input
+          id="ap-batch"
+          label="Batch (mandatory on auth stock)"
+          value={batch}
+          onChange={(e) => setBatch(e.target.value)}
+        />
+        <Textarea
+          id="ap-note"
+          label="Call note"
+          value={callNote}
+          onChange={(e) => setCallNote(e.target.value)}
+          required
+        />
+        {error && (
+          <p role="alert" className="text-sm text-danger-500">
+            {error}
+          </p>
+        )}
+        {message && <p className="text-sm text-success-600">{message}</p>}
+        <div className="flex gap-2">
+          <Button
+            loading={submitting}
+            disabled={!pileId || !sellerCounterpartyId || !callNote}
+            onClick={() => void handleConfirm()}
+            icon={<FiCheck />}
+          >
+            Confirm
+          </Button>
+          <Button
+            variant="secondary"
+            loading={submitting}
+            disabled={!pileId || !sellerCounterpartyId || !callNote}
+            onClick={() => void handleRequote()}
+          >
+            Requote
+          </Button>
+          <Button
+            variant="secondary"
+            loading={submitting}
+            disabled={!pileId || !sellerCounterpartyId || !callNote}
+            onClick={() => void handleDecline()}
+            icon={<FiX />}
+          >
+            Decline
+          </Button>
+        </div>
+      </div>
+    </Card>
+  );
+}
+
+/** Staff-assisted enquiries — the OTP-confirmation step is shown honestly as pending on the Registrations desk once submitted here. */
+function StaffAssistedSellerRegistrationSection() {
+  const { callApi } = useAuth();
+  const [mobile, setMobile] = useState('');
+  const [firm, setFirm] = useState('');
+  const [gstin, setGstin] = useState('');
+  const [ownerName, setOwnerName] = useState('');
+  const [licenceNo, setLicenceNo] = useState('');
+  const [accountNumber, setAccountNumber] = useState('');
+  const [ifsc, setIfsc] = useState('');
+  const [accountName, setAccountName] = useState('');
+  const [refFirm1, setRefFirm1] = useState('');
+  const [refPhone1, setRefPhone1] = useState('');
+  const [refFirm2, setRefFirm2] = useState('');
+  const [refPhone2, setRefPhone2] = useState('');
+  const [callNote, setCallNote] = useState('');
+  const [result, setResult] = useState<{ registrationId: string } | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+
+  async function handleSubmit(event: FormEvent): Promise<void> {
+    event.preventDefault();
+    setError(null);
+    setSubmitting(true);
+    try {
+      setResult(
+        await callApi((token) =>
+          staffRegisterSeller(token, {
+            mobile,
+            firm,
+            gstin,
+            ownerName,
+            licenceNo,
+            references: [
+              {
+                firm: refFirm1,
+                phone: refPhone1,
+                relationship: 'Supplier',
+                whatTheySaid: 'Reliable',
+              },
+              {
+                firm: refFirm2,
+                phone: refPhone2,
+                relationship: 'Supplier',
+                whatTheySaid: 'Reliable',
+              },
+            ],
+            bankDetail: { accountNumber, ifsc, accountName },
+            consent: { noticeVersion: 'v1', marketingOptIn: false },
+            callNote,
+          }),
+        ),
+      );
+    } catch (submitError) {
+      setError(
+        submitError instanceof ApiError ? submitError.message : 'Could not register this seller.',
+      );
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  return (
+    <Card title="Staff-assisted seller registration">
+      <p className="mb-4 text-sm text-slate-500">
+        GSTIN stays mandatory, exactly as self-service registration, plus BR-250&apos;s two named
+        referees. A single OTP goes to the real mobile number to confirm this is genuine before it
+        can be approved.
+      </p>
+      <form onSubmit={handleSubmit} className="grid max-w-2xl grid-cols-2 gap-4">
+        <Input
+          id="ss-mobile"
+          label="Mobile"
+          value={mobile}
+          onChange={(e) => setMobile(e.target.value)}
+          required
+        />
+        <Input
+          id="ss-firm"
+          label="Firm"
+          value={firm}
+          onChange={(e) => setFirm(e.target.value)}
+          required
+        />
+        <Input
+          id="ss-gstin"
+          label="GSTIN"
+          value={gstin}
+          onChange={(e) => setGstin(e.target.value)}
+          required
+        />
+        <Input
+          id="ss-owner"
+          label="Owner name"
+          value={ownerName}
+          onChange={(e) => setOwnerName(e.target.value)}
+          required
+        />
+        <Input
+          id="ss-licence"
+          label="Insecticide licence no."
+          value={licenceNo}
+          onChange={(e) => setLicenceNo(e.target.value)}
+          required
+        />
+        <Input
+          id="ss-account"
+          label="Bank account number"
+          value={accountNumber}
+          onChange={(e) => setAccountNumber(e.target.value)}
+          required
+        />
+        <Input
+          id="ss-ifsc"
+          label="IFSC"
+          value={ifsc}
+          onChange={(e) => setIfsc(e.target.value)}
+          required
+        />
+        <Input
+          id="ss-account-name"
+          label="Account name"
+          value={accountName}
+          onChange={(e) => setAccountName(e.target.value)}
+          required
+        />
+        <Input
+          id="ss-ref1-firm"
+          label="Referee 1 — firm"
+          value={refFirm1}
+          onChange={(e) => setRefFirm1(e.target.value)}
+          required
+        />
+        <Input
+          id="ss-ref1-phone"
+          label="Referee 1 — phone"
+          value={refPhone1}
+          onChange={(e) => setRefPhone1(e.target.value)}
+          required
+        />
+        <Input
+          id="ss-ref2-firm"
+          label="Referee 2 — firm"
+          value={refFirm2}
+          onChange={(e) => setRefFirm2(e.target.value)}
+          required
+        />
+        <Input
+          id="ss-ref2-phone"
+          label="Referee 2 — phone"
+          value={refPhone2}
+          onChange={(e) => setRefPhone2(e.target.value)}
+          required
+        />
+        <div className="col-span-2">
+          <Textarea
+            id="ss-note"
+            label="Call note"
+            hint="Who called, what was agreed."
+            value={callNote}
+            onChange={(e) => setCallNote(e.target.value)}
+            required
+          />
+        </div>
+        {error && (
+          <p role="alert" className="col-span-2 text-sm text-danger-500">
+            {error}
+          </p>
+        )}
+        {result && (
+          <p className="col-span-2 text-sm text-success-600">
+            Registered as {result.registrationId} — pending OTP confirmation.
+          </p>
+        )}
+        <div className="col-span-2">
+          <Button type="submit" loading={submitting} icon={<FiPhoneCall />}>
+            Register seller
+          </Button>
+        </div>
+      </form>
+    </Card>
   );
 }
 

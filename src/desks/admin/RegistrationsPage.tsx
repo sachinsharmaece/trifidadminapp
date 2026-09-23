@@ -80,7 +80,10 @@ export function RegistrationsPage() {
                     <Td>{item.gstin}</Td>
                     <Td className="capitalize">{item.kind}</Td>
                     <Td>
-                      <Badge tone={STATUS_TONE[item.status] ?? 'neutral'}>{item.status}</Badge>
+                      <div className="flex items-center gap-2">
+                        <Badge tone={STATUS_TONE[item.status] ?? 'neutral'}>{item.status}</Badge>
+                        {item.staffAssisted && <Badge tone="neutral">staff-assisted</Badge>}
+                      </div>
                     </Td>
                     <Td>
                       <Button
@@ -132,31 +135,48 @@ function RegistrationDetail({
   return (
     <Card title="Registration detail">
       <AsyncBoundary state={state} onRetry={retry}>
-        {(registration: RegistrationStatusDto) => (
-          <div className="flex flex-col gap-4">
-            <p className="text-sm text-slate-700">
-              Status: <strong>{registration.status}</strong>
-              {registration.rejectionReason ? ` — ${registration.rejectionReason}` : ''}
-            </p>
-            {registration.status === 'pending' &&
-              (registration.kind === 'seller' ? (
-                <ApproveSellerForm
-                  registrationId={registrationId}
-                  tehsils={tehsils}
-                  onDecided={onDecided}
-                />
-              ) : (
-                <ApproveBuyerForm
-                  registrationId={registrationId}
-                  tehsils={tehsils}
-                  onDecided={onDecided}
-                />
-              ))}
-            {registration.status === 'pending' && (
-              <RejectForm registrationId={registrationId} onDecided={onDecided} />
-            )}
-          </div>
-        )}
+        {(registration: RegistrationStatusDto) => {
+          const otpPending = registration.staffAssisted && !registration.staffAssistedOtpVerifiedAt;
+          return (
+            <div className="flex flex-col gap-4">
+              <p className="text-sm text-slate-700">
+                Status: <strong>{registration.status}</strong>
+                {registration.rejectionReason ? ` — ${registration.rejectionReason}` : ''}
+              </p>
+              {registration.staffAssisted && (
+                <p
+                  className={`rounded border p-3 text-sm ${
+                    otpPending
+                      ? 'border-amber-300 bg-amber-50 text-slate-700'
+                      : 'border-emerald-300 bg-emerald-50 text-slate-700'
+                  }`}
+                >
+                  {otpPending
+                    ? 'Staff-assisted registration — waiting on the OTP confirmation to the real phone number. Cannot be approved until then.'
+                    : 'Staff-assisted registration — OTP confirmed to the real phone number.'}
+                </p>
+              )}
+              {registration.status === 'pending' &&
+                !otpPending &&
+                (registration.kind === 'seller' ? (
+                  <ApproveSellerForm
+                    registrationId={registrationId}
+                    tehsils={tehsils}
+                    onDecided={onDecided}
+                  />
+                ) : (
+                  <ApproveBuyerForm
+                    registrationId={registrationId}
+                    tehsils={tehsils}
+                    onDecided={onDecided}
+                  />
+                ))}
+              {registration.status === 'pending' && (
+                <RejectForm registrationId={registrationId} onDecided={onDecided} />
+              )}
+            </div>
+          );
+        }}
       </AsyncBoundary>
     </Card>
   );

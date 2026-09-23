@@ -10,6 +10,7 @@ import {
   getUpcomingReceipts,
   markSellerBillFiled,
   postBankCredit,
+  recordReceiptConfirmation,
   releasePaymentRun,
   repostBankEntry,
   runDayClose,
@@ -42,6 +43,7 @@ export function AccountsDeskPage() {
       <DevNote screen="admin_accounts" />
       <UpcomingReceiptsSection />
       <PostBankCreditSection />
+      <ReceiptConfirmationSection />
       <PayablesSection />
       <PaymentRunSection />
       <RepostSection />
@@ -163,6 +165,103 @@ function PostBankCreditSection() {
         {result && <p className="text-sm text-success-600">Posted as {result.bankbookId}.</p>}
         <Button type="submit" loading={submitting} icon={<FiCheck />}>
           Post credit
+        </Button>
+      </form>
+    </Card>
+  );
+}
+
+/**
+ * Staff-assisted enquiries, decision (B) — Accounts' own dedicated
+ * confirmation of product and quantity received, as its own recorded step,
+ * distinct from and in addition to the dock's inspection record shown on
+ * the Dock desk. This is the fourth fact the payable gate checks, alongside
+ * inspection, seller bill and bank detail.
+ */
+function ReceiptConfirmationSection() {
+  const { callApi } = useAuth();
+  const [poId, setPoId] = useState('');
+  const [productMatches, setProductMatches] = useState(true);
+  const [qtyMatches, setQtyMatches] = useState(true);
+  const [notes, setNotes] = useState('');
+  const [result, setResult] = useState<{ receiptConfirmationId: string } | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+
+  async function handleSubmit(event: FormEvent): Promise<void> {
+    event.preventDefault();
+    setError(null);
+    setSubmitting(true);
+    try {
+      setResult(
+        await callApi((token) =>
+          recordReceiptConfirmation(token, poId, {
+            productMatches,
+            qtyMatches,
+            notes: notes || undefined,
+          }),
+        ),
+      );
+    } catch (submitError) {
+      setError(
+        submitError instanceof ApiError
+          ? submitError.message
+          : 'Could not record this confirmation.',
+      );
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  return (
+    <Card title="Confirm product and quantity received (Accounts)">
+      <p className="mb-4 text-sm text-slate-500">
+        Accounts&apos; own explicit check, separate from the dock&apos;s inspection record on the
+        Dock desk — a fourth fact the payable gate requires alongside inspection, the seller bill
+        and bank detail. Once submitted this cannot be changed.
+      </p>
+      <form onSubmit={handleSubmit} className="flex max-w-md flex-col gap-4">
+        <Input
+          id="rc-po"
+          label="PO ID"
+          value={poId}
+          onChange={(e) => setPoId(e.target.value)}
+          required
+        />
+        <label className="flex items-center gap-2 text-sm text-slate-700">
+          <input
+            type="checkbox"
+            className="h-4 w-4 rounded border-slate-300"
+            checked={productMatches}
+            onChange={(e) => setProductMatches(e.target.checked)}
+          />
+          Product matches
+        </label>
+        <label className="flex items-center gap-2 text-sm text-slate-700">
+          <input
+            type="checkbox"
+            className="h-4 w-4 rounded border-slate-300"
+            checked={qtyMatches}
+            onChange={(e) => setQtyMatches(e.target.checked)}
+          />
+          Quantity matches
+        </label>
+        <Input
+          id="rc-notes"
+          label="Notes (optional)"
+          value={notes}
+          onChange={(e) => setNotes(e.target.value)}
+        />
+        {error && (
+          <p role="alert" className="text-sm text-danger-500">
+            {error}
+          </p>
+        )}
+        {result && (
+          <p className="text-sm text-success-600">Recorded as {result.receiptConfirmationId}.</p>
+        )}
+        <Button type="submit" loading={submitting} disabled={!poId} icon={<FiCheck />}>
+          Confirm
         </Button>
       </form>
     </Card>

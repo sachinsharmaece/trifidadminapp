@@ -23,6 +23,11 @@ interface RequestOptions {
   accessToken?: string;
   // CH §24.2 — presented again on the money-moving call itself (requireReauth.ts).
   reauthToken?: string;
+  // middleware/idempotency.ts requires this on every money/stage-moving POST.
+  // Not read by the other calls in this file yet (a pre-existing gap this
+  // session did not extend beyond its own new proxy endpoints) — see
+  // CHANGELOG.md.
+  idempotencyKey?: string;
 }
 
 /**
@@ -41,6 +46,7 @@ export async function apiFetch<T>(path: string, options: RequestOptions = {}): P
         'Content-Type': 'application/json',
         ...(options.accessToken ? { Authorization: `Bearer ${options.accessToken}` } : {}),
         ...(options.reauthToken ? { 'X-Reauth-Token': options.reauthToken } : {}),
+        ...(options.idempotencyKey ? { 'Idempotency-Key': options.idempotencyKey } : {}),
       },
       body: options.body !== undefined ? JSON.stringify(options.body) : undefined,
     });

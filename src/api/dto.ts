@@ -53,6 +53,7 @@ export interface SkuDto {
   baseUnit: 'LTR' | 'KG' | 'PC';
   unitsPerBox: number;
   baseUnitsPerBox: number;
+  active?: boolean;
 }
 
 export interface SkuImportRowResult {

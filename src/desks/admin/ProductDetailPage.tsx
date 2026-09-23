@@ -8,6 +8,7 @@ import {
   getSkusForProduct,
   importSkus,
   updateProduct,
+  updateSku,
 } from '../../api/catalog';
 import { ApiError } from '../../api/errors';
 import { AsyncBoundary } from '../../components/AsyncBoundary';
@@ -243,6 +244,7 @@ function SkusSection({ productId }: { productId: string }) {
     [callApi, productId],
   );
   const { state, retry } = useAsyncData(loader, (items) => items.length === 0, [loader]);
+  const [editingSkuId, setEditingSkuId] = useState<string | null>(null);
 
   const [packLabel, setPackLabel] = useState('');
   const [packSize, setPackSize] = useState('');
@@ -292,20 +294,51 @@ function SkusSection({ productId }: { productId: string }) {
             <thead>
               <tr>
                 <Th>Pack</Th>
+                <Th>Pack size</Th>
                 <Th>Base unit</Th>
                 <Th>Units/box</Th>
                 <Th>Base units/box</Th>
+                <Th>Status</Th>
+                <Th />
               </tr>
             </thead>
             <tbody>
-              {items.map((sku) => (
-                <tr key={sku.skuId}>
-                  <Td>{sku.packLabel}</Td>
-                  <Td>{sku.baseUnit}</Td>
-                  <Td>{sku.unitsPerBox}</Td>
-                  <Td>{sku.baseUnitsPerBox}</Td>
-                </tr>
-              ))}
+              {items.map((sku) =>
+                editingSkuId === sku.skuId ? (
+                  <SkuEditRow
+                    key={sku.skuId}
+                    sku={sku}
+                    onSaved={() => {
+                      setEditingSkuId(null);
+                      retry();
+                    }}
+                    onCancel={() => setEditingSkuId(null)}
+                  />
+                ) : (
+                  <tr key={sku.skuId}>
+                    <Td>{sku.packLabel}</Td>
+                    <Td>{sku.packSize}</Td>
+                    <Td>{sku.baseUnit}</Td>
+                    <Td>{sku.unitsPerBox}</Td>
+                    <Td>{sku.baseUnitsPerBox}</Td>
+                    <Td>
+                      <Badge tone={sku.active === false ? 'neutral' : 'good'}>
+                        {sku.active === false ? 'Inactive' : 'Active'}
+                      </Badge>
+                    </Td>
+                    <Td>
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        icon={<FiEdit2 />}
+                        onClick={() => setEditingSkuId(sku.skuId)}
+                      >
+                        Edit
+                      </Button>
+                    </Td>
+                  </tr>
+                ),
+              )}
             </tbody>
           </Table>
         )}
@@ -379,5 +412,112 @@ function SkusSection({ productId }: { productId: string }) {
         </div>
       </form>
     </Card>
+  );
+}
+
+function SkuEditRow({
+  sku,
+  onSaved,
+  onCancel,
+}: {
+  sku: SkuDto;
+  onSaved: () => void;
+  onCancel: () => void;
+}) {
+  const { callApi } = useAuth();
+  const [packLabel, setPackLabel] = useState(sku.packLabel);
+  const [packSize, setPackSize] = useState(String(sku.packSize));
+  const [unitsPerBox, setUnitsPerBox] = useState(String(sku.unitsPerBox));
+  const [active, setActive] = useState(sku.active !== false);
+  const [error, setError] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+
+  const baseUnitsPerBoxPreview =
+    sku.baseUnit === 'PC' ? Number(unitsPerBox) : Number(packSize) * Number(unitsPerBox);
+
+  async function handleSave(): Promise<void> {
+    setError(null);
+    setSubmitting(true);
+    try {
+      await callApi((token) =>
+        updateSku(token, sku.skuId, {
+          packLabel,
+          packSize: Number(packSize),
+          unitsPerBox: Number(unitsPerBox),
+          active,
+        }),
+      );
+      onSaved();
+    } catch (submitError) {
+      setError(submitError instanceof ApiError ? submitError.message : 'Could not save this SKU.');
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  return (
+    <tr>
+      <Td>
+        <Input
+          label="Pack label"
+          className="w-28"
+          value={packLabel}
+          onChange={(e) => setPackLabel(e.target.value)}
+        />
+      </Td>
+      <Td>
+        <Input
+          label="Pack size"
+          className="w-20"
+          type="number"
+          min={0}
+          step="any"
+          disabled={sku.baseUnit === 'PC'}
+          value={packSize}
+          onChange={(e) => setPackSize(e.target.value)}
+        />
+      </Td>
+      <Td>
+        {sku.baseUnit}
+        <span className="ml-1 text-xs text-slate-400">(fixed)</span>
+      </Td>
+      <Td>
+        <Input
+          label="Units per box"
+          className="w-20"
+          type="number"
+          min={1}
+          value={unitsPerBox}
+          onChange={(e) => setUnitsPerBox(e.target.value)}
+        />
+      </Td>
+      <Td>{Number.isFinite(baseUnitsPerBoxPreview) ? baseUnitsPerBoxPreview : '—'}</Td>
+      <Td>
+        <label className="flex items-center gap-2 text-sm text-slate-700">
+          <input
+            type="checkbox"
+            className="h-4 w-4 rounded border-slate-300"
+            checked={active}
+            onChange={(e) => setActive(e.target.checked)}
+          />
+          Active
+        </label>
+      </Td>
+      <Td>
+        <div className="flex gap-2">
+          <Button size="sm" loading={submitting} onClick={() => void handleSave()}>
+            Save
+          </Button>
+          <Button size="sm" variant="secondary" icon={<FiX />} onClick={onCancel}>
+            Cancel
+          </Button>
+        </div>
+        {error && (
+          <p role="alert" className="mt-1 text-xs text-danger-500">
+            {error}
+          </p>
+        )}
+      </Td>
+    </tr>
   );
 }

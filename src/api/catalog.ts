@@ -78,3 +78,18 @@ export function importSkus(
 ): Promise<SkuImportRowResult[]> {
   return apiFetch('/admin/skus/import', { method: 'POST', body: { productId, rows }, accessToken });
 }
+
+// New — the Manage desk's own SKU edit. `baseUnit` is deliberately not an
+// accepted field here (BR-055 — immutable at the schema level).
+export function updateSku(
+  accessToken: string,
+  skuId: string,
+  input: Partial<{
+    packLabel: string;
+    packSize: number;
+    unitsPerBox: number;
+    active: boolean;
+  }>,
+): Promise<{ skuId: string; baseUnitsPerBox: number }> {
+  return apiFetch(`/admin/skus/${skuId}`, { method: 'PATCH', body: input, accessToken });
+}

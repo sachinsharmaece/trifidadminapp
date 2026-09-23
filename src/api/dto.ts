@@ -65,6 +65,7 @@ export interface RegistrationListItem {
   kind: 'buyer' | 'seller' | 'both';
   status: 'pending' | 'active' | 'rejected' | 'blacklisted';
   createdAt: string;
+  staffAssisted: boolean;
 }
 
 export interface RegistrationStatusDto {
@@ -72,6 +73,8 @@ export interface RegistrationStatusDto {
   kind: string;
   status: string;
   rejectionReason?: string;
+  staffAssisted: boolean;
+  staffAssistedOtpVerifiedAt: string | null;
 }
 
 // M4 — BUSINESS_RULES.md §2–§4, §17.

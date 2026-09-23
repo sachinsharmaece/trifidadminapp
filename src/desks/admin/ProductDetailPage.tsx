@@ -16,7 +16,7 @@ import { useAsyncData } from '../../lib/useAsyncData';
 import { useAuth } from '../../auth/AuthContext';
 import { Card } from '../../components/ui/Card';
 import { Table, Th, Td } from '../../components/ui/Table';
-import { Input, Select, Textarea } from '../../components/ui/Input';
+import { Input, Select } from '../../components/ui/Input';
 import { Button } from '../../components/ui/Button';
 import { Badge } from '../../components/ui/Badge';
 import type { ProductDto, SkuDto, SkuImportRowResult } from '../../api/dto';
@@ -234,6 +234,8 @@ function EditProductForm({
   );
 }
 
+const BASE_UNITS = ['LTR', 'KG', 'PC'] as const;
+
 function SkusSection({ productId }: { productId: string }) {
   const { callApi } = useAuth();
   const loader = useCallback(
@@ -242,33 +244,41 @@ function SkusSection({ productId }: { productId: string }) {
   );
   const { state, retry } = useAsyncData(loader, (items) => items.length === 0, [loader]);
 
-  const [csv, setCsv] = useState('packLabel,packSize,baseUnit,unitsPerBox\n1L,1,LTR,12');
-  const [results, setResults] = useState<SkuImportRowResult[] | null>(null);
+  const [packLabel, setPackLabel] = useState('');
+  const [packSize, setPackSize] = useState('');
+  const [baseUnit, setBaseUnit] = useState<(typeof BASE_UNITS)[number]>('LTR');
+  const [unitsPerBox, setUnitsPerBox] = useState('');
+  const [result, setResult] = useState<SkuImportRowResult | null>(null);
   const [importError, setImportError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
-  async function handleImport(event: FormEvent): Promise<void> {
+  const baseUnitsPerBoxPreview =
+    packSize && unitsPerBox
+      ? baseUnit === 'PC'
+        ? Number(unitsPerBox)
+        : Number(packSize) * Number(unitsPerBox)
+      : null;
+
+  async function handleAdd(event: FormEvent): Promise<void> {
     event.preventDefault();
     setImportError(null);
+    setResult(null);
     setSubmitting(true);
     try {
-      const lines = csv.trim().split('\n').slice(1);
-      const rows = lines.map((line) => {
-        const [packLabel, packSize, baseUnit, unitsPerBox] = line
-          .split(',')
-          .map((cell) => cell.trim());
-        return {
-          packLabel: packLabel ?? '',
-          packSize: Number(packSize),
-          baseUnit,
-          unitsPerBox: Number(unitsPerBox),
-        };
-      });
-      const result = await callApi((token) => importSkus(token, productId, rows));
-      setResults(result);
-      retry();
+      const [row] = await callApi((token) =>
+        importSkus(token, productId, [
+          { packLabel, packSize: Number(packSize), baseUnit, unitsPerBox: Number(unitsPerBox) },
+        ]),
+      );
+      setResult(row ?? null);
+      if (row?.accepted) {
+        setPackLabel('');
+        setPackSize('');
+        setUnitsPerBox('');
+        retry();
+      }
     } catch (error) {
-      setImportError(error instanceof ApiError ? error.message : 'Import failed.');
+      setImportError(error instanceof ApiError ? error.message : 'Could not add this SKU.');
     } finally {
       setSubmitting(false);
     }
@@ -301,48 +311,73 @@ function SkusSection({ productId }: { productId: string }) {
         )}
       </AsyncBoundary>
 
-      <form onSubmit={handleImport} className="flex max-w-lg flex-col gap-3">
-        <Textarea
-          id="sku-csv"
-          label="Import rows"
-          hint="BR-055 — a row failing the baseUnitsPerBox rule is rejected, not imported"
-          rows={6}
-          value={csv}
-          onChange={(e) => setCsv(e.target.value)}
+      <form onSubmit={handleAdd} className="grid max-w-2xl grid-cols-2 gap-4">
+        <Input
+          id="sku-pack-label"
+          label="Pack label"
+          hint="e.g. 1L, 500ML, 10PC"
+          value={packLabel}
+          onChange={(e) => setPackLabel(e.target.value)}
+          required
         />
-        <Button type="submit" loading={submitting} icon={<FiUpload />} className="self-start">
-          Import
-        </Button>
+        <Select
+          id="sku-base-unit"
+          label="Base unit"
+          value={baseUnit}
+          onChange={(e) => setBaseUnit(e.target.value as (typeof BASE_UNITS)[number])}
+        >
+          {BASE_UNITS.map((unit) => (
+            <option key={unit} value={unit}>
+              {unit}
+            </option>
+          ))}
+        </Select>
+        <Input
+          id="sku-pack-size"
+          label="Pack size"
+          type="number"
+          min={0}
+          step="any"
+          hint={
+            baseUnit === 'PC' ? 'Descriptive only for PC — not used in the calculation' : undefined
+          }
+          value={packSize}
+          onChange={(e) => setPackSize(e.target.value)}
+          required
+        />
+        <Input
+          id="sku-units-per-box"
+          label="Units per box"
+          type="number"
+          min={1}
+          value={unitsPerBox}
+          onChange={(e) => setUnitsPerBox(e.target.value)}
+          required
+        />
+        {baseUnitsPerBoxPreview !== null && (
+          <p className="col-span-2 text-sm text-slate-500">
+            Base units/box (BR-055): <strong>{baseUnitsPerBoxPreview}</strong>
+          </p>
+        )}
+        {importError && (
+          <p role="alert" className="col-span-2 text-sm text-danger-500">
+            {importError}
+          </p>
+        )}
+        {result && !result.accepted && (
+          <p role="alert" className="col-span-2 text-sm text-danger-500">
+            {result.reason}
+          </p>
+        )}
+        {result?.accepted && (
+          <p className="col-span-2 text-sm text-success-600">Added as {result.skuId}.</p>
+        )}
+        <div className="col-span-2">
+          <Button type="submit" loading={submitting} icon={<FiUpload />}>
+            Add SKU
+          </Button>
+        </div>
       </form>
-      {importError && (
-        <p role="alert" className="mt-2 text-sm text-danger-500">
-          {importError}
-        </p>
-      )}
-      {results && (
-        <Table className="mt-4">
-          <thead>
-            <tr>
-              <Th>Row</Th>
-              <Th>Result</Th>
-              <Th>Detail</Th>
-            </tr>
-          </thead>
-          <tbody>
-            {results.map((row) => (
-              <tr key={row.index}>
-                <Td>{row.index + 1}</Td>
-                <Td>
-                  <Badge tone={row.accepted ? 'good' : 'bad'}>
-                    {row.accepted ? 'Accepted' : 'Rejected'}
-                  </Badge>
-                </Td>
-                <Td>{row.accepted ? row.skuId : row.reason}</Td>
-              </tr>
-            ))}
-          </tbody>
-        </Table>
-      )}
     </Card>
   );
 }

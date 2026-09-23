@@ -106,7 +106,12 @@ function PaymentAllocationSection() {
     <Card title="Allocate a payment (IC-13)">
       <p className="mb-4 text-sm text-slate-500">
         A buyer&apos;s claim, not yet money — it touches no bank book and no ledger until Accounts
-        posts it against exactly the SOs picked here (BR-012, INV-15).
+        posts it against exactly the SO picked here (BR-012, INV-15).
+      </p>
+      <p className="mb-4 rounded border border-amber-300 bg-amber-50 p-3 text-sm text-slate-700">
+        <strong>One receipt, one order (QR-057).</strong> A receipt cannot be split across orders.
+        If the buyer&apos;s one bank transfer pays two orders, record it as two separate receipts
+        against the same bank credit, one per order. The system refuses more than one order here.
       </p>
       <AsyncBoundary state={state} onRetry={retry} emptyMessage="Nothing waiting.">
         {(items) => (
@@ -159,7 +164,7 @@ function PaymentAllocationSection() {
           required
         />
         <Input
-          label="SO IDs (comma-separated)"
+          label="SO ID (exactly one)"
           value={soIdsText}
           onChange={(e) => setSoIdsText(e.target.value)}
           required

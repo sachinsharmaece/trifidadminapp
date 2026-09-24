@@ -88,6 +88,20 @@ export const devNotes = {
     tradeContext:
       'A read-only summary drawn from the accounts and chain desks; nothing is entered here directly.',
   },
+  enquiries: {
+    purpose:
+      'Every enquiry in one list, each with its own number (ENQ-26-00012) to quote on the phone — where it stands, who it is waiting on, which Sales and Purchase person owns it, and when it is next due a follow-up. Sales can log a new one when a buyer phones in, even if he is not registered yet or wants a product that is not in the catalogue.',
+    tradeContext:
+      'This is the very start of a trade, before any order exists, and it follows the enquiry all the way through its orders. Each department sees its own side: Sales sees the buyer, Purchase sees the seller, Logistics sees neither, Accounts and management see both. An enquiry from someone not yet registered stays "pre-trade" until Sales converts it into a proper ask or drops it with a reason.',
+    notBuiltYet:
+      "Purchase cannot yet enter a seller's quote on an ask from a phone call — the seller has to quote from his own app. When a seller revises a listed rate, the step where each buyer accepts or cancels is not built yet either.",
+  },
+  enquiry_detail: {
+    purpose:
+      "One enquiry from start to finish — what was asked, every seller's response, the order or orders it became with their six-stage progress, and one timeline of everything that happened, including staff call notes.",
+    tradeContext:
+      'The buttons shown depend on your department and on where the enquiry stands: Sales can accept quotes, walk away, or convert/drop a pre-trade enquiry on the buyer’s behalf; Purchase can confirm, requote or decline for the seller. Each department sets its own owner and follow-up date and keeps its own notes — a Purchase note is never shown to Sales, and the other way round.',
+  },
   purchase_desk: {
     purpose:
       'Where Purchase staff work the seller side of the business — which asks have no seller lined up yet, replacement sellers found after one fails to supply, and ageing on stock the dock has rejected.',

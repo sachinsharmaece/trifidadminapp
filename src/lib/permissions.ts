@@ -70,6 +70,8 @@ export const PERMISSIONS = {
   PROXY_BUYER_CALL: 'proxy:buyer_call',
   PROXY_SELLER_CALL: 'proxy:seller_call',
   ACCOUNTS_CONFIRM_RECEIPT: 'accounts:confirm_receipt',
+  // Enquiry journey — owner, follow-up and notes on an enquiry (DEC-051).
+  ENQUIRY_MANAGE: 'enquiry:manage',
 } as const;
 
 // Copied from trifid-serverapp/src/config/permissions.ts (BR-260). There is

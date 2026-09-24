@@ -5,9 +5,13 @@ import type { RegistrationListItem, RegistrationStatusDto } from './dto';
 export function listRegistrations(
   accessToken: string,
   stage?: string,
+  limit?: number,
 ): Promise<RegistrationListItem[]> {
-  const query = stage ? `?stage=${encodeURIComponent(stage)}` : '';
-  return apiFetch(`/staff/registrations${query}`, { accessToken });
+  const params = new URLSearchParams();
+  if (stage) params.set('stage', stage);
+  if (limit) params.set('limit', String(limit));
+  const query = params.toString();
+  return apiFetch(`/staff/registrations${query ? `?${query}` : ''}`, { accessToken });
 }
 
 // API-012

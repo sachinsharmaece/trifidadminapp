@@ -6,6 +6,7 @@ import {
   FiDatabase,
   FiUserCheck,
   FiGitBranch,
+  FiInbox,
   FiDollarSign,
   FiFileText,
   FiTruck,
@@ -58,6 +59,12 @@ const NAV_ITEMS: NavItem[] = [
     label: 'Registrations',
     icon: <FiUserCheck />,
     permission: PERMISSIONS.ONBOARDING_READ,
+  },
+  {
+    to: '/enquiries',
+    label: 'Enquiries',
+    icon: <FiInbox />,
+    permission: PERMISSIONS.CHAIN_READ,
   },
   { to: '/chain', label: 'Trade chain', icon: <FiGitBranch />, permission: PERMISSIONS.CHAIN_READ },
   {

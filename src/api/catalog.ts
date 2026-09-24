@@ -6,6 +6,14 @@ export function getTechnicals(accessToken: string): Promise<string[]> {
   return apiFetch('/catalog/technicals', { accessToken });
 }
 
+// API-022 — the technical-scoped product picker (BR-111).
+export function getProductsByTechnical(
+  accessToken: string,
+  technical: string,
+): Promise<Array<{ productId: string; brand: string; hsn: string; class: string }>> {
+  return apiFetch(`/catalog/products?technical=${encodeURIComponent(technical)}`, { accessToken });
+}
+
 // API-023
 export function getSkusForProduct(accessToken: string, productId: string): Promise<SkuDto[]> {
   return apiFetch(`/catalog/products/${productId}/skus`, { accessToken });

@@ -21,6 +21,8 @@ import { LogisticsDeskPage } from '../desks/logistics/LogisticsDeskPage';
 import { ControllerDeskPage } from '../desks/controller/ControllerDeskPage';
 import { NotificationLogPage } from '../desks/notifications/NotificationLogPage';
 import { FounderDeskPage } from '../desks/founder/FounderDeskPage';
+import { EnquiriesPage } from '../desks/enquiries/EnquiriesPage';
+import { EnquiryDetailPage } from '../desks/enquiries/EnquiryDetailPage';
 import { PERMISSIONS } from '../lib/permissions';
 
 export function App() {
@@ -94,6 +96,26 @@ export function App() {
             <RequireAuth permission={PERMISSIONS.ONBOARDING_READ}>
               <AppShell>
                 <RegistrationsPage />
+              </AppShell>
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/enquiries"
+          element={
+            <RequireAuth permission={PERMISSIONS.CHAIN_READ}>
+              <AppShell>
+                <EnquiriesPage />
+              </AppShell>
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/enquiries/:id"
+          element={
+            <RequireAuth permission={PERMISSIONS.CHAIN_READ}>
+              <AppShell>
+                <EnquiryDetailPage />
               </AppShell>
             </RequireAuth>
           }

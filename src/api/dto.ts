@@ -33,6 +33,8 @@ export interface TehsilDto {
 export interface ManufacturerDto {
   manufacturerId: string;
   name: string;
+  // Purchase-desk v2 — draft/live. Absent on rows read before this existed.
+  state?: 'draft' | 'live';
 }
 
 export interface ProductDto {
@@ -44,6 +46,8 @@ export interface ProductDto {
   manufacturerId?: string;
   manufacturerName?: string;
   active?: boolean;
+  state?: 'draft' | 'live';
+  createdBy?: string | null;
 }
 
 export interface SkuDto {
@@ -54,6 +58,7 @@ export interface SkuDto {
   unitsPerBox: number;
   baseUnitsPerBox: number;
   active?: boolean;
+  state?: 'draft' | 'live';
 }
 
 export interface SkuImportRowResult {

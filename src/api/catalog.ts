@@ -6,6 +6,18 @@ export function getTechnicals(accessToken: string): Promise<string[]> {
   return apiFetch('/catalog/technicals', { accessToken });
 }
 
+// API-021 — step 2 of the cascading picker (BR-111). Any authenticated staff
+// member, unlike `/admin/manufacturers` below — this is what lets Purchase's
+// "what does he carry" form pick a company without CATALOG_WRITE.
+export function getManufacturersForTechnical(
+  accessToken: string,
+  technical: string,
+): Promise<Array<{ manufacturerId: string; name: string }>> {
+  return apiFetch(`/catalog/manufacturers?technical=${encodeURIComponent(technical)}`, {
+    accessToken,
+  });
+}
+
 // API-022 — the technical-scoped product picker (BR-111).
 export function getProductsByTechnical(
   accessToken: string,
@@ -29,6 +41,19 @@ export function createManufacturer(
   name: string,
 ): Promise<{ manufacturerId: string }> {
   return apiFetch('/admin/manufacturers', { method: 'POST', body: { name }, accessToken });
+}
+
+// Purchase-desk v2 — Admin's rename/confirm action (the draft → live PATCH).
+export function updateManufacturer(
+  accessToken: string,
+  manufacturerId: string,
+  input: Partial<{ name: string; state: 'live' }>,
+): Promise<{ manufacturerId: string }> {
+  return apiFetch(`/admin/manufacturers/${manufacturerId}`, {
+    method: 'PATCH',
+    body: input,
+    accessToken,
+  });
 }
 
 // New — the Manage desk's own unfiltered product list (distinct from
@@ -66,6 +91,7 @@ export function updateProduct(
     hsn: string;
     class: 'A' | 'B' | 'C';
     active: boolean;
+    state: 'live';
   }>,
 ): Promise<{ productId: string }> {
   return apiFetch(`/admin/products/${productId}`, { method: 'PATCH', body: input, accessToken });
@@ -97,6 +123,7 @@ export function updateSku(
     packSize: number;
     unitsPerBox: number;
     active: boolean;
+    state: 'live';
   }>,
 ): Promise<{ skuId: string; baseUnitsPerBox: number }> {
   return apiFetch(`/admin/skus/${skuId}`, { method: 'PATCH', body: input, accessToken });

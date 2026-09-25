@@ -1,7 +1,7 @@
 import { useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FiPlus, FiEye } from 'react-icons/fi';
-import { getAllProducts } from '../../api/catalog';
+import { getAllProducts, updateProduct } from '../../api/catalog';
 import { AsyncBoundary } from '../../components/AsyncBoundary';
 import { DevNote } from '../../components/dev/DevNote';
 import { useAsyncData } from '../../lib/useAsyncData';
@@ -18,6 +18,11 @@ export function ProductsPage() {
   const navigate = useNavigate();
   const loader = useCallback(() => callApi((token) => getAllProducts(token)), [callApi]);
   const { state, retry } = useAsyncData(loader, (items) => items.length === 0, [loader]);
+
+  async function confirmDraft(productId: string): Promise<void> {
+    await callApi((token) => updateProduct(token, productId, { state: 'live' }));
+    retry();
+  }
 
   return (
     <div className="flex flex-col gap-6">
@@ -56,8 +61,13 @@ export function ProductsPage() {
                       <Badge tone={product.active ? 'good' : 'neutral'}>
                         {product.active ? 'Active' : 'Inactive'}
                       </Badge>
+                      {product.state === 'draft' && (
+                        <span className="ml-1">
+                          <Badge tone="warn">draft</Badge>
+                        </span>
+                      )}
                     </Td>
-                    <Td>
+                    <Td className="flex gap-2">
                       <Button
                         variant="secondary"
                         size="sm"
@@ -66,6 +76,15 @@ export function ProductsPage() {
                       >
                         View
                       </Button>
+                      {product.state === 'draft' && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => void confirmDraft(product.productId)}
+                        >
+                          Confirm
+                        </Button>
+                      )}
                     </Td>
                   </tr>
                 ))}

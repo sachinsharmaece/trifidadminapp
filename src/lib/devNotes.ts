@@ -110,6 +110,64 @@ export const devNotes = {
     notBuiltYet:
       'the coverage map (which companies are covered in which areas) and a full product-by-product breakdown are built as raw data only so far — there is no visual map or chart yet, just tables of numbers.',
   },
+  purchase_today: {
+    purpose:
+      "Everything waiting on this desk, pulled together from every other Purchase screen: overdue dispatches, sellers who haven't confirmed a pile, demand nobody can supply, dock findings still waiting to be applied, and return notes running out of their 30 days.",
+    tradeContext:
+      "Composed on this screen from each screen's own read — there is deliberately no single combined server endpoint for this (an earlier attempt at one was dropped; each desk keeps its own working list instead).",
+  },
+  purchase_demand: {
+    purpose:
+      'Every open ask, with how many sellers have quoted it, are listed but silent, or carry it in their catalogue with no live rate yet — and a way to code why an ask never became an order.',
+    tradeContext:
+      "No buyer identity and no rupee figure anywhere on this screen, by design — only counts, codes and a seller's own quoted rate.",
+  },
+  purchase_confirmations: {
+    purpose:
+      "Buyer demand piling on one seller's listing, waiting for him to confirm, requote or decline. He answers once and it covers every buyer on that pile.",
+  },
+  purchase_dispatch: {
+    purpose:
+      "Purchase orders due or overdue for dispatch against the seller's own cut-off, plus what is already on the way to Indore.",
+    tradeContext:
+      'A logged chase does not itself change anything — extending the clock is a Controller action (the bulk lifeline), kept separate from this queue on purpose.',
+  },
+  purchase_sellers: {
+    purpose:
+      'The seller panel — who carries what, who has it on the board, and sellers who registered but are still waiting on Purchase to set their area.',
+  },
+  purchase_seller_file: {
+    purpose:
+      "One seller's whole file: contact and area, references, his conduct record (grace and strikes), what he sells, what is priced on the board, and anything owed back to or from him.",
+  },
+  purchase_add_seller: {
+    purpose:
+      'Registers a seller Purchase found by phone, the same way the seller himself would from his own app, plus the two named references BR-250 requires.',
+    notBuiltYet:
+      'a single OTP confirmation to the real phone number is still required before this registration can be approved.',
+  },
+  purchase_catalogue_entry: {
+    purpose:
+      'Records what a seller says he can supply on a call — no rate, no territory. This is capability only; it never reaches a buyer on its own.',
+  },
+  purchase_enter_listing: {
+    purpose:
+      "Puts a priced offer on the board on a seller's behalf, from a phone call — the same fields and validation as the seller's own listing screen, plus a mandatory note of who said what.",
+    notBuiltYet:
+      "a product or pack Purchase raises mid-call stays usable in a seller's catalogue immediately but cannot be listed until Admin confirms the underlying master data.",
+  },
+  purchase_matrix: {
+    purpose:
+      'Who sells what, read either by product (the call list for a gap) or by seller (his whole business) — built from the seller catalogue plus every live listing.',
+  },
+  purchase_recovery: {
+    purpose:
+      'Three things that leak money quietly: dock findings still waiting for Purchase to apply, return notes running out of their 30-day window, and open debits against a seller.',
+  },
+  purchase_products: {
+    purpose:
+      "What came in, what was answered and what converted, product by product — plus the product/company/pack master data Purchase may raise mid-call as a draft, pending Admin's confirmation.",
+  },
   sales_desk: {
     purpose:
       'Where Sales staff work the buyer side — who is waiting on a payment, who was promised a call-back, who is waiting on a rate, and where demand is picking up.',

@@ -55,7 +55,15 @@ export function ProductDetailPage() {
               onCancel={() => setEditing(false)}
             />
           ) : (
-            <ProductDetailCard product={product} onEdit={() => setEditing(true)} />
+            <ProductDetailCard
+              product={product}
+              onEdit={() => setEditing(true)}
+              onConfirmDraft={() =>
+                void callApi((token) =>
+                  updateProduct(token, product.productId, { state: 'live' }),
+                ).then(retry)
+              }
+            />
           )
         }
       </AsyncBoundary>
@@ -65,14 +73,29 @@ export function ProductDetailPage() {
   );
 }
 
-function ProductDetailCard({ product, onEdit }: { product: ProductDto; onEdit: () => void }) {
+function ProductDetailCard({
+  product,
+  onEdit,
+  onConfirmDraft,
+}: {
+  product: ProductDto;
+  onEdit: () => void;
+  onConfirmDraft: () => void;
+}) {
   return (
     <Card
       title={product.brand}
       actions={
-        <Button variant="secondary" icon={<FiEdit2 />} onClick={onEdit}>
-          Edit
-        </Button>
+        <div className="flex gap-2">
+          {product.state === 'draft' && (
+            <Button variant="secondary" onClick={onConfirmDraft}>
+              Confirm draft
+            </Button>
+          )}
+          <Button variant="secondary" icon={<FiEdit2 />} onClick={onEdit}>
+            Edit
+          </Button>
+        </div>
       }
     >
       <dl className="grid grid-cols-2 gap-x-6 gap-y-3 text-sm">
@@ -94,10 +117,11 @@ function ProductDetailCard({ product, onEdit }: { product: ProductDto; onEdit: (
         </div>
         <div>
           <dt className="text-slate-500">Status</dt>
-          <dd>
+          <dd className="flex gap-1">
             <Badge tone={product.active ? 'good' : 'neutral'}>
               {product.active ? 'Active' : 'Inactive'}
             </Badge>
+            {product.state === 'draft' && <Badge tone="warn">draft</Badge>}
           </dd>
         </div>
       </dl>
@@ -325,8 +349,13 @@ function SkusSection({ productId }: { productId: string }) {
                       <Badge tone={sku.active === false ? 'neutral' : 'good'}>
                         {sku.active === false ? 'Inactive' : 'Active'}
                       </Badge>
+                      {sku.state === 'draft' && (
+                        <span className="ml-1">
+                          <Badge tone="warn">draft</Badge>
+                        </span>
+                      )}
                     </Td>
-                    <Td>
+                    <Td className="flex gap-2">
                       <Button
                         variant="secondary"
                         size="sm"
@@ -335,6 +364,19 @@ function SkusSection({ productId }: { productId: string }) {
                       >
                         Edit
                       </Button>
+                      {sku.state === 'draft' && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() =>
+                            void callApi((token) =>
+                              updateSku(token, sku.skuId, { state: 'live' }),
+                            ).then(retry)
+                          }
+                        >
+                          Confirm
+                        </Button>
+                      )}
                     </Td>
                   </tr>
                 ),

@@ -15,7 +15,19 @@ import { AccountsDeskPage } from '../desks/accounts/AccountsDeskPage';
 import { MargDeskPage } from '../desks/marg/MargDeskPage';
 import { DockDeskPage } from '../desks/dock/DockDeskPage';
 import { RegistersPage } from '../desks/registers/RegistersPage';
-import { PurchaseDeskPage } from '../desks/purchase/PurchaseDeskPage';
+import { PurchaseLayout } from '../desks/purchase/PurchaseLayout';
+import { TodayPage } from '../desks/purchase/TodayPage';
+import { DemandPage } from '../desks/purchase/DemandPage';
+import { ConfirmationsPage } from '../desks/purchase/ConfirmationsPage';
+import { DispatchPage } from '../desks/purchase/DispatchPage';
+import { SellersPage } from '../desks/purchase/SellersPage';
+import { SellerFilePage } from '../desks/purchase/SellerFilePage';
+import { AddSellerPage } from '../desks/purchase/AddSellerPage';
+import { AddCatalogueEntryPage } from '../desks/purchase/AddCatalogueEntryPage';
+import { EnterListingPage } from '../desks/purchase/EnterListingPage';
+import { SupplyMatrixPage } from '../desks/purchase/SupplyMatrixPage';
+import { RecoveryPage } from '../desks/purchase/RecoveryPage';
+import { PurchaseProductsPage } from '../desks/purchase/PurchaseProductsPage';
 import { SalesDeskPage } from '../desks/sales/SalesDeskPage';
 import { LogisticsDeskPage } from '../desks/logistics/LogisticsDeskPage';
 import { ControllerDeskPage } from '../desks/controller/ControllerDeskPage';
@@ -165,11 +177,24 @@ export function App() {
           element={
             <RequireAuth permission={PERMISSIONS.DEMAND_READ}>
               <AppShell>
-                <PurchaseDeskPage />
+                <PurchaseLayout />
               </AppShell>
             </RequireAuth>
           }
-        />
+        >
+          <Route index element={<TodayPage />} />
+          <Route path="demand" element={<DemandPage />} />
+          <Route path="confirmations" element={<ConfirmationsPage />} />
+          <Route path="dispatch" element={<DispatchPage />} />
+          <Route path="sellers" element={<SellersPage />} />
+          <Route path="add-seller" element={<AddSellerPage />} />
+          <Route path="sellers/:id" element={<SellerFilePage />} />
+          <Route path="sellers/:id/catalogue/new" element={<AddCatalogueEntryPage />} />
+          <Route path="sellers/:id/listing/new" element={<EnterListingPage />} />
+          <Route path="matrix" element={<SupplyMatrixPage />} />
+          <Route path="recovery" element={<RecoveryPage />} />
+          <Route path="products" element={<PurchaseProductsPage />} />
+        </Route>
         <Route
           path="/sales"
           element={

@@ -1,7 +1,7 @@
 import { useCallback, useState } from 'react';
 import type { FormEvent } from 'react';
 import { FiPlus } from 'react-icons/fi';
-import { createManufacturer, getAllManufacturers } from '../../api/catalog';
+import { createManufacturer, getAllManufacturers, updateManufacturer } from '../../api/catalog';
 import { ApiError } from '../../api/errors';
 import { AsyncBoundary } from '../../components/AsyncBoundary';
 import { DevNote } from '../../components/dev/DevNote';
@@ -51,8 +51,26 @@ export function ManufacturersPage() {
           {(items) => (
             <ul className="mb-4 flex flex-wrap gap-2">
               {items.map((manufacturer) => (
-                <li key={manufacturer.manufacturerId}>
+                <li key={manufacturer.manufacturerId} className="flex items-center gap-1">
                   <Badge>{manufacturer.name}</Badge>
+                  {manufacturer.state === 'draft' && (
+                    <>
+                      <Badge tone="warn">draft</Badge>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() =>
+                          void callApi((token) =>
+                            updateManufacturer(token, manufacturer.manufacturerId, {
+                              state: 'live',
+                            }),
+                          ).then(retry)
+                        }
+                      >
+                        Confirm
+                      </Button>
+                    </>
+                  )}
                 </li>
               ))}
             </ul>

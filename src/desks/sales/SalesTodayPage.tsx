@@ -1,5 +1,6 @@
-import { useCallback, useState } from 'react';
-import { getSalesWorklist, type SalesWorkItem } from '../../api/sales';
+import { useCallback, useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { getSalesWorklist, getMarketPulse, type SalesWorkItem } from '../../api/sales';
 import { allocateUpcomingReceipt, getUpcomingReceipts } from '../../api/payment';
 import { ApiError } from '../../api/errors';
 import { AsyncBoundary } from '../../components/AsyncBoundary';
@@ -11,6 +12,8 @@ import { Badge } from '../../components/ui/Badge';
 import { Input } from '../../components/ui/Input';
 import { Button } from '../../components/ui/Button';
 
+const BUCKET_ORDER: SalesWorkItem['bucket'][] = ['money', 'promised', 'he_asked', 'market'];
+
 const BUCKET_LABEL: Record<SalesWorkItem['bucket'], string> = {
   money: 'Money',
   promised: 'Promised',
@@ -18,60 +21,135 @@ const BUCKET_LABEL: Record<SalesWorkItem['bucket'], string> = {
   market: 'Market',
 };
 
+const BUCKET_NOTE: Record<SalesWorkItem['bucket'], string> = {
+  money: 'A payment window running out, or money he says he has sent.',
+  promised: 'You said you would. Nothing else in the system creates these.',
+  he_asked: 'Waiting on a rate, or a held rate running out.',
+  market: 'Rising where he is, and he buys it. The pulse is a call list and nothing else.',
+};
+
 /**
  * "Today" — everything the customer is waiting on (BR-282), grouped by
  * bucket rather than stage, plus Sales's own accounting act, payment
- * allocation (IC-13 — moved here from the Accounts desk). Relocated from
- * the old flat `SalesDeskPage`.
+ * allocation (IC-13 — moved here from the Accounts desk).
  */
 export function SalesTodayPage() {
+  const { callApi } = useAuth();
+  const worklistLoader = useCallback(() => callApi((token) => getSalesWorklist(token)), [callApi]);
+  const { state: worklistState, retry: retryWorklist } = useAsyncData(
+    worklistLoader,
+    (items) => items.length === 0,
+    [worklistLoader],
+  );
+  const pulseLoader = useCallback(() => callApi((token) => getMarketPulse(token)), [callApi]);
+  const { state: pulseState } = useAsyncData(pulseLoader, (items) => items.length === 0, [pulseLoader]);
+  const risingCount =
+    pulseState.status === 'success' ? pulseState.data.filter((c) => c.status === 'rising').length : null;
+
   return (
     <div className="flex flex-col gap-6">
-      <WorklistSection />
+      <AsyncBoundary
+        state={worklistState}
+        onRetry={retryWorklist}
+        emptyMessage="Nothing is waiting on you. Open the Funnel — every joint on it has an owner."
+      >
+        {(items) => <Worklist items={items} risingCount={risingCount} />}
+      </AsyncBoundary>
       <PaymentAllocationSection />
     </div>
   );
 }
 
-function WorklistSection() {
-  const { callApi } = useAuth();
-  const loader = useCallback(() => callApi((token) => getSalesWorklist(token)), [callApi]);
-  const { state, retry } = useAsyncData(loader, (items) => items.length === 0, [loader]);
+function Worklist({
+  items,
+  risingCount,
+}: {
+  items: SalesWorkItem[];
+  risingCount: number | null;
+}) {
+  const navigate = useNavigate();
+  const grouped = useMemo(() => {
+    const map = new Map<SalesWorkItem['bucket'], SalesWorkItem[]>();
+    for (const bucket of BUCKET_ORDER) map.set(bucket, []);
+    for (const item of items) map.get(item.bucket)?.push(item);
+    return map;
+  }, [items]);
 
   return (
-    <Card title="My work (BR-282)">
-      <p className="mb-4 text-sm text-slate-500">
-        Grouped by what the customer is waiting on, not by stage.
-      </p>
-      <AsyncBoundary state={state} onRetry={retry} emptyMessage="Nothing waiting.">
-        {(items) => (
-          <Table>
-            <thead>
-              <tr>
-                <Th>Waiting on</Th>
-                <Th>Type</Th>
-                <Th>Ref</Th>
-                <Th>Due</Th>
-              </tr>
-            </thead>
-            <tbody>
-              {items.map((item, index) => (
-                <tr key={`${item.refType}-${item.refId}-${index}`}>
-                  <Td>
-                    <Badge tone={item.bucket === 'money' ? 'bad' : 'neutral'}>
-                      {BUCKET_LABEL[item.bucket]}
-                    </Badge>
-                  </Td>
-                  <Td>{item.refType}</Td>
-                  <Td>{item.refId.slice(-6)}</Td>
-                  <Td>{item.dueAt ? new Date(item.dueAt).toLocaleString() : '—'}</Td>
-                </tr>
-              ))}
-            </tbody>
-          </Table>
-        )}
-      </AsyncBoundary>
-    </Card>
+    <div className="flex flex-col gap-6">
+      <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+        <Kpi label="On your plate" value={String(items.length)} />
+        <Kpi label="Money" value={String(grouped.get('money')?.length ?? 0)} />
+        <Kpi label="He asked" value={String(grouped.get('he_asked')?.length ?? 0)} />
+        <Kpi label="Rising cells" value={risingCount == null ? '—' : String(risingCount)} />
+      </div>
+
+      {BUCKET_ORDER.filter((bucket) => (grouped.get(bucket)?.length ?? 0) > 0).map((bucket) => (
+        <Card
+          key={bucket}
+          title={
+            <span className="flex items-center gap-2">
+              {BUCKET_LABEL[bucket]}
+              <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-semibold text-slate-600">
+                {grouped.get(bucket)?.length}
+              </span>
+            </span>
+          }
+        >
+          <p className="mb-3 text-sm text-slate-500">{BUCKET_NOTE[bucket]}</p>
+          <div className="flex flex-col divide-y divide-slate-100 overflow-hidden rounded-md border border-slate-200">
+            {grouped.get(bucket)!.map((item, index) => (
+              <WorkRow
+                key={`${item.refType}-${item.refId}-${index}`}
+                item={item}
+                onOpen={item.buyerId ? () => navigate(`/sales/buyers/${item.buyerId}`) : undefined}
+              />
+            ))}
+          </div>
+        </Card>
+      ))}
+    </div>
+  );
+}
+
+function WorkRow({ item, onOpen }: { item: SalesWorkItem; onOpen?: () => void }) {
+  const isMarket = item.bucket === 'market';
+  const [tehsilId, productId] = isMarket ? item.refId.split(':') : [null, null];
+  const main = isMarket
+    ? `Tehsil …${(tehsilId ?? '').slice(-6)} × product …${(productId ?? '').slice(-6)}`
+    : `${item.refType.toUpperCase()} …${item.refId.slice(-6)}`;
+  const due = item.dueAt ? new Date(item.dueAt) : null;
+  const overdue = due ? due < new Date() : false;
+
+  const content = (
+    <>
+      <div className="flex flex-col text-left">
+        <span className="text-sm font-semibold text-slate-900">{main}</span>
+        {due && <span className="text-xs text-slate-500">due {due.toLocaleString()}</span>}
+      </div>
+      {due && <Badge tone={overdue ? 'bad' : 'warn'}>{overdue ? 'overdue' : 'due'}</Badge>}
+    </>
+  );
+
+  return onOpen ? (
+    <button
+      type="button"
+      onClick={onOpen}
+      className="flex items-center justify-between gap-3 px-4 py-3 text-left hover:bg-slate-50"
+    >
+      {content}
+    </button>
+  ) : (
+    <div className="flex items-center justify-between gap-3 px-4 py-3">{content}</div>
+  );
+}
+
+function Kpi({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-md border border-slate-200 bg-white p-3">
+      <div className="text-xl font-semibold text-slate-900">{value}</div>
+      <div className="text-xs font-medium uppercase tracking-wide text-slate-500">{label}</div>
+    </div>
   );
 }
 
@@ -86,7 +164,7 @@ function PaymentAllocationSection() {
   const [submitting, setSubmitting] = useState(false);
 
   return (
-    <Card title="Allocate a payment (IC-13)">
+    <Card title="Money — apply a claim (IC-13)">
       <p className="mb-4 text-sm text-slate-500">
         A buyer&apos;s claim, not yet money — it touches no bank book and no ledger until Accounts
         posts it against exactly the SO picked here (BR-012, INV-15).
@@ -103,7 +181,7 @@ function PaymentAllocationSection() {
               <tr>
                 <Th>ID</Th>
                 <Th>Buyer</Th>
-                <Th>Amount</Th>
+                <Th numeric>Amount</Th>
               </tr>
             </thead>
             <tbody>
@@ -111,7 +189,7 @@ function PaymentAllocationSection() {
                 <tr key={item.upcomingReceiptId}>
                   <Td>{item.upcomingReceiptId}</Td>
                   <Td>{item.buyerId}</Td>
-                  <Td>₹{(item.amountPaise / 100).toFixed(2)}</Td>
+                  <Td numeric>₹{(item.amountPaise / 100).toFixed(2)}</Td>
                 </tr>
               ))}
             </tbody>

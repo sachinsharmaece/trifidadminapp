@@ -33,7 +33,8 @@ export interface TehsilDto {
 export interface ManufacturerDto {
   manufacturerId: string;
   name: string;
-  // Purchase-desk v2 — draft/live. Absent on rows read before this existed.
+  // Absent on rows read before either of these existed.
+  aka?: string[];
   state?: 'draft' | 'live';
 }
 

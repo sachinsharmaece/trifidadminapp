@@ -8,11 +8,14 @@ import {
   getInspectionsPendingApply,
   getReturnNoteAgeing,
   getFunnelReport,
+  getSupplyMatrixByProduct,
+  getAbsorptionQueue,
   type PileAwaitingDecisionItem,
   type DispatchQueueItem,
   type InspectionPendingApplyItem,
   type ReturnNoteAgeingItem,
   type FunnelReport,
+  type AbsorptionQueueItem,
 } from '../../api/purchase';
 import { listRegistrations } from '../../api/onboarding';
 import type { RegistrationListItem } from '../../api/dto';
@@ -27,11 +30,15 @@ import { FunnelMetricsGrid } from './FunnelMetrics';
 
 interface TodaySummary {
   noSellerAsks: number;
+  openBoxes: number;
+  catalogueEntries: number;
+  carryNeverListed: number;
   pilesChasing: PileAwaitingDecisionItem[];
   dispatchOverdue: DispatchQueueItem[];
   inspectionsPending: InspectionPendingApplyItem[];
   returnNotesOld: ReturnNoteAgeingItem[];
   sellersPendingApproval: RegistrationListItem[];
+  absorptionPending: AbsorptionQueueItem[];
   funnel: FunnelReport | null;
 }
 
@@ -46,25 +53,42 @@ export function TodayPage() {
   const navigate = useNavigate();
 
   const loader = useCallback(async (): Promise<TodaySummary> => {
-    const [demand, piles, dispatch, inspections, returns, registrations, funnel] =
-      await Promise.all([
-        callApi((token) => getActiveDemandList(token, true)),
-        callApi((token) => getPilesAwaitingDecision(token)),
-        callApi((token) => getDispatchChaseQueue(token)),
-        callApi((token) => getInspectionsPendingApply(token)),
-        callApi((token) => getReturnNoteAgeing(token)),
-        callApi((token) => listRegistrations(token, 'pending')),
-        hasPermission(PERMISSIONS.FUNNEL_READ)
-          ? callApi((token) => getFunnelReport(token))
-          : Promise.resolve(null),
-      ]);
+    const [
+      demand,
+      piles,
+      dispatch,
+      inspections,
+      returns,
+      registrations,
+      matrix,
+      funnel,
+      absorption,
+    ] = await Promise.all([
+      callApi((token) => getActiveDemandList(token)),
+      callApi((token) => getPilesAwaitingDecision(token)),
+      callApi((token) => getDispatchChaseQueue(token)),
+      callApi((token) => getInspectionsPendingApply(token)),
+      callApi((token) => getReturnNoteAgeing(token)),
+      callApi((token) => listRegistrations(token, 'pending')),
+      callApi((token) => getSupplyMatrixByProduct(token)),
+      hasPermission(PERMISSIONS.FUNNEL_READ)
+        ? callApi((token) => getFunnelReport(token))
+        : Promise.resolve(null),
+      hasPermission(PERMISSIONS.ABSORPTION_READ)
+        ? callApi((token) => getAbsorptionQueue(token))
+        : Promise.resolve([]),
+    ]);
     return {
-      noSellerAsks: demand.length,
+      noSellerAsks: demand.filter((d) => d.noSeller).length,
+      openBoxes: demand.reduce((sum, d) => sum + d.qty, 0),
+      catalogueEntries: matrix.reduce((sum, r) => sum + r.carryCount, 0),
+      carryNeverListed: matrix.filter((r) => r.carryCount > 0 && r.listedCount === 0).length,
       pilesChasing: piles.filter((p) => p.chaseLeftHours <= 3),
       dispatchOverdue: dispatch.filter((d) => d.bucket === 'overdue'),
       inspectionsPending: inspections,
       returnNotesOld: returns.filter((r) => r.daysOld > 21),
       sellersPendingApproval: registrations.filter((r) => r.kind !== 'buyer'),
+      absorptionPending: absorption.filter((a) => a.status === 'pending'),
       funnel,
     };
   }, [callApi, hasPermission]);
@@ -77,7 +101,8 @@ export function TodayPage() {
         s.dispatchOverdue.length +
         s.inspectionsPending.length +
         s.returnNotesOld.length +
-        s.sellersPendingApproval.length ===
+        s.sellersPendingApproval.length +
+        s.absorptionPending.length ===
       0,
     [loader],
   );
@@ -95,6 +120,24 @@ export function TodayPage() {
       >
         {(s) => (
           <div className="flex flex-col gap-4">
+            <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+              <Kpi label="Open boxes" value={s.openBoxes} />
+              <Kpi label="Catalogue entries" value={s.catalogueEntries} />
+              <Kpi label="Carry, never listed" value={s.carryNeverListed} />
+              <Kpi
+                label="On your plate"
+                value={
+                  s.noSellerAsks +
+                  s.pilesChasing.length +
+                  s.dispatchOverdue.length +
+                  s.inspectionsPending.length +
+                  s.returnNotesOld.length +
+                  s.sellersPendingApproval.length +
+                  s.absorptionPending.length
+                }
+              />
+            </div>
+
             {s.dispatchOverdue.length > 0 && (
               <Card title="Dispatch overdue">
                 <ul className="flex flex-col gap-2">
@@ -199,6 +242,27 @@ export function TodayPage() {
               </Card>
             )}
 
+            {s.absorptionPending.length > 0 && (
+              <Card title="Replacement offers pending">
+                <p className="mb-3 text-sm text-slate-600">
+                  {s.absorptionPending.length} SO
+                  {s.absorptionPending.length === 1 ? '' : 's'} offered a replacement, awaiting the
+                  buyer's answer before the offer expires (IC-06 — no cap, no source rate shown
+                  here).
+                </p>
+                <ul className="flex flex-col gap-2">
+                  {s.absorptionPending.map((a) => (
+                    <li key={a.soId} className="flex items-center justify-between text-sm">
+                      <span>SO {a.soId.slice(-6)}</span>
+                      <Badge tone={a.withinCap ? 'good' : 'warn'}>
+                        expires {new Date(a.expiresAt).toLocaleString()}
+                      </Badge>
+                    </li>
+                  ))}
+                </ul>
+              </Card>
+            )}
+
             {s.funnel && (
               <Card title="Leaks closed — funnel and leak analytics (BR-275)">
                 <p className="mb-4 text-sm text-slate-500">
@@ -210,6 +274,15 @@ export function TodayPage() {
           </div>
         )}
       </AsyncBoundary>
+    </div>
+  );
+}
+
+function Kpi({ label, value }: { label: string; value: number }) {
+  return (
+    <div className="rounded-md border border-slate-200 bg-white p-3">
+      <div className="text-xl font-semibold text-slate-900">{value}</div>
+      <div className="text-xs font-medium uppercase tracking-wide text-slate-500">{label}</div>
     </div>
   );
 }

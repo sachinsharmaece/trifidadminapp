@@ -8,6 +8,9 @@ export interface ActiveDemandItem {
   createdAt: string;
   sellerCounts: { quoted: number; active: number; dormant: number; dark: number };
   noSeller: boolean;
+  brand: string;
+  technical: string;
+  manufacturerName: string;
 }
 
 export function getActiveDemandList(
@@ -41,6 +44,18 @@ export function getAskSellerStates(
   askId: string,
 ): Promise<AskSellerStateItem[]> {
   return apiFetch(`/staff/purchase/asks/${askId}/seller-states`, { accessToken });
+}
+
+export function postAskChase(
+  accessToken: string,
+  askId: string,
+  sellerId: string,
+): Promise<{ logged: true }> {
+  return apiFetch(`/staff/purchase/asks/${askId}/chase`, {
+    method: 'POST',
+    body: { sellerId },
+    accessToken,
+  });
 }
 
 export interface CoverageCell {
@@ -112,6 +127,7 @@ export function getReturnNoteAgeing(accessToken: string): Promise<ReturnNoteAgei
 export interface SellerRecoveryItem {
   complaintId: string;
   sellerId: string;
+  sellerFirm: string;
   debitNoteId: string | null;
   decidedAt: string | null;
 }
@@ -284,23 +300,37 @@ export interface PileAwaitingDecisionItem {
   pileId: string;
   sellerId: string;
   sellerCounterpartyId: string;
+  sellerFirm: string;
   skuId: string;
+  packLabel: string;
+  brand: string;
   ratePaise: number;
   boxes: number;
+  lineQty: number;
   buyers: number;
   openedAt: string;
   confirmWindowEndsAt: string;
   chaseLeftHours: number;
+  gapText: string | null;
 }
 
 export function getPilesAwaitingDecision(accessToken: string): Promise<PileAwaitingDecisionItem[]> {
   return apiFetch('/staff/purchase/piles', { accessToken });
 }
 
+export function postPileChase(accessToken: string, pileId: string): Promise<{ logged: true }> {
+  return apiFetch(`/staff/purchase/piles/${pileId}/chase`, { method: 'POST', accessToken });
+}
+
 export interface DispatchQueueItem {
   poId: string;
   poNo: string;
   sellerId: string;
+  sellerFirm: string;
+  sellerCutoffTime: string;
+  brand: string;
+  packLabel: string;
+  boxes: number;
   bucket: 'due' | 'overdue' | 'in_transit';
   dispatchDueDate: string;
   hoursLeft: number | null;
@@ -323,6 +353,7 @@ export interface InspectionPendingApplyItem {
   poId: string;
   poNo: string;
   sellerId: string;
+  sellerFirm: string;
   casesAccepted: number;
   casesRejected: number;
   reasons: string[];
@@ -385,9 +416,14 @@ export function getDraftMasters(accessToken: string): Promise<DraftMasterItem[]>
   return apiFetch('/staff/purchase/masters/drafts', { accessToken });
 }
 
-export function getMastersManufacturers(
-  accessToken: string,
-): Promise<Array<{ manufacturerId: string; name: string; state?: 'draft' | 'live' }>> {
+export interface MasterManufacturer {
+  manufacturerId: string;
+  name: string;
+  aka: string[];
+  state?: 'draft' | 'live';
+}
+
+export function getMastersManufacturers(accessToken: string): Promise<MasterManufacturer[]> {
   return apiFetch('/staff/purchase/masters/manufacturers', { accessToken });
 }
 
@@ -406,10 +442,11 @@ export function getMastersProducts(accessToken: string): Promise<
 export function postDraftManufacturer(
   accessToken: string,
   name: string,
+  aka?: string[],
 ): Promise<{ manufacturerId: string }> {
   return apiFetch('/staff/purchase/masters/manufacturers', {
     method: 'POST',
-    body: { name },
+    body: { name, aka },
     accessToken,
   });
 }
@@ -443,6 +480,7 @@ export function postDraftSku(
 export interface OpenSellerDebitItem {
   debitId: string;
   sellerId: string;
+  sellerFirm: string;
   reason: string;
   amountPaise: number;
   raisedAt: string;

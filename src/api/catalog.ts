@@ -39,15 +39,16 @@ export function getAllManufacturers(accessToken: string): Promise<ManufacturerDt
 export function createManufacturer(
   accessToken: string,
   name: string,
+  aka?: string[],
 ): Promise<{ manufacturerId: string }> {
-  return apiFetch('/admin/manufacturers', { method: 'POST', body: { name }, accessToken });
+  return apiFetch('/admin/manufacturers', { method: 'POST', body: { name, aka }, accessToken });
 }
 
 // Purchase-desk v2 — Admin's rename/confirm action (the draft → live PATCH).
 export function updateManufacturer(
   accessToken: string,
   manufacturerId: string,
-  input: Partial<{ name: string; state: 'live' }>,
+  input: Partial<{ name: string; aka: string[]; state: 'live' }>,
 ): Promise<{ manufacturerId: string }> {
   return apiFetch(`/admin/manufacturers/${manufacturerId}`, {
     method: 'PATCH',

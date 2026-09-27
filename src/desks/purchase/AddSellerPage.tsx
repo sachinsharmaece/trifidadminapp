@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import type { FormEvent } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { FiArrowLeft, FiPhoneCall } from 'react-icons/fi';
 import { staffRegisterSeller } from '../../api/onboarding';
 import { ApiError } from '../../api/errors';
@@ -27,13 +27,20 @@ export function AddSellerPage() {
   const [refFirm2, setRefFirm2] = useState('');
   const [refPhone2, setRefPhone2] = useState('');
   const [callNote, setCallNote] = useState('');
-  const [result, setResult] = useState<{ registrationId: string } | null>(null);
+  const [result, setResult] = useState<{
+    registrationId: string;
+    accountNameWarning: string | null;
+  } | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [duplicateOfId, setDuplicateOfId] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
 
   async function handleSubmit(event: FormEvent): Promise<void> {
     event.preventDefault();
     setError(null);
+    setFieldErrors({});
+    setDuplicateOfId(null);
     setSubmitting(true);
     try {
       setResult(
@@ -65,9 +72,25 @@ export function AddSellerPage() {
         ),
       );
     } catch (submitError) {
-      setError(
-        submitError instanceof ApiError ? submitError.message : 'Could not register this seller.',
-      );
+      if (submitError instanceof ApiError && submitError.fieldErrors) {
+        setFieldErrors(submitError.fieldErrors);
+      } else if (submitError instanceof ApiError && submitError.field) {
+        // A single-field AppError (e.g. the GSTIN/mobile duplicate check) —
+        // pin it to that field instead of a generic page-level banner, same
+        // as the batch fieldErrors case above.
+        setFieldErrors({ [submitError.field]: submitError.message });
+      } else {
+        setError(
+          submitError instanceof ApiError ? submitError.message : 'Could not register this seller.',
+        );
+      }
+      if (
+        submitError instanceof ApiError &&
+        typeof submitError.meta?.existingCounterpartyId === 'string'
+      ) {
+        setError(submitError.message);
+        setDuplicateOfId(submitError.meta.existingCounterpartyId);
+      }
     } finally {
       setSubmitting(false);
     }
@@ -91,6 +114,9 @@ export function AddSellerPage() {
             label="Mobile"
             value={mobile}
             onChange={(e) => setMobile(e.target.value)}
+            pattern="[6-9][0-9]{9}"
+            maxLength={10}
+            error={fieldErrors.mobile}
             required
           />
           <Input
@@ -98,6 +124,7 @@ export function AddSellerPage() {
             label="Firm"
             value={firm}
             onChange={(e) => setFirm(e.target.value)}
+            error={fieldErrors.firm}
             required
           />
           <Input
@@ -105,6 +132,7 @@ export function AddSellerPage() {
             label="GSTIN"
             value={gstin}
             onChange={(e) => setGstin(e.target.value)}
+            error={fieldErrors.gstin}
             required
           />
           <Input
@@ -112,6 +140,7 @@ export function AddSellerPage() {
             label="Owner name"
             value={ownerName}
             onChange={(e) => setOwnerName(e.target.value)}
+            error={fieldErrors.ownerName}
             required
           />
           <Input
@@ -119,6 +148,7 @@ export function AddSellerPage() {
             label="Insecticide licence no."
             value={licenceNo}
             onChange={(e) => setLicenceNo(e.target.value)}
+            error={fieldErrors.licenceNo}
             required
           />
           <Input
@@ -126,6 +156,7 @@ export function AddSellerPage() {
             label="Bank account number"
             value={accountNumber}
             onChange={(e) => setAccountNumber(e.target.value)}
+            error={fieldErrors['bankDetail.accountNumber']}
             required
           />
           <Input
@@ -133,6 +164,7 @@ export function AddSellerPage() {
             label="IFSC"
             value={ifsc}
             onChange={(e) => setIfsc(e.target.value)}
+            error={fieldErrors['bankDetail.ifsc']}
             required
           />
           <Input
@@ -140,6 +172,7 @@ export function AddSellerPage() {
             label="Account name"
             value={accountName}
             onChange={(e) => setAccountName(e.target.value)}
+            error={fieldErrors['bankDetail.accountName']}
             required
           />
           <Input
@@ -147,6 +180,7 @@ export function AddSellerPage() {
             label="Referee 1 — firm"
             value={refFirm1}
             onChange={(e) => setRefFirm1(e.target.value)}
+            error={fieldErrors['references.0.firm']}
             required
           />
           <Input
@@ -154,6 +188,9 @@ export function AddSellerPage() {
             label="Referee 1 — phone"
             value={refPhone1}
             onChange={(e) => setRefPhone1(e.target.value)}
+            pattern="[6-9][0-9]{9}"
+            maxLength={10}
+            error={fieldErrors['references.0.phone']}
             required
           />
           <Input
@@ -161,6 +198,7 @@ export function AddSellerPage() {
             label="Referee 2 — firm"
             value={refFirm2}
             onChange={(e) => setRefFirm2(e.target.value)}
+            error={fieldErrors['references.1.firm']}
             required
           />
           <Input
@@ -168,6 +206,9 @@ export function AddSellerPage() {
             label="Referee 2 — phone"
             value={refPhone2}
             onChange={(e) => setRefPhone2(e.target.value)}
+            pattern="[6-9][0-9]{9}"
+            maxLength={10}
+            error={fieldErrors['references.1.phone']}
             required
           />
           <div className="col-span-2">
@@ -177,19 +218,39 @@ export function AddSellerPage() {
               hint="Who called, what was agreed."
               value={callNote}
               onChange={(e) => setCallNote(e.target.value)}
+              error={fieldErrors.callNote}
               required
             />
           </div>
           {error && (
             <p role="alert" className="col-span-2 text-sm text-danger-500">
               {error}
+              {duplicateOfId && (
+                <>
+                  {' '}
+                  <Link to="/registrations" className="underline">
+                    View existing registrations
+                  </Link>
+                </>
+              )}
             </p>
           )}
           {result && (
-            <p className="col-span-2 text-sm text-success-600">
-              Registered as {result.registrationId} — pending OTP confirmation, then set his area
-              from Registrations.
-            </p>
+            <>
+              <p className="col-span-2 text-sm text-success-600">
+                Registered as {result.registrationId} — pending OTP confirmation, then set his area
+                from Registrations.
+              </p>
+              {result.accountNameWarning && (
+                <p
+                  role="alert"
+                  className="col-span-2 rounded-md bg-warning-50 px-3 py-2 text-sm text-warning-600"
+                >
+                  ⚠️ {result.accountNameWarning} Not blocked — logged for whoever approves this
+                  registration to check with him.
+                </p>
+              )}
+            </>
           )}
           <div className="col-span-2">
             <Button type="submit" loading={submitting} icon={<FiPhoneCall />}>

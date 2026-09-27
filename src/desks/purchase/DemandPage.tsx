@@ -1,8 +1,10 @@
 import { useCallback, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { FiFlag } from 'react-icons/fi';
 import {
   getActiveDemandList,
   getAskSellerStates,
+  postAskChase,
   postNonOrderReason,
   type ActiveDemandItem,
   type AskSellerStateItem,
@@ -58,10 +60,10 @@ export function DemandPage() {
               <thead>
                 <tr>
                   <Th>Ask</Th>
-                  <Th>Boxes</Th>
-                  <Th>Quoted</Th>
-                  <Th>Active</Th>
-                  <Th>Dormant</Th>
+                  <Th numeric>Boxes</Th>
+                  <Th numeric>Quoted</Th>
+                  <Th numeric>Listed</Th>
+                  <Th numeric>Dormant</Th>
                   <Th>No seller</Th>
                   <Th />
                   <Th />
@@ -81,23 +83,36 @@ export function DemandPage() {
 }
 
 function DemandRow({ item, onRecorded }: { item: ActiveDemandItem; onRecorded: () => void }) {
+  const navigate = useNavigate();
   const [open, setOpen] = useState(false);
   return (
     <>
       <tr className="cursor-pointer" onClick={() => setOpen((v) => !v)}>
         <Td>
           {open ? '▾ ' : '▸ '}
-          {item.askId.slice(-6)}
+          {item.brand} · {item.technical}
         </Td>
-        <Td>{item.qty}</Td>
-        <Td>{item.sellerCounts.quoted}</Td>
-        <Td>{item.sellerCounts.active}</Td>
-        <Td>{item.sellerCounts.dormant}</Td>
+        <Td numeric>{item.qty}</Td>
+        <Td numeric>{item.sellerCounts.quoted}</Td>
+        <Td numeric>{item.sellerCounts.active}</Td>
+        <Td numeric>{item.sellerCounts.dormant}</Td>
         <Td>
           {item.noSeller && (
-            <Badge tone="warn">
-              <FiFlag className="inline" /> No seller
-            </Badge>
+            <div className="flex items-center gap-2">
+              <Badge tone="warn">
+                <FiFlag className="inline" /> No seller
+              </Badge>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  navigate(`/purchase/matrix?q=${encodeURIComponent(item.technical)}`);
+                }}
+              >
+                Who could carry it →
+              </Button>
+            </div>
           )}
         </Td>
         <Td onClick={(e) => e.stopPropagation()}>
@@ -141,32 +156,49 @@ function QuoteGapsDetail({ askId }: { askId: string }) {
     >
       {(sellers: AskSellerStateItem[]) => (
         <ul className="flex flex-col gap-1 py-2 pl-6 text-sm">
-          {sellers.map((s) => {
-            const { label, tone } = SELLER_STATE_LABEL[s.state];
-            return (
-              <li key={s.sellerId} className="flex items-center gap-2">
-                <span className="font-medium text-slate-800">{s.firm}</span>
-                <Badge tone={tone}>{label}</Badge>
-                {s.ratePaise !== null && (
-                  <span className="text-slate-500">₹{(s.ratePaise / 100).toFixed(2)}</span>
-                )}
-                {s.gapCodes.length > 0 && (
-                  <span className="text-danger-500">
-                    short: {s.gapCodes.join(', ').replaceAll('_', ' ')}
-                  </span>
-                )}
-              </li>
-            );
-          })}
+          {sellers.map((s) => (
+            <SellerStateRow key={s.sellerId} askId={askId} seller={s} />
+          ))}
         </ul>
       )}
     </AsyncBoundary>
   );
 }
 
+function SellerStateRow({ askId, seller: s }: { askId: string; seller: AskSellerStateItem }) {
+  const { callApi } = useAuth();
+  const [chased, setChased] = useState(false);
+  const { label, tone } = SELLER_STATE_LABEL[s.state];
+  return (
+    <li className="flex items-center gap-2">
+      <span className="font-medium text-slate-800">{s.firm}</span>
+      <Badge tone={tone}>{label}</Badge>
+      {s.ratePaise !== null && (
+        <span className="text-slate-500">₹{(s.ratePaise / 100).toFixed(2)}</span>
+      )}
+      {s.gapCodes.length > 0 && (
+        <span className="text-danger-500">short: {s.gapCodes.join(', ').replaceAll('_', ' ')}</span>
+      )}
+      {s.state !== 'quoted' && (
+        <Button
+          variant="secondary"
+          size="sm"
+          onClick={() =>
+            void callApi((token) => postAskChase(token, askId, s.sellerId)).then(() =>
+              setChased(true),
+            )
+          }
+        >
+          {chased ? 'Chased' : 'Chase'}
+        </Button>
+      )}
+    </li>
+  );
+}
+
 function NonOrderReasonForm({ askId, onRecorded }: { askId: string; onRecorded: () => void }) {
   const { callApi } = useAuth();
-  const [code, setCode] = useState<string>(SUPPLY_GAP_CODES[0]);
+  const [code, setCode] = useState<string>('');
   const [saved, setSaved] = useState(false);
 
   return (
@@ -178,6 +210,9 @@ function NonOrderReasonForm({ askId, onRecorded }: { askId: string; onRecorded: 
         onChange={(e) => setCode(e.target.value)}
         className="text-xs"
       >
+        <option value="" disabled>
+          Select a reason…
+        </option>
         {SUPPLY_GAP_CODES.map((c) => (
           <option key={c} value={c}>
             {c.replaceAll('_', ' ')}
@@ -187,6 +222,7 @@ function NonOrderReasonForm({ askId, onRecorded }: { askId: string; onRecorded: 
       <Button
         variant="secondary"
         size="sm"
+        disabled={!code}
         onClick={() =>
           void callApi((token) => postNonOrderReason(token, { askId, code })).then(() => {
             setSaved(true);

@@ -1,4 +1,12 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import type { ReactNode } from 'react';
 import {
   getMe,
@@ -19,6 +27,12 @@ interface AuthContextValue {
   verifyMfa: (mfaToken: string, code: string) => Promise<void>;
   logout: () => Promise<void>;
   hasPermission: (permission: string) => boolean;
+  // Set only when an already-authenticated session was force-signed-out —
+  // a failed silent refresh mid-task, never the ordinary "never logged in
+  // yet" case on first load — so `/login` can say *why* instead of just
+  // silently reappearing with whatever form data the user had lost.
+  sessionExpiredNotice: boolean;
+  dismissSessionExpiredNotice: () => void;
   // Wraps any authenticated API call: on a REAUTH_REQUIRED it attempts one
   // silent refresh and retries once, then gives up — never an infinite loop
   // (ARCHITECTURE.md §M2 frontend scope).
@@ -31,25 +45,46 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [status, setStatus] = useState<AuthStatus>('loading');
   const [accessToken, setAccessToken] = useState<string | null>(null);
   const [me, setMe] = useState<StaffMeDto | null>(null);
+  // Concurrent callApi calls with an expired token must not each race the
+  // same rotating refresh cookie — the backend's reuse-detection (correctly)
+  // revokes the whole token family on a second presentation of an
+  // already-rotated refresh token, which was forcing false logouts whenever
+  // a page fired several parallel calls at once.
+  const refreshInFlight = useRef<Promise<{ accessToken: string }> | null>(null);
+
+  const getOrStartRefresh = useCallback(() => {
+    if (!refreshInFlight.current) {
+      refreshInFlight.current = refreshSession().finally(() => {
+        refreshInFlight.current = null;
+      });
+    }
+    return refreshInFlight.current;
+  }, []);
+
+  const [sessionExpiredNotice, setSessionExpiredNotice] = useState(false);
 
   const establishSession = useCallback(async (token: string) => {
     const profile = await getMe(token);
     setAccessToken(token);
     setMe(profile);
     setStatus('authenticated');
+    setSessionExpiredNotice(false);
   }, []);
 
-  const clearSession = useCallback(() => {
+  const clearSession = useCallback((reason?: 'expired') => {
     setAccessToken(null);
     setMe(null);
     setStatus('anonymous');
+    if (reason === 'expired') setSessionExpiredNotice(true);
   }, []);
+
+  const dismissSessionExpiredNotice = useCallback(() => setSessionExpiredNotice(false), []);
 
   // On first load, try to restore a session from the httpOnly refresh
   // cookie — never from localStorage (TD-006: shared shop devices).
   useEffect(() => {
     let cancelled = false;
-    refreshSession()
+    getOrStartRefresh()
       .then((result) => {
         if (cancelled) return;
         return establishSession(result.accessToken);
@@ -60,7 +95,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => {
       cancelled = true;
     };
-  }, [establishSession, clearSession]);
+  }, [establishSession, clearSession, getOrStartRefresh]);
 
   const login = useCallback(
     async (email: string, password: string) => {
@@ -97,8 +132,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const callApi = useCallback(
     async <T,>(fn: (token: string) => Promise<T>): Promise<T> => {
       if (!accessToken) {
-        clearSession();
-        throw new ApiError({ code: 'REAUTH_REQUIRED', message: 'Sign in to continue.' });
+        try {
+          const refreshed = await getOrStartRefresh();
+          setAccessToken(refreshed.accessToken);
+          return await fn(refreshed.accessToken);
+        } catch {
+          clearSession();
+          throw new ApiError({ code: 'REAUTH_REQUIRED', message: 'Sign in to continue.' });
+        }
       }
       try {
         return await fn(accessToken);
@@ -107,21 +148,44 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           throw error;
         }
         try {
-          const refreshed = await refreshSession();
+          const refreshed = await getOrStartRefresh();
           setAccessToken(refreshed.accessToken);
           return await fn(refreshed.accessToken);
         } catch {
-          clearSession();
+          // Was authenticated, mid-task, and a silent refresh couldn't save
+          // it — the one case worth telling the user about on the way to
+          // `/login`, distinct from never having signed in at all.
+          clearSession('expired');
           throw error;
         }
       }
     },
-    [accessToken, clearSession],
+    [accessToken, clearSession, getOrStartRefresh],
   );
 
   const value = useMemo<AuthContextValue>(
-    () => ({ status, me, login, verifyMfa, logout, hasPermission, callApi }),
-    [status, me, login, verifyMfa, logout, hasPermission, callApi],
+    () => ({
+      status,
+      me,
+      login,
+      verifyMfa,
+      logout,
+      hasPermission,
+      callApi,
+      sessionExpiredNotice,
+      dismissSessionExpiredNotice,
+    }),
+    [
+      status,
+      me,
+      login,
+      verifyMfa,
+      logout,
+      hasPermission,
+      callApi,
+      sessionExpiredNotice,
+      dismissSessionExpiredNotice,
+    ],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

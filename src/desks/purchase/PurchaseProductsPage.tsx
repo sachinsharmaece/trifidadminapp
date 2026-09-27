@@ -9,6 +9,7 @@ import {
   postDraftSku,
   type ProductFunnelRow,
   type DraftMasterItem,
+  type MasterManufacturer,
 } from '../../api/purchase';
 import { ApiError } from '../../api/errors';
 import { AsyncBoundary } from '../../components/AsyncBoundary';
@@ -20,13 +21,9 @@ import { Badge } from '../../components/ui/Badge';
 import { Button } from '../../components/ui/Button';
 import { Input, Select } from '../../components/ui/Input';
 import { DevNote } from '../../components/dev/DevNote';
+import { isNearMatch } from '../../lib/fuzzyMatch';
 
-const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, '');
-const near = (a: string, b: string) => {
-  const na = norm(a);
-  const nb = norm(b);
-  return na.length > 1 && nb.length > 1 && (na.includes(nb) || nb.includes(na));
-};
+type MasterProductLite = Awaited<ReturnType<typeof getMastersProducts>>[number];
 
 export function PurchaseProductsPage() {
   const [tab, setTab] = useState<'analysis' | 'master'>('analysis');
@@ -104,12 +101,12 @@ function AnalysisTab() {
             <thead>
               <tr>
                 <Th>Product</Th>
-                <Th>Inquiries</Th>
-                <Th>Quoted</Th>
-                <Th>Ordered</Th>
-                <Th>Fill</Th>
-                <Th>Open, boxes</Th>
-                <Th>Sellers</Th>
+                <Th numeric>Inquiries</Th>
+                <Th numeric>Quoted</Th>
+                <Th numeric>Ordered</Th>
+                <Th numeric>Fill</Th>
+                <Th numeric>Open, boxes</Th>
+                <Th numeric>Sellers</Th>
               </tr>
             </thead>
             <tbody>
@@ -125,15 +122,18 @@ function AnalysisTab() {
                         </div>
                       )}
                     </Td>
-                    <Td>{r.inq}</Td>
-                    <Td>
+                    <Td numeric>{r.inq}</Td>
+                    <Td numeric>
                       {r.quoted}
                       <div className="text-xs text-slate-500">{r.inq - r.quoted} never quoted</div>
                     </Td>
-                    <Td className="font-semibold">{r.ordered}</Td>
-                    <Td>{r.fillPct === null ? '—' : `${r.fillPct}%`}</Td>
-                    <Td>{r.openBoxes}</Td>
+                    <Td numeric className="font-semibold">
+                      {r.ordered}
+                    </Td>
+                    <Td numeric>{r.fillPct === null ? '—' : `${r.fillPct}%`}</Td>
+                    <Td numeric>{r.openBoxes}</Td>
                     <Td
+                      numeric
                       className={
                         r.sellerCount === 0
                           ? 'text-danger-500'
@@ -150,13 +150,13 @@ function AnalysisTab() {
               {totals && (
                 <tr className="border-t-2 border-slate-900 font-semibold">
                   <Td>Total</Td>
-                  <Td>{totals.inq}</Td>
-                  <Td>{totals.quoted}</Td>
-                  <Td>{totals.ordered}</Td>
-                  <Td>
+                  <Td numeric>{totals.inq}</Td>
+                  <Td numeric>{totals.quoted}</Td>
+                  <Td numeric>{totals.ordered}</Td>
+                  <Td numeric>
                     {totals.inq ? `${Math.round((totals.ordered / totals.inq) * 1000) / 10}%` : '—'}
                   </Td>
-                  <Td>{totals.openBoxes}</Td>
+                  <Td numeric>{totals.openBoxes}</Td>
                   <Td />
                 </tr>
               )}
@@ -234,7 +234,10 @@ function MasterTab() {
         {(mfrs) => (
           <AsyncBoundary state={products.state} onRetry={products.retry}>
             {(prods) => (
-              <NewMastersCard manufacturers={mfrs} products={prods} onCreated={refreshAll} />
+              <>
+                <NewMastersCard manufacturers={mfrs} products={prods} onCreated={refreshAll} />
+                <BrowseMastersCard manufacturers={mfrs} products={prods} />
+              </>
             )}
           </AsyncBoundary>
         )}
@@ -243,17 +246,90 @@ function MasterTab() {
   );
 }
 
+function BrowseMastersCard({
+  manufacturers,
+  products,
+}: {
+  manufacturers: MasterManufacturer[];
+  products: MasterProductLite[];
+}) {
+  const technicals = useMemo(
+    () => [...new Set(products.map((p) => p.technical))].sort(),
+    [products],
+  );
+
+  return (
+    <Card title="Everything on the master">
+      <div className="grid gap-6 md:grid-cols-3">
+        <div>
+          <h3 className="mb-2 text-sm font-semibold text-slate-700">
+            Companies ({manufacturers.length})
+          </h3>
+          <ul className="flex max-h-80 flex-col gap-1 overflow-y-auto text-sm">
+            {manufacturers.map((m) => (
+              <li key={m.manufacturerId} className="border-b border-slate-100 py-1">
+                {m.name}
+                {m.state === 'draft' && (
+                  <span className="ml-2">
+                    <Badge tone="warn">draft</Badge>
+                  </span>
+                )}
+                {m.aka && m.aka.length > 0 && (
+                  <div className="text-xs text-slate-500">aka {m.aka.join(', ')}</div>
+                )}
+              </li>
+            ))}
+          </ul>
+        </div>
+        <div>
+          <h3 className="mb-2 text-sm font-semibold text-slate-700">
+            Technicals ({technicals.length})
+          </h3>
+          <ul className="flex max-h-80 flex-col gap-1 overflow-y-auto text-sm">
+            {technicals.map((t) => (
+              <li key={t} className="border-b border-slate-100 py-1">
+                {t}
+              </li>
+            ))}
+          </ul>
+        </div>
+        <div>
+          <h3 className="mb-2 text-sm font-semibold text-slate-700">
+            Products ({products.length})
+          </h3>
+          <ul className="flex max-h-80 flex-col gap-1 overflow-y-auto text-sm">
+            {products.map((p) => (
+              <li key={p.productId} className="border-b border-slate-100 py-1">
+                {p.brand}
+                {p.state === 'draft' && (
+                  <span className="ml-2">
+                    <Badge tone="warn">draft</Badge>
+                  </span>
+                )}
+                <div className="text-xs text-slate-500">
+                  {p.technical} · {p.manufacturerName}
+                </div>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </div>
+    </Card>
+  );
+}
+
 function NewMastersCard({
   manufacturers,
   products,
   onCreated,
 }: {
-  manufacturers: Array<{ manufacturerId: string; name: string }>;
-  products: Array<{ productId: string; brand: string }>;
+  manufacturers: MasterManufacturer[];
+  products: MasterProductLite[];
   onCreated: () => void;
 }) {
   const { callApi } = useAuth();
   const [companyName, setCompanyName] = useState('');
+  const [companyAka, setCompanyAka] = useState('');
   const [brand, setBrand] = useState('');
   const [technical, setTechnical] = useState('');
   const [manufacturerId, setManufacturerId] = useState('');
@@ -264,19 +340,38 @@ function NewMastersCard({
   const [baseUnit, setBaseUnit] = useState<'LTR' | 'KG' | 'PC'>('LTR');
   const [unitsPerBox, setUnitsPerBox] = useState(1);
   const [error, setError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [message, setMessage] = useState<string | null>(null);
 
+  const technicals = useMemo(() => [...new Set(products.map((p) => p.technical))], [products]);
+
   const companyDupes = useMemo(
-    () => (companyName.length > 1 ? manufacturers.filter((m) => near(m.name, companyName)) : []),
+    () =>
+      companyName.length > 1 ? manufacturers.filter((m) => isNearMatch(m.name, companyName)) : [],
     [companyName, manufacturers],
   );
   const productDupes = useMemo(
-    () => (brand.length > 1 ? products.filter((p) => near(p.brand, brand)) : []),
+    () => (brand.length > 1 ? products.filter((p) => isNearMatch(p.brand, brand)) : []),
     [brand, products],
   );
+  const technicalDupes = useMemo(
+    () => (technical.length > 1 ? technicals.filter((t) => isNearMatch(t, technical)) : []),
+    [technical, technicals],
+  );
+
+  const missingProductFields = [
+    !brand && 'brand',
+    !technical && 'technical',
+    !manufacturerId && 'company',
+  ].filter((v): v is string => !!v);
 
   function fail(e: unknown) {
-    setError(e instanceof ApiError ? e.message : 'Could not add this.');
+    setFieldErrors({});
+    if (e instanceof ApiError && e.fieldErrors) {
+      setFieldErrors(e.fieldErrors);
+    } else {
+      setError(e instanceof ApiError ? e.message : 'Could not add this.');
+    }
   }
 
   return (
@@ -292,26 +387,42 @@ function NewMastersCard({
             label="Add a company"
             value={companyName}
             onChange={(e) => setCompanyName(e.target.value)}
+            error={fieldErrors.name}
           />
           {companyDupes.length > 0 && (
             <p className="mt-1 text-xs text-warning-600">
               Already have: {companyDupes.map((d) => d.name).join(', ')}
             </p>
           )}
+          <Input
+            id="pm-company-aka"
+            label="Also known as (comma-separated)"
+            className="mt-2"
+            hint="Stops one seller's shorthand becoming a second company — e.g. Bayer / Bayer CropScience."
+            value={companyAka}
+            onChange={(e) => setCompanyAka(e.target.value)}
+          />
           <Button
             variant="secondary"
             size="sm"
             className="mt-2"
             disabled={!companyName}
-            onClick={() =>
-              void callApi((token) => postDraftManufacturer(token, companyName))
+            onClick={() => {
+              setError(null);
+              setFieldErrors({});
+              const aka = companyAka
+                .split(',')
+                .map((s) => s.trim())
+                .filter(Boolean);
+              void callApi((token) => postDraftManufacturer(token, companyName, aka))
                 .then(() => {
                   setMessage('Company added as a draft.');
                   setCompanyName('');
+                  setCompanyAka('');
                   onCreated();
                 })
-                .catch(fail)
-            }
+                .catch(fail);
+            }}
           >
             Add company
           </Button>
@@ -323,6 +434,7 @@ function NewMastersCard({
             label="Brand"
             value={brand}
             onChange={(e) => setBrand(e.target.value)}
+            error={fieldErrors.brand}
           />
           {productDupes.length > 0 && (
             <p className="mt-1 text-xs text-warning-600">
@@ -335,13 +447,20 @@ function NewMastersCard({
             className="mt-2"
             value={technical}
             onChange={(e) => setTechnical(e.target.value)}
+            error={fieldErrors.technical}
           />
+          {technicalDupes.length > 0 && (
+            <p className="mt-1 text-xs text-warning-600">
+              Already have: {technicalDupes.join(', ')}
+            </p>
+          )}
           <Select
             id="pm-manufacturer"
             label="Company"
             className="mt-2"
             value={manufacturerId}
             onChange={(e) => setManufacturerId(e.target.value)}
+            error={fieldErrors.manufacturerId}
           >
             <option value="">Select…</option>
             {manufacturers.map((m) => (
@@ -356,13 +475,21 @@ function NewMastersCard({
             className="mt-2"
             value={hsn}
             onChange={(e) => setHsn(e.target.value)}
+            error={fieldErrors.hsn}
           />
           <Button
             variant="secondary"
             size="sm"
             className="mt-2"
-            disabled={!brand || !technical || !manufacturerId}
-            onClick={() =>
+            disabled={missingProductFields.length > 0}
+            title={
+              missingProductFields.length > 0
+                ? `Missing: ${missingProductFields.join(', ')}`
+                : undefined
+            }
+            onClick={() => {
+              setError(null);
+              setFieldErrors({});
               void callApi((token) =>
                 postDraftProduct(token, { brand, technical, manufacturerId, hsn }),
               )
@@ -372,8 +499,8 @@ function NewMastersCard({
                   setTechnical('');
                   onCreated();
                 })
-                .catch(fail)
-            }
+                .catch(fail);
+            }}
           >
             Add product
           </Button>
@@ -400,6 +527,7 @@ function NewMastersCard({
             placeholder="500 GM"
             value={packLabel}
             onChange={(e) => setPackLabel(e.target.value)}
+            error={fieldErrors.packLabel}
           />
           <div className="mt-2 grid grid-cols-3 gap-2">
             <Select
@@ -418,6 +546,7 @@ function NewMastersCard({
               type="number"
               value={packSize}
               onChange={(e) => setPackSize(Number(e.target.value))}
+              error={fieldErrors.packSize}
             />
             <Input
               id="pm-pack-upb"
@@ -425,6 +554,7 @@ function NewMastersCard({
               type="number"
               value={unitsPerBox}
               onChange={(e) => setUnitsPerBox(Number(e.target.value))}
+              error={fieldErrors.unitsPerBox}
             />
           </div>
           <Button
@@ -432,7 +562,9 @@ function NewMastersCard({
             size="sm"
             className="mt-2"
             disabled={!packProductId || !packLabel}
-            onClick={() =>
+            onClick={() => {
+              setError(null);
+              setFieldErrors({});
               void callApi((token) =>
                 postDraftSku(token, {
                   productId: packProductId,
@@ -447,8 +579,8 @@ function NewMastersCard({
                   setPackLabel('');
                   onCreated();
                 })
-                .catch(fail)
-            }
+                .catch(fail);
+            }}
           >
             Add pack
           </Button>

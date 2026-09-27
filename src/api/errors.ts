@@ -28,6 +28,8 @@ export class ApiError extends Error {
   field?: string;
   retryable: boolean;
   correlationId?: string;
+  fieldErrors?: Record<string, string>;
+  meta?: Record<string, unknown>;
 
   constructor(options: {
     code: ErrorCode;
@@ -35,6 +37,8 @@ export class ApiError extends Error {
     field?: string;
     retryable?: boolean;
     correlationId?: string;
+    fieldErrors?: Record<string, string>;
+    meta?: Record<string, unknown>;
   }) {
     super(options.message);
     this.name = 'ApiError';
@@ -42,5 +46,7 @@ export class ApiError extends Error {
     this.field = options.field;
     this.retryable = options.retryable ?? false;
     this.correlationId = options.correlationId;
+    this.fieldErrors = options.fieldErrors;
+    this.meta = options.meta;
   }
 }

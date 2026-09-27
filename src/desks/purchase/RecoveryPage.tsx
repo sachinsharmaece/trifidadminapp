@@ -54,8 +54,8 @@ function InspectionsSection() {
                 <tr>
                   <Th>PO</Th>
                   <Th>Seller</Th>
-                  <Th>Accepted</Th>
-                  <Th>Rejected</Th>
+                  <Th numeric>Accepted</Th>
+                  <Th numeric>Rejected</Th>
                   <Th>Reasons</Th>
                   <Th />
                 </tr>
@@ -64,9 +64,9 @@ function InspectionsSection() {
                 {items.map((i) => (
                   <tr key={i.inspectionId}>
                     <Td className="font-mono">{i.poNo}</Td>
-                    <Td className="font-mono text-xs">{i.sellerId.slice(-6)}</Td>
-                    <Td>{i.casesAccepted}</Td>
-                    <Td>
+                    <Td className="font-medium">{i.sellerFirm}</Td>
+                    <Td numeric>{i.casesAccepted}</Td>
+                    <Td numeric>
                       {i.casesRejected ? (
                         <span className="text-danger-500">{i.casesRejected}</span>
                       ) : (
@@ -123,8 +123,8 @@ function ReturnNotesSection() {
             <thead>
               <tr>
                 <Th>PO</Th>
-                <Th>Cases</Th>
-                <Th>Days old</Th>
+                <Th numeric>Cases</Th>
+                <Th numeric>Days old</Th>
                 <Th>Overdue</Th>
               </tr>
             </thead>
@@ -132,8 +132,8 @@ function ReturnNotesSection() {
               {items.map((item) => (
                 <tr key={item.returnNoteId}>
                   <Td className="font-mono">{item.poId.slice(-6)}</Td>
-                  <Td>{item.cases}</Td>
-                  <Td>{item.daysOld}</Td>
+                  <Td numeric>{item.cases}</Td>
+                  <Td numeric>{item.daysOld}</Td>
                   <Td>{item.overdue && <Badge tone="bad">Past 30 days</Badge>}</Td>
                 </tr>
               ))}
@@ -163,16 +163,16 @@ function DebitsSection() {
               <tr>
                 <Th>Seller</Th>
                 <Th>Reason</Th>
-                <Th>Amount</Th>
+                <Th numeric>Amount</Th>
                 <Th>Raised</Th>
               </tr>
             </thead>
             <tbody>
               {items.map((d) => (
                 <tr key={d.debitId}>
-                  <Td className="font-mono text-xs">{d.sellerId.slice(-6)}</Td>
+                  <Td className="font-medium">{d.sellerFirm}</Td>
                   <Td>{d.reason}</Td>
-                  <Td>₹{(d.amountPaise / 100).toFixed(2)}</Td>
+                  <Td numeric>₹{(d.amountPaise / 100).toFixed(2)}</Td>
                   <Td>{new Date(d.raisedAt).toLocaleDateString()}</Td>
                 </tr>
               ))}
@@ -205,7 +205,7 @@ function SellerRecoverySection() {
             <tbody>
               {items.map((item) => (
                 <tr key={item.complaintId}>
-                  <Td className="font-mono text-xs">{item.sellerId.slice(-6)}</Td>
+                  <Td className="font-medium">{item.sellerFirm}</Td>
                   <Td className="font-mono text-xs">
                     {item.debitNoteId ? item.debitNoteId.slice(-6) : '—'}
                   </Td>

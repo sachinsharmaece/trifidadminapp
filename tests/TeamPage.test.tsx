@@ -24,6 +24,8 @@ function mockAuth() {
     status: 'authenticated',
     me: null,
     callApi: ((fn: (token: string) => unknown) => fn('token')) as never,
+    sessionExpiredNotice: false,
+    dismissSessionExpiredNotice: vi.fn(),
   });
 }
 

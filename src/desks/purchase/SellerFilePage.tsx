@@ -36,11 +36,12 @@ export function SellerFilePage() {
               </p>
             </div>
 
-            <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+            <div className="grid grid-cols-2 gap-4 md:grid-cols-5">
               <Kpi label="Trust tier" value={file.trustTier} />
               <Kpi label="Supplies" value={String(file.suppliesCompleted)} />
               <Kpi label="Grace left" value={String(file.scorecard.graceRemaining)} />
               <Kpi label="Strikes" value={String(file.scorecard.strikeCount)} />
+              <Kpi label="Requoted" value={String(file.scorecard.requoteTotal)} />
             </div>
 
             <div className="grid gap-6 md:grid-cols-[1fr_320px]">
@@ -126,7 +127,7 @@ export function SellerFilePage() {
                       <thead>
                         <tr>
                           <Th>Pack</Th>
-                          <Th>Rate</Th>
+                          <Th numeric>Rate</Th>
                           <Th>Scope</Th>
                           <Th>Origin</Th>
                         </tr>
@@ -135,7 +136,7 @@ export function SellerFilePage() {
                         {file.listings.map((l) => (
                           <tr key={l.lineId}>
                             <Td>{l.packLabel}</Td>
-                            <Td>₹{(l.ratePaise / 100).toFixed(2)}</Td>
+                            <Td numeric>₹{(l.ratePaise / 100).toFixed(2)}</Td>
                             <Td className="text-xs text-slate-500">{l.scopeType}</Td>
                             <Td>
                               {l.deskEntered ? (
@@ -167,16 +168,16 @@ export function SellerFilePage() {
                       <thead>
                         <tr>
                           <Th>Ask</Th>
-                          <Th>Boxes</Th>
-                          <Th>Open</Th>
+                          <Th numeric>Boxes</Th>
+                          <Th numeric>Open</Th>
                         </tr>
                       </thead>
                       <tbody>
                         {file.openDemand.map((d) => (
                           <tr key={d.askId}>
                             <Td className="font-mono text-xs">{d.askId.slice(-6)}</Td>
-                            <Td>{d.qty}</Td>
-                            <Td>
+                            <Td numeric>{d.qty}</Td>
+                            <Td numeric>
                               {d.ageHours >= 24
                                 ? `${Math.floor(d.ageHours / 24)}d`
                                 : `${d.ageHours}h`}
@@ -195,14 +196,14 @@ export function SellerFilePage() {
                         <thead>
                           <tr>
                             <Th>Reason</Th>
-                            <Th>Amount</Th>
+                            <Th numeric>Amount</Th>
                           </tr>
                         </thead>
                         <tbody>
                           {file.openDebits.map((d) => (
                             <tr key={d.debitId}>
                               <Td>{d.reason}</Td>
-                              <Td>₹{(d.amountPaise / 100).toFixed(2)}</Td>
+                              <Td numeric>₹{(d.amountPaise / 100).toFixed(2)}</Td>
                             </tr>
                           ))}
                         </tbody>
@@ -213,7 +214,7 @@ export function SellerFilePage() {
                         <thead>
                           <tr>
                             <Th>Return note</Th>
-                            <Th>Cases</Th>
+                            <Th numeric>Cases</Th>
                             <Th>Age</Th>
                           </tr>
                         </thead>
@@ -221,7 +222,7 @@ export function SellerFilePage() {
                           {file.openReturnNotes.map((r) => (
                             <tr key={r.returnNoteId}>
                               <Td className="font-mono text-xs">{r.returnNoteId.slice(-6)}</Td>
-                              <Td>{r.cases}</Td>
+                              <Td numeric>{r.cases}</Td>
                               <Td>
                                 {r.overdue ? (
                                   <Badge tone="bad">{r.daysOld}d of 30</Badge>

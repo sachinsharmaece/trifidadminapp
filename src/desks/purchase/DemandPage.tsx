@@ -60,10 +60,10 @@ export function DemandPage() {
               <thead>
                 <tr>
                   <Th>Ask</Th>
-                  <Th>Boxes</Th>
-                  <Th>Quoted</Th>
-                  <Th>Listed</Th>
-                  <Th>Dormant</Th>
+                  <Th numeric>Boxes</Th>
+                  <Th numeric>Quoted</Th>
+                  <Th numeric>Listed</Th>
+                  <Th numeric>Dormant</Th>
                   <Th>No seller</Th>
                   <Th />
                   <Th />
@@ -92,10 +92,10 @@ function DemandRow({ item, onRecorded }: { item: ActiveDemandItem; onRecorded: (
           {open ? '▾ ' : '▸ '}
           {item.brand} · {item.technical}
         </Td>
-        <Td>{item.qty}</Td>
-        <Td>{item.sellerCounts.quoted}</Td>
-        <Td>{item.sellerCounts.active}</Td>
-        <Td>{item.sellerCounts.dormant}</Td>
+        <Td numeric>{item.qty}</Td>
+        <Td numeric>{item.sellerCounts.quoted}</Td>
+        <Td numeric>{item.sellerCounts.active}</Td>
+        <Td numeric>{item.sellerCounts.dormant}</Td>
         <Td>
           {item.noSeller && (
             <div className="flex items-center gap-2">

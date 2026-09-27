@@ -101,12 +101,12 @@ function AnalysisTab() {
             <thead>
               <tr>
                 <Th>Product</Th>
-                <Th>Inquiries</Th>
-                <Th>Quoted</Th>
-                <Th>Ordered</Th>
-                <Th>Fill</Th>
-                <Th>Open, boxes</Th>
-                <Th>Sellers</Th>
+                <Th numeric>Inquiries</Th>
+                <Th numeric>Quoted</Th>
+                <Th numeric>Ordered</Th>
+                <Th numeric>Fill</Th>
+                <Th numeric>Open, boxes</Th>
+                <Th numeric>Sellers</Th>
               </tr>
             </thead>
             <tbody>
@@ -122,15 +122,18 @@ function AnalysisTab() {
                         </div>
                       )}
                     </Td>
-                    <Td>{r.inq}</Td>
-                    <Td>
+                    <Td numeric>{r.inq}</Td>
+                    <Td numeric>
                       {r.quoted}
                       <div className="text-xs text-slate-500">{r.inq - r.quoted} never quoted</div>
                     </Td>
-                    <Td className="font-semibold">{r.ordered}</Td>
-                    <Td>{r.fillPct === null ? '—' : `${r.fillPct}%`}</Td>
-                    <Td>{r.openBoxes}</Td>
+                    <Td numeric className="font-semibold">
+                      {r.ordered}
+                    </Td>
+                    <Td numeric>{r.fillPct === null ? '—' : `${r.fillPct}%`}</Td>
+                    <Td numeric>{r.openBoxes}</Td>
                     <Td
+                      numeric
                       className={
                         r.sellerCount === 0
                           ? 'text-danger-500'
@@ -147,13 +150,13 @@ function AnalysisTab() {
               {totals && (
                 <tr className="border-t-2 border-slate-900 font-semibold">
                   <Td>Total</Td>
-                  <Td>{totals.inq}</Td>
-                  <Td>{totals.quoted}</Td>
-                  <Td>{totals.ordered}</Td>
-                  <Td>
+                  <Td numeric>{totals.inq}</Td>
+                  <Td numeric>{totals.quoted}</Td>
+                  <Td numeric>{totals.ordered}</Td>
+                  <Td numeric>
                     {totals.inq ? `${Math.round((totals.ordered / totals.inq) * 1000) / 10}%` : '—'}
                   </Td>
-                  <Td>{totals.openBoxes}</Td>
+                  <Td numeric>{totals.openBoxes}</Td>
                   <Td />
                 </tr>
               )}

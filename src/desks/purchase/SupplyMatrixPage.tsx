@@ -79,8 +79,8 @@ function ByProduct({ initialQuery }: { initialQuery: string }) {
               <thead>
                 <tr>
                   <Th>Product</Th>
-                  <Th>Carries it</Th>
-                  <Th>On the board</Th>
+                  <Th numeric>Carries it</Th>
+                  <Th numeric>On the board</Th>
                   <Th>State</Th>
                 </tr>
               </thead>
@@ -98,8 +98,11 @@ function ByProduct({ initialQuery }: { initialQuery: string }) {
                         {r.technical} · {r.manufacturerName}
                       </div>
                     </Td>
-                    <Td className={r.carryCount === 0 ? 'text-danger-500' : ''}>{r.carryCount}</Td>
+                    <Td numeric className={r.carryCount === 0 ? 'text-danger-500' : ''}>
+                      {r.carryCount}
+                    </Td>
                     <Td
+                      numeric
                       className={r.listedCount === 0 && r.carryCount > 0 ? 'text-warning-600' : ''}
                     >
                       {r.listedCount}
@@ -139,8 +142,8 @@ function BySeller() {
           <thead>
             <tr>
               <Th>Seller</Th>
-              <Th>Products he carries</Th>
-              <Th>On the board</Th>
+              <Th numeric>Products he carries</Th>
+              <Th numeric>On the board</Th>
               <Th>Companies</Th>
               <Th />
             </tr>
@@ -149,8 +152,13 @@ function BySeller() {
             {rows.map((r) => (
               <tr key={r.sellerId}>
                 <Td className="font-medium">{r.firm}</Td>
-                <Td className={r.carryCount === 0 ? 'text-danger-500' : ''}>{r.carryCount}</Td>
-                <Td className={r.carryCount > 0 && r.listedCount === 0 ? 'text-warning-600' : ''}>
+                <Td numeric className={r.carryCount === 0 ? 'text-danger-500' : ''}>
+                  {r.carryCount}
+                </Td>
+                <Td
+                  numeric
+                  className={r.carryCount > 0 && r.listedCount === 0 ? 'text-warning-600' : ''}
+                >
                   {r.listedCount}
                 </Td>
                 <Td className="text-xs text-slate-500">{r.manufacturerNames.join(', ') || '—'}</Td>

@@ -42,11 +42,11 @@ export function ConfirmationsPage() {
               <thead>
                 <tr>
                   <Th>Seller · Product</Th>
-                  <Th>Boxes</Th>
-                  <Th>Buyers</Th>
-                  <Th>Rate</Th>
+                  <Th numeric>Boxes</Th>
+                  <Th numeric>Buyers</Th>
+                  <Th numeric>Rate</Th>
                   <Th>Gap</Th>
-                  <Th>Chase in</Th>
+                  <Th numeric>Chase in</Th>
                   <Th />
                 </tr>
               </thead>
@@ -99,9 +99,9 @@ function PileRow({ item, onDecided }: { item: PileAwaitingDecisionItem; onDecide
             · {item.brand} {item.packLabel}
           </span>
         </Td>
-        <Td>{item.boxes}</Td>
-        <Td>{item.buyers}</Td>
-        <Td>₹{(item.ratePaise / 100).toFixed(2)}</Td>
+        <Td numeric>{item.boxes}</Td>
+        <Td numeric>{item.buyers}</Td>
+        <Td numeric>₹{(item.ratePaise / 100).toFixed(2)}</Td>
         <Td>
           {item.gapText ? (
             <span className="text-danger-500 font-medium">{item.gapText}</span>
@@ -109,7 +109,7 @@ function PileRow({ item, onDecided }: { item: PileAwaitingDecisionItem; onDecide
             <span className="text-slate-500">covers it</span>
           )}
         </Td>
-        <Td className={item.chaseLeftHours <= 3 ? 'text-danger-500 font-semibold' : ''}>
+        <Td numeric className={item.chaseLeftHours <= 3 ? 'text-danger-500 font-semibold' : ''}>
           {item.chaseLeftHours}h
         </Td>
         <Td onClick={(e) => e.stopPropagation()}>

@@ -59,7 +59,7 @@ export function DispatchPage() {
                     <Th>Seller</Th>
                     <Th>Goods</Th>
                     <Th>Dispatched</Th>
-                    <Th>Days out</Th>
+                    <Th numeric>Days out</Th>
                   </tr>
                 </thead>
                 <tbody>
@@ -73,7 +73,7 @@ export function DispatchPage() {
                       <Td>
                         {d.dispatchedAt ? new Date(d.dispatchedAt).toLocaleDateString() : '—'}
                       </Td>
-                      <Td>{d.daysInTransit ?? '—'}</Td>
+                      <Td numeric>{d.daysInTransit ?? '—'}</Td>
                     </tr>
                   ))}
                 </tbody>

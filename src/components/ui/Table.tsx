@@ -15,17 +15,38 @@ export function Table({ children, className = '' }: { children: ReactNode; class
   );
 }
 
-export function Th({ className = '', ...rest }: ThHTMLAttributes<HTMLTableCellElement>) {
+interface NumericProp {
+  /** Right-aligns the cell and gives its digits a fixed width, so a column
+   * of numbers lines up edge-to-edge instead of ragged-left. */
+  numeric?: boolean;
+}
+
+export function Th({
+  className = '',
+  numeric,
+  ...rest
+}: ThHTMLAttributes<HTMLTableCellElement> & NumericProp) {
   return (
     <th
-      className={`border-b border-slate-200 bg-slate-50 px-3 py-2 text-left font-medium text-slate-600 ${className}`}
+      className={`border-b border-slate-200 bg-slate-50 px-3 py-2 font-medium text-slate-600 ${
+        numeric ? 'text-right' : 'text-left'
+      } ${className}`}
       {...rest}
     />
   );
 }
 
-export function Td({ className = '', ...rest }: TdHTMLAttributes<HTMLTableCellElement>) {
+export function Td({
+  className = '',
+  numeric,
+  ...rest
+}: TdHTMLAttributes<HTMLTableCellElement> & NumericProp) {
   return (
-    <td className={`border-b border-slate-100 px-3 py-2 text-slate-800 ${className}`} {...rest} />
+    <td
+      className={`border-b border-slate-100 px-3 py-2 align-top text-slate-800 ${
+        numeric ? 'text-right tabular-nums' : ''
+      } ${className}`}
+      {...rest}
+    />
   );
 }

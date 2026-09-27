@@ -99,8 +99,8 @@ export function SellersPage() {
                 <tr>
                   <Th>Firm</Th>
                   <Th>Tier</Th>
-                  <Th>Carries</Th>
-                  <Th>Listed</Th>
+                  <Th numeric>Carries</Th>
+                  <Th numeric>Listed</Th>
                   <Th>Companies</Th>
                   <Th />
                 </tr>
@@ -112,10 +112,10 @@ export function SellersPage() {
                     <Td>
                       <Badge tone="neutral">{s.trustTier}</Badge>
                     </Td>
-                    <Td>
+                    <Td numeric>
                       {s.carryCount ? s.carryCount : <span className="text-danger-500">0</span>}
                     </Td>
-                    <Td>
+                    <Td numeric>
                       {s.listedCount ? (
                         s.listedCount
                       ) : s.carryCount ? (

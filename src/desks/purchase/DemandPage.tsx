@@ -60,7 +60,7 @@ export function DemandPage() {
                   <Th>Ask</Th>
                   <Th>Boxes</Th>
                   <Th>Quoted</Th>
-                  <Th>Active</Th>
+                  <Th>Listed</Th>
                   <Th>Dormant</Th>
                   <Th>No seller</Th>
                   <Th />
@@ -87,7 +87,7 @@ function DemandRow({ item, onRecorded }: { item: ActiveDemandItem; onRecorded: (
       <tr className="cursor-pointer" onClick={() => setOpen((v) => !v)}>
         <Td>
           {open ? '▾ ' : '▸ '}
-          {item.askId.slice(-6)}
+          {item.brand} · {item.technical}
         </Td>
         <Td>{item.qty}</Td>
         <Td>{item.sellerCounts.quoted}</Td>
@@ -166,7 +166,7 @@ function QuoteGapsDetail({ askId }: { askId: string }) {
 
 function NonOrderReasonForm({ askId, onRecorded }: { askId: string; onRecorded: () => void }) {
   const { callApi } = useAuth();
-  const [code, setCode] = useState<string>(SUPPLY_GAP_CODES[0]);
+  const [code, setCode] = useState<string>('');
   const [saved, setSaved] = useState(false);
 
   return (
@@ -178,6 +178,9 @@ function NonOrderReasonForm({ askId, onRecorded }: { askId: string; onRecorded: 
         onChange={(e) => setCode(e.target.value)}
         className="text-xs"
       >
+        <option value="" disabled>
+          Select a reason…
+        </option>
         {SUPPLY_GAP_CODES.map((c) => (
           <option key={c} value={c}>
             {c.replaceAll('_', ' ')}
@@ -187,6 +190,7 @@ function NonOrderReasonForm({ askId, onRecorded }: { askId: string; onRecorded: 
       <Button
         variant="secondary"
         size="sm"
+        disabled={!code}
         onClick={() =>
           void callApi((token) => postNonOrderReason(token, { askId, code })).then(() => {
             setSaved(true);

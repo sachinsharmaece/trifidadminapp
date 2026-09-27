@@ -8,6 +8,9 @@ export interface ActiveDemandItem {
   createdAt: string;
   sellerCounts: { quoted: number; active: number; dormant: number; dark: number };
   noSeller: boolean;
+  brand: string;
+  technical: string;
+  manufacturerName: string;
 }
 
 export function getActiveDemandList(
@@ -301,6 +304,7 @@ export interface DispatchQueueItem {
   poId: string;
   poNo: string;
   sellerId: string;
+  sellerFirm: string;
   bucket: 'due' | 'overdue' | 'in_transit';
   dispatchDueDate: string;
   hoursLeft: number | null;

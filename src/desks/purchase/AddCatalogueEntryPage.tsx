@@ -18,13 +18,7 @@ import { Card } from '../../components/ui/Card';
 import { Input, Select } from '../../components/ui/Input';
 import { Button } from '../../components/ui/Button';
 import { DevNote } from '../../components/dev/DevNote';
-
-const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, '');
-const near = (a: string, b: string) => {
-  const na = norm(a);
-  const nb = norm(b);
-  return na.length > 1 && nb.length > 1 && (na.includes(nb) || nb.includes(na));
-};
+import { isNearMatch } from '../../lib/fuzzyMatch';
 
 export function AddCatalogueEntryPage() {
   const { id: sellerId } = useParams<{ id: string }>();
@@ -195,16 +189,24 @@ function NewMasterCard({
   const [manufacturerId, setManufacturerId] = useState('');
   const [hsn, setHsn] = useState('3808');
   const [error, setError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [message, setMessage] = useState<string | null>(null);
 
   const companyDupes = useMemo(
-    () => (companyName.length > 1 ? manufacturers.filter((m) => near(m.name, companyName)) : []),
+    () =>
+      companyName.length > 1 ? manufacturers.filter((m) => isNearMatch(m.name, companyName)) : [],
     [companyName, manufacturers],
   );
   const productDupes = useMemo(
-    () => (brand.length > 1 ? products.filter((p) => near(p.brand, brand)) : []),
+    () => (brand.length > 1 ? products.filter((p) => isNearMatch(p.brand, brand)) : []),
     [brand, products],
   );
+
+  const missingProductFields = [
+    !brand && 'brand',
+    !technical && 'technical',
+    !manufacturerId && 'company',
+  ].filter((v): v is string => !!v);
 
   return (
     <Card title="Naming something not in the master?">
@@ -219,6 +221,7 @@ function NewMasterCard({
             label="Add a company"
             value={companyName}
             onChange={(e) => setCompanyName(e.target.value)}
+            error={fieldErrors.name}
           />
           {companyDupes.length > 0 && (
             <p className="mt-1 text-xs text-warning-600">
@@ -230,15 +233,23 @@ function NewMasterCard({
             size="sm"
             className="mt-2"
             disabled={!companyName}
-            onClick={() =>
+            onClick={() => {
+              setError(null);
+              setFieldErrors({});
               void callApi((token) => postDraftManufacturer(token, companyName))
                 .then(() => {
                   setMessage('Company added as a draft — Admin confirms it.');
                   setCompanyName('');
                   onCreated();
                 })
-                .catch((e) => setError(e instanceof ApiError ? e.message : 'Could not add.'))
-            }
+                .catch((e) => {
+                  if (e instanceof ApiError && e.fieldErrors) {
+                    setFieldErrors(e.fieldErrors);
+                  } else {
+                    setError(e instanceof ApiError ? e.message : 'Could not add.');
+                  }
+                });
+            }}
           >
             Add company
           </Button>
@@ -249,6 +260,7 @@ function NewMasterCard({
             label="Brand"
             value={brand}
             onChange={(e) => setBrand(e.target.value)}
+            error={fieldErrors.brand}
           />
           {productDupes.length > 0 && (
             <p className="mt-1 text-xs text-warning-600">
@@ -261,6 +273,7 @@ function NewMasterCard({
             className="mt-2"
             value={technical}
             onChange={(e) => setTechnical(e.target.value)}
+            error={fieldErrors.technical}
           />
           <Select
             id="new-manufacturer"
@@ -268,6 +281,7 @@ function NewMasterCard({
             className="mt-2"
             value={manufacturerId}
             onChange={(e) => setManufacturerId(e.target.value)}
+            error={fieldErrors.manufacturerId}
           >
             <option value="">Select…</option>
             {manufacturers.map((m) => (
@@ -282,13 +296,21 @@ function NewMasterCard({
             className="mt-2"
             value={hsn}
             onChange={(e) => setHsn(e.target.value)}
+            error={fieldErrors.hsn}
           />
           <Button
             variant="secondary"
             size="sm"
             className="mt-2"
-            disabled={!brand || !technical || !manufacturerId}
-            onClick={() =>
+            disabled={missingProductFields.length > 0}
+            title={
+              missingProductFields.length > 0
+                ? `Missing: ${missingProductFields.join(', ')}`
+                : undefined
+            }
+            onClick={() => {
+              setError(null);
+              setFieldErrors({});
               void callApi((token) =>
                 postDraftProduct(token, { brand, technical, manufacturerId, hsn }),
               )
@@ -298,8 +320,14 @@ function NewMasterCard({
                   setTechnical('');
                   onCreated();
                 })
-                .catch((e) => setError(e instanceof ApiError ? e.message : 'Could not add.'))
-            }
+                .catch((e) => {
+                  if (e instanceof ApiError && e.fieldErrors) {
+                    setFieldErrors(e.fieldErrors);
+                  } else {
+                    setError(e instanceof ApiError ? e.message : 'Could not add.');
+                  }
+                });
+            }}
           >
             Add product
           </Button>

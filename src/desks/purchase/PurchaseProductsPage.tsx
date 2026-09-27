@@ -20,13 +20,7 @@ import { Badge } from '../../components/ui/Badge';
 import { Button } from '../../components/ui/Button';
 import { Input, Select } from '../../components/ui/Input';
 import { DevNote } from '../../components/dev/DevNote';
-
-const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, '');
-const near = (a: string, b: string) => {
-  const na = norm(a);
-  const nb = norm(b);
-  return na.length > 1 && nb.length > 1 && (na.includes(nb) || nb.includes(na));
-};
+import { isNearMatch } from '../../lib/fuzzyMatch';
 
 export function PurchaseProductsPage() {
   const [tab, setTab] = useState<'analysis' | 'master'>('analysis');
@@ -264,19 +258,32 @@ function NewMastersCard({
   const [baseUnit, setBaseUnit] = useState<'LTR' | 'KG' | 'PC'>('LTR');
   const [unitsPerBox, setUnitsPerBox] = useState(1);
   const [error, setError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [message, setMessage] = useState<string | null>(null);
 
   const companyDupes = useMemo(
-    () => (companyName.length > 1 ? manufacturers.filter((m) => near(m.name, companyName)) : []),
+    () =>
+      companyName.length > 1 ? manufacturers.filter((m) => isNearMatch(m.name, companyName)) : [],
     [companyName, manufacturers],
   );
   const productDupes = useMemo(
-    () => (brand.length > 1 ? products.filter((p) => near(p.brand, brand)) : []),
+    () => (brand.length > 1 ? products.filter((p) => isNearMatch(p.brand, brand)) : []),
     [brand, products],
   );
 
+  const missingProductFields = [
+    !brand && 'brand',
+    !technical && 'technical',
+    !manufacturerId && 'company',
+  ].filter((v): v is string => !!v);
+
   function fail(e: unknown) {
-    setError(e instanceof ApiError ? e.message : 'Could not add this.');
+    setFieldErrors({});
+    if (e instanceof ApiError && e.fieldErrors) {
+      setFieldErrors(e.fieldErrors);
+    } else {
+      setError(e instanceof ApiError ? e.message : 'Could not add this.');
+    }
   }
 
   return (
@@ -292,6 +299,7 @@ function NewMastersCard({
             label="Add a company"
             value={companyName}
             onChange={(e) => setCompanyName(e.target.value)}
+            error={fieldErrors.name}
           />
           {companyDupes.length > 0 && (
             <p className="mt-1 text-xs text-warning-600">
@@ -303,15 +311,17 @@ function NewMastersCard({
             size="sm"
             className="mt-2"
             disabled={!companyName}
-            onClick={() =>
+            onClick={() => {
+              setError(null);
+              setFieldErrors({});
               void callApi((token) => postDraftManufacturer(token, companyName))
                 .then(() => {
                   setMessage('Company added as a draft.');
                   setCompanyName('');
                   onCreated();
                 })
-                .catch(fail)
-            }
+                .catch(fail);
+            }}
           >
             Add company
           </Button>
@@ -323,6 +333,7 @@ function NewMastersCard({
             label="Brand"
             value={brand}
             onChange={(e) => setBrand(e.target.value)}
+            error={fieldErrors.brand}
           />
           {productDupes.length > 0 && (
             <p className="mt-1 text-xs text-warning-600">
@@ -335,6 +346,7 @@ function NewMastersCard({
             className="mt-2"
             value={technical}
             onChange={(e) => setTechnical(e.target.value)}
+            error={fieldErrors.technical}
           />
           <Select
             id="pm-manufacturer"
@@ -342,6 +354,7 @@ function NewMastersCard({
             className="mt-2"
             value={manufacturerId}
             onChange={(e) => setManufacturerId(e.target.value)}
+            error={fieldErrors.manufacturerId}
           >
             <option value="">Select…</option>
             {manufacturers.map((m) => (
@@ -356,13 +369,21 @@ function NewMastersCard({
             className="mt-2"
             value={hsn}
             onChange={(e) => setHsn(e.target.value)}
+            error={fieldErrors.hsn}
           />
           <Button
             variant="secondary"
             size="sm"
             className="mt-2"
-            disabled={!brand || !technical || !manufacturerId}
-            onClick={() =>
+            disabled={missingProductFields.length > 0}
+            title={
+              missingProductFields.length > 0
+                ? `Missing: ${missingProductFields.join(', ')}`
+                : undefined
+            }
+            onClick={() => {
+              setError(null);
+              setFieldErrors({});
               void callApi((token) =>
                 postDraftProduct(token, { brand, technical, manufacturerId, hsn }),
               )
@@ -372,8 +393,8 @@ function NewMastersCard({
                   setTechnical('');
                   onCreated();
                 })
-                .catch(fail)
-            }
+                .catch(fail);
+            }}
           >
             Add product
           </Button>
@@ -400,6 +421,7 @@ function NewMastersCard({
             placeholder="500 GM"
             value={packLabel}
             onChange={(e) => setPackLabel(e.target.value)}
+            error={fieldErrors.packLabel}
           />
           <div className="mt-2 grid grid-cols-3 gap-2">
             <Select
@@ -418,6 +440,7 @@ function NewMastersCard({
               type="number"
               value={packSize}
               onChange={(e) => setPackSize(Number(e.target.value))}
+              error={fieldErrors.packSize}
             />
             <Input
               id="pm-pack-upb"
@@ -425,6 +448,7 @@ function NewMastersCard({
               type="number"
               value={unitsPerBox}
               onChange={(e) => setUnitsPerBox(Number(e.target.value))}
+              error={fieldErrors.unitsPerBox}
             />
           </div>
           <Button
@@ -432,7 +456,9 @@ function NewMastersCard({
             size="sm"
             className="mt-2"
             disabled={!packProductId || !packLabel}
-            onClick={() =>
+            onClick={() => {
+              setError(null);
+              setFieldErrors({});
               void callApi((token) =>
                 postDraftSku(token, {
                   productId: packProductId,
@@ -447,8 +473,8 @@ function NewMastersCard({
                   setPackLabel('');
                   onCreated();
                 })
-                .catch(fail)
-            }
+                .catch(fail);
+            }}
           >
             Add pack
           </Button>

@@ -63,7 +63,7 @@ export function DispatchPage() {
                   {inTransit(items).map((d) => (
                     <tr key={d.poId}>
                       <Td className="font-mono">{d.poNo}</Td>
-                      <Td className="font-mono text-xs">{d.sellerId.slice(-6)}</Td>
+                      <Td>{d.sellerFirm}</Td>
                       <Td>
                         {d.dispatchedAt ? new Date(d.dispatchedAt).toLocaleDateString() : '—'}
                       </Td>
@@ -86,7 +86,7 @@ function DispatchRow({ item, onChased }: { item: DispatchQueueItem; onChased: ()
   return (
     <tr>
       <Td className="font-mono">{item.poNo}</Td>
-      <Td className="font-mono text-xs">{item.sellerId.slice(-6)}</Td>
+      <Td>{item.sellerFirm}</Td>
       <Td>{new Date(item.dispatchDueDate).toLocaleString()}</Td>
       <Td>
         {item.bucket === 'overdue' ? (

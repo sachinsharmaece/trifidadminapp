@@ -14,6 +14,8 @@ interface ErrorEnvelope {
     field?: string;
     retryable?: boolean;
     correlationId?: string;
+    fieldErrors?: { field: string; message: string }[];
+    meta?: Record<string, unknown>;
   };
 }
 
@@ -68,6 +70,10 @@ export async function apiFetch<T>(path: string, options: RequestOptions = {}): P
       field: error?.field,
       retryable: error?.retryable ?? response.status >= 500,
       correlationId: error?.correlationId,
+      fieldErrors: error?.fieldErrors
+        ? Object.fromEntries(error.fieldErrors.map((fe) => [fe.field, fe.message]))
+        : undefined,
+      meta: error?.meta,
     });
   }
 

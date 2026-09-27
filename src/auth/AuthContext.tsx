@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import {
   getMe,
@@ -31,6 +31,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [status, setStatus] = useState<AuthStatus>('loading');
   const [accessToken, setAccessToken] = useState<string | null>(null);
   const [me, setMe] = useState<StaffMeDto | null>(null);
+  // Concurrent callApi calls with an expired token must not each race the
+  // same rotating refresh cookie — the backend's reuse-detection (correctly)
+  // revokes the whole token family on a second presentation of an
+  // already-rotated refresh token, which was forcing false logouts whenever
+  // a page fired several parallel calls at once.
+  const refreshInFlight = useRef<Promise<{ accessToken: string }> | null>(null);
+
+  const getOrStartRefresh = useCallback(() => {
+    if (!refreshInFlight.current) {
+      refreshInFlight.current = refreshSession().finally(() => {
+        refreshInFlight.current = null;
+      });
+    }
+    return refreshInFlight.current;
+  }, []);
 
   const establishSession = useCallback(async (token: string) => {
     const profile = await getMe(token);
@@ -49,7 +64,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // cookie — never from localStorage (TD-006: shared shop devices).
   useEffect(() => {
     let cancelled = false;
-    refreshSession()
+    getOrStartRefresh()
       .then((result) => {
         if (cancelled) return;
         return establishSession(result.accessToken);
@@ -60,7 +75,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => {
       cancelled = true;
     };
-  }, [establishSession, clearSession]);
+  }, [establishSession, clearSession, getOrStartRefresh]);
 
   const login = useCallback(
     async (email: string, password: string) => {
@@ -97,8 +112,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const callApi = useCallback(
     async <T,>(fn: (token: string) => Promise<T>): Promise<T> => {
       if (!accessToken) {
-        clearSession();
-        throw new ApiError({ code: 'REAUTH_REQUIRED', message: 'Sign in to continue.' });
+        try {
+          const refreshed = await getOrStartRefresh();
+          setAccessToken(refreshed.accessToken);
+          return await fn(refreshed.accessToken);
+        } catch {
+          clearSession();
+          throw new ApiError({ code: 'REAUTH_REQUIRED', message: 'Sign in to continue.' });
+        }
       }
       try {
         return await fn(accessToken);
@@ -107,7 +128,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           throw error;
         }
         try {
-          const refreshed = await refreshSession();
+          const refreshed = await getOrStartRefresh();
           setAccessToken(refreshed.accessToken);
           return await fn(refreshed.accessToken);
         } catch {
@@ -116,7 +137,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
       }
     },
-    [accessToken, clearSession],
+    [accessToken, clearSession, getOrStartRefresh],
   );
 
   const value = useMemo<AuthContextValue>(

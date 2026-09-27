@@ -1,5 +1,5 @@
 import { useCallback, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
   getSupplyMatrixByProduct,
   getSupplyMatrixBySeller,
@@ -12,6 +12,7 @@ import { useAuth } from '../../auth/AuthContext';
 import { Table, Th, Td } from '../../components/ui/Table';
 import { Badge } from '../../components/ui/Badge';
 import { Button } from '../../components/ui/Button';
+import { Input } from '../../components/ui/Input';
 import { DevNote } from '../../components/dev/DevNote';
 
 // BR-274 — "two sources per cell" is the coverage target elsewhere in this
@@ -20,6 +21,7 @@ import { DevNote } from '../../components/dev/DevNote';
 const TWO_SOURCE_TARGET = 2;
 
 export function SupplyMatrixPage() {
+  const [searchParams] = useSearchParams();
   const [byProduct, setByProduct] = useState(true);
   return (
     <div className="flex flex-col gap-6">
@@ -44,62 +46,82 @@ export function SupplyMatrixPage() {
           Seller × Product
         </Button>
       </div>
-      {byProduct ? <ByProduct /> : <BySeller />}
+      {byProduct ? <ByProduct initialQuery={searchParams.get('q') ?? ''} /> : <BySeller />}
     </div>
   );
 }
 
-function ByProduct() {
+function ByProduct({ initialQuery }: { initialQuery: string }) {
   const { callApi } = useAuth();
+  const [query, setQuery] = useState(initialQuery);
   const loader = useCallback(() => callApi((token) => getSupplyMatrixByProduct(token)), [callApi]);
   const { state, retry } = useAsyncData(loader, (items) => items.length === 0, [loader]);
 
   return (
     <AsyncBoundary state={state} onRetry={retry}>
-      {(rows: SupplyMatrixProductRow[]) => (
-        <Table>
-          <thead>
-            <tr>
-              <Th>Product</Th>
-              <Th>Carries it</Th>
-              <Th>On the board</Th>
-              <Th>State</Th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((r) => (
-              <tr key={r.productId}>
-                <Td className="font-medium">
-                  {r.brand}
-                  {r.productState === 'draft' && (
-                    <span className="ml-2">
-                      <Badge tone="warn">draft</Badge>
-                    </span>
-                  )}
-                  <div className="text-xs text-slate-500">
-                    {r.technical} · {r.manufacturerName}
-                  </div>
-                </Td>
-                <Td className={r.carryCount === 0 ? 'text-danger-500' : ''}>{r.carryCount}</Td>
-                <Td className={r.listedCount === 0 && r.carryCount > 0 ? 'text-warning-600' : ''}>
-                  {r.listedCount}
-                </Td>
-                <Td>
-                  {r.carryCount === 0 ? (
-                    <Badge tone="bad">nobody carries it</Badge>
-                  ) : r.listedCount === 0 ? (
-                    <Badge tone="warn">carried, none on the board</Badge>
-                  ) : r.listedCount < TWO_SOURCE_TARGET ? (
-                    <Badge tone="neutral">single source</Badge>
-                  ) : (
-                    <Badge tone="good">at target</Badge>
-                  )}
-                </Td>
-              </tr>
-            ))}
-          </tbody>
-        </Table>
-      )}
+      {(rows: SupplyMatrixProductRow[]) => {
+        const q = query.trim().toLowerCase();
+        const filtered = q
+          ? rows.filter(
+              (r) => r.brand.toLowerCase().includes(q) || r.technical.toLowerCase().includes(q),
+            )
+          : rows;
+        return (
+          <div className="flex flex-col gap-3">
+            <Input
+              id="matrix-search"
+              label="Search brand or technical"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="e.g. Crop Shield"
+            />
+            <Table>
+              <thead>
+                <tr>
+                  <Th>Product</Th>
+                  <Th>Carries it</Th>
+                  <Th>On the board</Th>
+                  <Th>State</Th>
+                </tr>
+              </thead>
+              <tbody>
+                {filtered.map((r) => (
+                  <tr key={r.productId}>
+                    <Td className="font-medium">
+                      {r.brand}
+                      {r.productState === 'draft' && (
+                        <span className="ml-2">
+                          <Badge tone="warn">draft</Badge>
+                        </span>
+                      )}
+                      <div className="text-xs text-slate-500">
+                        {r.technical} · {r.manufacturerName}
+                      </div>
+                    </Td>
+                    <Td className={r.carryCount === 0 ? 'text-danger-500' : ''}>{r.carryCount}</Td>
+                    <Td
+                      className={r.listedCount === 0 && r.carryCount > 0 ? 'text-warning-600' : ''}
+                    >
+                      {r.listedCount}
+                    </Td>
+                    <Td>
+                      {r.carryCount === 0 ? (
+                        <Badge tone="bad">nobody carries it</Badge>
+                      ) : r.listedCount === 0 ? (
+                        <Badge tone="warn">carried, none on the board</Badge>
+                      ) : r.listedCount < TWO_SOURCE_TARGET ? (
+                        <Badge tone="neutral">single source</Badge>
+                      ) : (
+                        <Badge tone="good">at target</Badge>
+                      )}
+                    </Td>
+                  </tr>
+                ))}
+              </tbody>
+            </Table>
+          </div>
+        );
+      }}
     </AsyncBoundary>
   );
 }

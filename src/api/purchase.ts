@@ -46,6 +46,18 @@ export function getAskSellerStates(
   return apiFetch(`/staff/purchase/asks/${askId}/seller-states`, { accessToken });
 }
 
+export function postAskChase(
+  accessToken: string,
+  askId: string,
+  sellerId: string,
+): Promise<{ logged: true }> {
+  return apiFetch(`/staff/purchase/asks/${askId}/chase`, {
+    method: 'POST',
+    body: { sellerId },
+    accessToken,
+  });
+}
+
 export interface CoverageCell {
   manufacturerId: string;
   tehsilId: string;
@@ -294,14 +306,20 @@ export interface PileAwaitingDecisionItem {
   brand: string;
   ratePaise: number;
   boxes: number;
+  lineQty: number;
   buyers: number;
   openedAt: string;
   confirmWindowEndsAt: string;
   chaseLeftHours: number;
+  gapText: string | null;
 }
 
 export function getPilesAwaitingDecision(accessToken: string): Promise<PileAwaitingDecisionItem[]> {
   return apiFetch('/staff/purchase/piles', { accessToken });
+}
+
+export function postPileChase(accessToken: string, pileId: string): Promise<{ logged: true }> {
+  return apiFetch(`/staff/purchase/piles/${pileId}/chase`, { method: 'POST', accessToken });
 }
 
 export interface DispatchQueueItem {
@@ -309,6 +327,10 @@ export interface DispatchQueueItem {
   poNo: string;
   sellerId: string;
   sellerFirm: string;
+  sellerCutoffTime: string;
+  brand: string;
+  packLabel: string;
+  boxes: number;
   bucket: 'due' | 'overdue' | 'in_transit';
   dispatchDueDate: string;
   hoursLeft: number | null;
@@ -394,9 +416,14 @@ export function getDraftMasters(accessToken: string): Promise<DraftMasterItem[]>
   return apiFetch('/staff/purchase/masters/drafts', { accessToken });
 }
 
-export function getMastersManufacturers(
-  accessToken: string,
-): Promise<Array<{ manufacturerId: string; name: string; state?: 'draft' | 'live' }>> {
+export interface MasterManufacturer {
+  manufacturerId: string;
+  name: string;
+  aka: string[];
+  state?: 'draft' | 'live';
+}
+
+export function getMastersManufacturers(accessToken: string): Promise<MasterManufacturer[]> {
   return apiFetch('/staff/purchase/masters/manufacturers', { accessToken });
 }
 
@@ -415,10 +442,11 @@ export function getMastersProducts(accessToken: string): Promise<
 export function postDraftManufacturer(
   accessToken: string,
   name: string,
+  aka?: string[],
 ): Promise<{ manufacturerId: string }> {
   return apiFetch('/staff/purchase/masters/manufacturers', {
     method: 'POST',
-    body: { name },
+    body: { name, aka },
     accessToken,
   });
 }

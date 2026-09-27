@@ -37,6 +37,8 @@ export function DispatchPage() {
                   <tr>
                     <Th>PO</Th>
                     <Th>Seller</Th>
+                    <Th>Goods</Th>
+                    <Th>His cut-off</Th>
                     <Th>Due</Th>
                     <Th>Status</Th>
                     <Th />
@@ -55,6 +57,7 @@ export function DispatchPage() {
                   <tr>
                     <Th>PO</Th>
                     <Th>Seller</Th>
+                    <Th>Goods</Th>
                     <Th>Dispatched</Th>
                     <Th>Days out</Th>
                   </tr>
@@ -64,6 +67,9 @@ export function DispatchPage() {
                     <tr key={d.poId}>
                       <Td className="font-mono">{d.poNo}</Td>
                       <Td>{d.sellerFirm}</Td>
+                      <Td>
+                        {d.brand} {d.packLabel} · {d.boxes} boxes
+                      </Td>
                       <Td>
                         {d.dispatchedAt ? new Date(d.dispatchedAt).toLocaleDateString() : '—'}
                       </Td>
@@ -87,6 +93,10 @@ function DispatchRow({ item, onChased }: { item: DispatchQueueItem; onChased: ()
     <tr>
       <Td className="font-mono">{item.poNo}</Td>
       <Td>{item.sellerFirm}</Td>
+      <Td>
+        {item.brand} {item.packLabel} · {item.boxes} boxes
+      </Td>
+      <Td>{item.sellerCutoffTime}</Td>
       <Td>{new Date(item.dispatchDueDate).toLocaleString()}</Td>
       <Td>
         {item.bucket === 'overdue' ? (

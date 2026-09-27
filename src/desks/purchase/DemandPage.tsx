@@ -1,8 +1,10 @@
 import { useCallback, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { FiFlag } from 'react-icons/fi';
 import {
   getActiveDemandList,
   getAskSellerStates,
+  postAskChase,
   postNonOrderReason,
   type ActiveDemandItem,
   type AskSellerStateItem,
@@ -81,6 +83,7 @@ export function DemandPage() {
 }
 
 function DemandRow({ item, onRecorded }: { item: ActiveDemandItem; onRecorded: () => void }) {
+  const navigate = useNavigate();
   const [open, setOpen] = useState(false);
   return (
     <>
@@ -95,9 +98,21 @@ function DemandRow({ item, onRecorded }: { item: ActiveDemandItem; onRecorded: (
         <Td>{item.sellerCounts.dormant}</Td>
         <Td>
           {item.noSeller && (
-            <Badge tone="warn">
-              <FiFlag className="inline" /> No seller
-            </Badge>
+            <div className="flex items-center gap-2">
+              <Badge tone="warn">
+                <FiFlag className="inline" /> No seller
+              </Badge>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  navigate(`/purchase/matrix?q=${encodeURIComponent(item.technical)}`);
+                }}
+              >
+                Who could carry it →
+              </Button>
+            </div>
           )}
         </Td>
         <Td onClick={(e) => e.stopPropagation()}>
@@ -141,26 +156,43 @@ function QuoteGapsDetail({ askId }: { askId: string }) {
     >
       {(sellers: AskSellerStateItem[]) => (
         <ul className="flex flex-col gap-1 py-2 pl-6 text-sm">
-          {sellers.map((s) => {
-            const { label, tone } = SELLER_STATE_LABEL[s.state];
-            return (
-              <li key={s.sellerId} className="flex items-center gap-2">
-                <span className="font-medium text-slate-800">{s.firm}</span>
-                <Badge tone={tone}>{label}</Badge>
-                {s.ratePaise !== null && (
-                  <span className="text-slate-500">₹{(s.ratePaise / 100).toFixed(2)}</span>
-                )}
-                {s.gapCodes.length > 0 && (
-                  <span className="text-danger-500">
-                    short: {s.gapCodes.join(', ').replaceAll('_', ' ')}
-                  </span>
-                )}
-              </li>
-            );
-          })}
+          {sellers.map((s) => (
+            <SellerStateRow key={s.sellerId} askId={askId} seller={s} />
+          ))}
         </ul>
       )}
     </AsyncBoundary>
+  );
+}
+
+function SellerStateRow({ askId, seller: s }: { askId: string; seller: AskSellerStateItem }) {
+  const { callApi } = useAuth();
+  const [chased, setChased] = useState(false);
+  const { label, tone } = SELLER_STATE_LABEL[s.state];
+  return (
+    <li className="flex items-center gap-2">
+      <span className="font-medium text-slate-800">{s.firm}</span>
+      <Badge tone={tone}>{label}</Badge>
+      {s.ratePaise !== null && (
+        <span className="text-slate-500">₹{(s.ratePaise / 100).toFixed(2)}</span>
+      )}
+      {s.gapCodes.length > 0 && (
+        <span className="text-danger-500">short: {s.gapCodes.join(', ').replaceAll('_', ' ')}</span>
+      )}
+      {s.state !== 'quoted' && (
+        <Button
+          variant="secondary"
+          size="sm"
+          onClick={() =>
+            void callApi((token) => postAskChase(token, askId, s.sellerId)).then(() =>
+              setChased(true),
+            )
+          }
+        >
+          {chased ? 'Chased' : 'Chase'}
+        </Button>
+      )}
+    </li>
   );
 }
 

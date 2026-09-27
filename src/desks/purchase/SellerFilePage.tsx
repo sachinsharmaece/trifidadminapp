@@ -36,11 +36,12 @@ export function SellerFilePage() {
               </p>
             </div>
 
-            <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+            <div className="grid grid-cols-2 gap-4 md:grid-cols-5">
               <Kpi label="Trust tier" value={file.trustTier} />
               <Kpi label="Supplies" value={String(file.suppliesCompleted)} />
               <Kpi label="Grace left" value={String(file.scorecard.graceRemaining)} />
               <Kpi label="Strikes" value={String(file.scorecard.strikeCount)} />
+              <Kpi label="Requoted" value={String(file.scorecard.requoteTotal)} />
             </div>
 
             <div className="grid gap-6 md:grid-cols-[1fr_320px]">

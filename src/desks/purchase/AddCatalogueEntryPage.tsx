@@ -184,6 +184,7 @@ function NewMasterCard({
 }) {
   const { callApi } = useAuth();
   const [companyName, setCompanyName] = useState('');
+  const [companyAka, setCompanyAka] = useState('');
   const [brand, setBrand] = useState('');
   const [technical, setTechnical] = useState('');
   const [manufacturerId, setManufacturerId] = useState('');
@@ -191,6 +192,8 @@ function NewMasterCard({
   const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [message, setMessage] = useState<string | null>(null);
+
+  const technicals = useMemo(() => [...new Set(products.map((p) => p.technical))], [products]);
 
   const companyDupes = useMemo(
     () =>
@@ -200,6 +203,10 @@ function NewMasterCard({
   const productDupes = useMemo(
     () => (brand.length > 1 ? products.filter((p) => isNearMatch(p.brand, brand)) : []),
     [brand, products],
+  );
+  const technicalDupes = useMemo(
+    () => (technical.length > 1 ? technicals.filter((t) => isNearMatch(t, technical)) : []),
+    [technical, technicals],
   );
 
   const missingProductFields = [
@@ -228,6 +235,13 @@ function NewMasterCard({
               We may already have this: {companyDupes.map((d) => d.name).join(', ')}
             </p>
           )}
+          <Input
+            id="new-company-aka"
+            label="Also known as (comma-separated)"
+            className="mt-2"
+            value={companyAka}
+            onChange={(e) => setCompanyAka(e.target.value)}
+          />
           <Button
             variant="secondary"
             size="sm"
@@ -236,10 +250,15 @@ function NewMasterCard({
             onClick={() => {
               setError(null);
               setFieldErrors({});
-              void callApi((token) => postDraftManufacturer(token, companyName))
+              const aka = companyAka
+                .split(',')
+                .map((s) => s.trim())
+                .filter(Boolean);
+              void callApi((token) => postDraftManufacturer(token, companyName, aka))
                 .then(() => {
                   setMessage('Company added as a draft — Admin confirms it.');
                   setCompanyName('');
+                  setCompanyAka('');
                   onCreated();
                 })
                 .catch((e) => {
@@ -275,6 +294,11 @@ function NewMasterCard({
             onChange={(e) => setTechnical(e.target.value)}
             error={fieldErrors.technical}
           />
+          {technicalDupes.length > 0 && (
+            <p className="mt-1 text-xs text-warning-600">
+              Already have: {technicalDupes.join(', ')}
+            </p>
+          )}
           <Select
             id="new-manufacturer"
             label="Company"

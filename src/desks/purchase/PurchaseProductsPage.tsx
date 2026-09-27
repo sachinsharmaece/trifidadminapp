@@ -9,6 +9,7 @@ import {
   postDraftSku,
   type ProductFunnelRow,
   type DraftMasterItem,
+  type MasterManufacturer,
 } from '../../api/purchase';
 import { ApiError } from '../../api/errors';
 import { AsyncBoundary } from '../../components/AsyncBoundary';
@@ -21,6 +22,8 @@ import { Button } from '../../components/ui/Button';
 import { Input, Select } from '../../components/ui/Input';
 import { DevNote } from '../../components/dev/DevNote';
 import { isNearMatch } from '../../lib/fuzzyMatch';
+
+type MasterProductLite = Awaited<ReturnType<typeof getMastersProducts>>[number];
 
 export function PurchaseProductsPage() {
   const [tab, setTab] = useState<'analysis' | 'master'>('analysis');
@@ -228,7 +231,10 @@ function MasterTab() {
         {(mfrs) => (
           <AsyncBoundary state={products.state} onRetry={products.retry}>
             {(prods) => (
-              <NewMastersCard manufacturers={mfrs} products={prods} onCreated={refreshAll} />
+              <>
+                <NewMastersCard manufacturers={mfrs} products={prods} onCreated={refreshAll} />
+                <BrowseMastersCard manufacturers={mfrs} products={prods} />
+              </>
             )}
           </AsyncBoundary>
         )}
@@ -237,17 +243,90 @@ function MasterTab() {
   );
 }
 
+function BrowseMastersCard({
+  manufacturers,
+  products,
+}: {
+  manufacturers: MasterManufacturer[];
+  products: MasterProductLite[];
+}) {
+  const technicals = useMemo(
+    () => [...new Set(products.map((p) => p.technical))].sort(),
+    [products],
+  );
+
+  return (
+    <Card title="Everything on the master">
+      <div className="grid gap-6 md:grid-cols-3">
+        <div>
+          <h3 className="mb-2 text-sm font-semibold text-slate-700">
+            Companies ({manufacturers.length})
+          </h3>
+          <ul className="flex max-h-80 flex-col gap-1 overflow-y-auto text-sm">
+            {manufacturers.map((m) => (
+              <li key={m.manufacturerId} className="border-b border-slate-100 py-1">
+                {m.name}
+                {m.state === 'draft' && (
+                  <span className="ml-2">
+                    <Badge tone="warn">draft</Badge>
+                  </span>
+                )}
+                {m.aka && m.aka.length > 0 && (
+                  <div className="text-xs text-slate-500">aka {m.aka.join(', ')}</div>
+                )}
+              </li>
+            ))}
+          </ul>
+        </div>
+        <div>
+          <h3 className="mb-2 text-sm font-semibold text-slate-700">
+            Technicals ({technicals.length})
+          </h3>
+          <ul className="flex max-h-80 flex-col gap-1 overflow-y-auto text-sm">
+            {technicals.map((t) => (
+              <li key={t} className="border-b border-slate-100 py-1">
+                {t}
+              </li>
+            ))}
+          </ul>
+        </div>
+        <div>
+          <h3 className="mb-2 text-sm font-semibold text-slate-700">
+            Products ({products.length})
+          </h3>
+          <ul className="flex max-h-80 flex-col gap-1 overflow-y-auto text-sm">
+            {products.map((p) => (
+              <li key={p.productId} className="border-b border-slate-100 py-1">
+                {p.brand}
+                {p.state === 'draft' && (
+                  <span className="ml-2">
+                    <Badge tone="warn">draft</Badge>
+                  </span>
+                )}
+                <div className="text-xs text-slate-500">
+                  {p.technical} · {p.manufacturerName}
+                </div>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </div>
+    </Card>
+  );
+}
+
 function NewMastersCard({
   manufacturers,
   products,
   onCreated,
 }: {
-  manufacturers: Array<{ manufacturerId: string; name: string }>;
-  products: Array<{ productId: string; brand: string }>;
+  manufacturers: MasterManufacturer[];
+  products: MasterProductLite[];
   onCreated: () => void;
 }) {
   const { callApi } = useAuth();
   const [companyName, setCompanyName] = useState('');
+  const [companyAka, setCompanyAka] = useState('');
   const [brand, setBrand] = useState('');
   const [technical, setTechnical] = useState('');
   const [manufacturerId, setManufacturerId] = useState('');
@@ -261,6 +340,8 @@ function NewMastersCard({
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [message, setMessage] = useState<string | null>(null);
 
+  const technicals = useMemo(() => [...new Set(products.map((p) => p.technical))], [products]);
+
   const companyDupes = useMemo(
     () =>
       companyName.length > 1 ? manufacturers.filter((m) => isNearMatch(m.name, companyName)) : [],
@@ -269,6 +350,10 @@ function NewMastersCard({
   const productDupes = useMemo(
     () => (brand.length > 1 ? products.filter((p) => isNearMatch(p.brand, brand)) : []),
     [brand, products],
+  );
+  const technicalDupes = useMemo(
+    () => (technical.length > 1 ? technicals.filter((t) => isNearMatch(t, technical)) : []),
+    [technical, technicals],
   );
 
   const missingProductFields = [
@@ -306,6 +391,14 @@ function NewMastersCard({
               Already have: {companyDupes.map((d) => d.name).join(', ')}
             </p>
           )}
+          <Input
+            id="pm-company-aka"
+            label="Also known as (comma-separated)"
+            className="mt-2"
+            hint="Stops one seller's shorthand becoming a second company — e.g. Bayer / Bayer CropScience."
+            value={companyAka}
+            onChange={(e) => setCompanyAka(e.target.value)}
+          />
           <Button
             variant="secondary"
             size="sm"
@@ -314,10 +407,15 @@ function NewMastersCard({
             onClick={() => {
               setError(null);
               setFieldErrors({});
-              void callApi((token) => postDraftManufacturer(token, companyName))
+              const aka = companyAka
+                .split(',')
+                .map((s) => s.trim())
+                .filter(Boolean);
+              void callApi((token) => postDraftManufacturer(token, companyName, aka))
                 .then(() => {
                   setMessage('Company added as a draft.');
                   setCompanyName('');
+                  setCompanyAka('');
                   onCreated();
                 })
                 .catch(fail);
@@ -348,6 +446,11 @@ function NewMastersCard({
             onChange={(e) => setTechnical(e.target.value)}
             error={fieldErrors.technical}
           />
+          {technicalDupes.length > 0 && (
+            <p className="mt-1 text-xs text-warning-600">
+              Already have: {technicalDupes.join(', ')}
+            </p>
+          )}
           <Select
             id="pm-manufacturer"
             label="Company"

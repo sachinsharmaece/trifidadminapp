@@ -15,3 +15,4 @@ export { Dropdown, type DropdownOption } from './Dropdown';
 export { Loader } from './Loader';
 export { EmptyState } from './EmptyState';
 export { ErrorState } from './ErrorState';
+export { ToastProvider, useToast } from './Toast';

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import type { FormEvent } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { FiArrowLeft, FiCheck, FiX, FiPhoneCall } from 'react-icons/fi';
@@ -9,24 +9,84 @@ import {
   proxyAcceptPromotion,
   proxyRejectPromotion,
 } from '../../api/proxy';
+import {
+  getSalesBuyerFile,
+  getSalesBoardProduct,
+  createCallLog,
+  listCallLogsForBuyer,
+  type BuyerFileDto,
+  type BuyerProductHistoryRow,
+  type BoardProductDetail,
+  type CallLogDto,
+  type CallOutcome,
+  type CallLogUpdateKind,
+} from '../../api/sales';
 import { ApiError } from '../../api/errors';
 import { useAuth } from '../../auth/AuthContext';
+import { useToast } from '../../components/ui/Toast';
+import { AsyncBoundary } from '../../components/AsyncBoundary';
+import { useAsyncData } from '../../lib/useAsyncData';
 import { Card } from '../../components/ui/Card';
+import { Table, Th, Td } from '../../components/ui/Table';
+import { Badge } from '../../components/ui/Badge';
 import { Input, Select, Textarea } from '../../components/ui/Input';
 import { Button } from '../../components/ui/Button';
 
+const OUTCOMES: CallOutcome[] = [
+  'placed_an_order',
+  'asked_for_a_rate',
+  'wants_something_we_dont_stock',
+  'rate_too_high',
+  'already_holds_stock',
+  'buys_direct_from_company',
+  'not_now_call_later',
+  'no_answer',
+  'wrong_number',
+];
+
+const UPDATE_KINDS: CallLogUpdateKind[] = [
+  'mobile',
+  'delivery_address',
+  'dealerships',
+  'reclassify_request',
+  'gst_details',
+];
+
+function humanize(value: string): string {
+  return value.replace(/_/g, ' ');
+}
+
+function humanizeCapitalized(value: string): string {
+  const spaced = humanize(value);
+  return spaced.charAt(0).toUpperCase() + spaced.slice(1);
+}
+
 /**
  * The call workspace for one specific buyer — reached from his buyer file
- * (`/sales/call/:buyerId`). For now this is just `LogBuyerCallSection` and
- * `AdvanceAskSection` relocated as-is from the old flat `SalesDeskPage`,
- * with the buyer counterparty ID pre-filled from the route instead of typed
- * free-text, since we now arrive here already in a specific buyer's
- * context. A richer workspace (board-for-him, buyer history, etc.) is a
- * later pass.
+ * (`/sales/call/:buyerId`). `LogBuyerCallSection` and `AdvanceAskSection`
+ * are relocated as-is from the old flat `SalesDeskPage` (kept unchanged
+ * below); this pass adds buyer-header context, the "on the board for him"
+ * panel, a call-outcome form + history, and an update-request form around
+ * them.
+ *
+ * Direction: neither existing section tracks a call direction (raise-ask
+ * and accept/decline-fill take no direction field), and the route
+ * (`call/:buyerId`) takes no direction query param either — so the two
+ * "Log an incoming/outgoing call" buttons on the buyer file page both land
+ * here the same way. This page owns one local `direction` toggle, used only
+ * by the new "what the call produced" form below.
  */
 export function SalesCallWorkspacePage() {
   const { buyerId = '' } = useParams<{ buyerId: string }>();
   const navigate = useNavigate();
+  const { callApi } = useAuth();
+  const [direction, setDirection] = useState<'in' | 'out'>('out');
+
+  const fileLoader = useCallback(
+    () => callApi((token) => getSalesBuyerFile(token, buyerId)),
+    [callApi, buyerId],
+  );
+  const { state: fileState, retry: retryFile } = useAsyncData(fileLoader, () => false, [fileLoader]);
 
   return (
     <div className="flex flex-col gap-6">
@@ -37,9 +97,373 @@ export function SalesCallWorkspacePage() {
       >
         Buyer file
       </Button>
+
+      <AsyncBoundary state={fileState} onRetry={retryFile}>
+        {(file: BuyerFileDto) => (
+          <div className="flex flex-col gap-6">
+            <div>
+              <h2 className="text-lg font-semibold text-slate-900">{file.firm}</h2>
+              <p className="text-sm text-slate-500">
+                <span className="font-mono">{file.mobile}</span>
+                {file.tehsil && ` · ${file.tehsil}`}
+                {file.tier && ` · ${file.tier}`}
+              </p>
+            </div>
+            <BoardForHimSection buyerId={buyerId} productHistory={file.productHistory} />
+          </div>
+        )}
+      </AsyncBoundary>
+
+      <DirectionToggle direction={direction} onChange={setDirection} />
+
       <LogBuyerCallSection buyerId={buyerId} />
       <AdvanceAskSection buyerId={buyerId} />
+
+      <CallOutcomeSection buyerId={buyerId} direction={direction} />
+      <UpdateRequestSection buyerId={buyerId} />
     </div>
+  );
+}
+
+function DirectionToggle({
+  direction,
+  onChange,
+}: {
+  direction: 'in' | 'out';
+  onChange: (direction: 'in' | 'out') => void;
+}) {
+  return (
+    <div className="flex items-center gap-2">
+      <span className="text-xs font-medium uppercase tracking-wide text-slate-500">
+        This call is
+      </span>
+      <Button
+        size="sm"
+        variant={direction === 'in' ? 'primary' : 'secondary'}
+        onClick={() => onChange('in')}
+      >
+        ↓ Incoming
+      </Button>
+      <Button
+        size="sm"
+        variant={direction === 'out' ? 'primary' : 'secondary'}
+        onClick={() => onChange('out')}
+      >
+        ↑ Outgoing
+      </Button>
+    </div>
+  );
+}
+
+/**
+ * "On the board for him" — only his own product history (capped at 5), not
+ * the whole catalogue: this fetches a handful of `getSalesBoardProduct`
+ * calls, never `getSalesBoard()` followed by one call per catalog product.
+ */
+function BoardForHimSection({
+  buyerId,
+  productHistory,
+}: {
+  buyerId: string;
+  productHistory: BuyerProductHistoryRow[];
+}) {
+  const { callApi } = useAuth();
+  const capped = useMemo(() => productHistory.slice(0, 5), [productHistory]);
+  const loader = useCallback(
+    () =>
+      callApi((token) =>
+        Promise.all(capped.map((p) => getSalesBoardProduct(token, p.productId, { buyerId }))),
+      ),
+    [callApi, buyerId, capped],
+  );
+  const { state, retry } = useAsyncData(loader, (items) => items.length === 0, [loader]);
+
+  if (productHistory.length === 0) {
+    return (
+      <Card title="On the board for him">
+        <p className="text-sm text-slate-500">
+          He has never ordered — nothing to show him from his own history yet.
+        </p>
+      </Card>
+    );
+  }
+
+  return (
+    <Card title="On the board for him">
+      <AsyncBoundary
+        state={state}
+        onRetry={retry}
+        emptyMessage="Nothing on the board for his products right now."
+      >
+        {(details: BoardProductDetail[]) => (
+          <div className="flex flex-col gap-5">
+            {details.map((detail) => (
+              <BoardProductBlock key={detail.productId} buyerId={buyerId} detail={detail} />
+            ))}
+          </div>
+        )}
+      </AsyncBoundary>
+    </Card>
+  );
+}
+
+function BoardProductBlock({
+  buyerId,
+  detail,
+}: {
+  buyerId: string;
+  detail: BoardProductDetail;
+}) {
+  const { callApi } = useAuth();
+  const { show } = useToast();
+  const [submittingLine, setSubmittingLine] = useState<string | null>(null);
+
+  async function handleWantsIt(listingLineId: string): Promise<void> {
+    setSubmittingLine(listingLineId);
+    try {
+      await callApi((token) =>
+        createCallLog(token, {
+          buyerId,
+          kind: 'note',
+          note: 'Named interest in this rate.',
+          listingLineId,
+        }),
+      );
+      show('Logged his interest.');
+    } catch {
+      show('Could not log this.');
+    } finally {
+      setSubmittingLine(null);
+    }
+  }
+
+  return (
+    <div className="border-t border-slate-100 pt-4 first:border-t-0 first:pt-0">
+      <h3 className="text-sm font-semibold text-slate-900">{detail.brand}</h3>
+      <p className="text-xs text-slate-500">{detail.technicalName}</p>
+      {detail.ladder.length === 0 ? (
+        <p className="mt-2 text-sm text-slate-500">Nothing on the board for this product.</p>
+      ) : (
+        <ul className="mt-2 flex flex-col gap-2">
+          {detail.ladder.map((line) => (
+            <li
+              key={line.listingLineId}
+              className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-slate-200 p-2 text-sm"
+            >
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="font-semibold text-slate-900">
+                  {line.ratePaise != null ? `₹${(line.ratePaise / 100).toFixed(2)}` : 'no rate'}
+                </span>
+                <Badge tone="neutral" variant="chip">
+                  {line.expiryBand}
+                </Badge>
+                <Badge tone="neutral" variant="chip">
+                  {line.moqBand}
+                </Badge>
+                <Badge tone="neutral" variant="chip">
+                  {line.deliveryBand}
+                </Badge>
+                <span className="text-xs text-slate-500">qty {line.qty}</span>
+              </div>
+              <Button
+                size="sm"
+                variant="secondary"
+                loading={submittingLine === line.listingLineId}
+                onClick={() => void handleWantsIt(line.listingLineId)}
+              >
+                He wants it
+              </Button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+/** "What the call produced" (a fresh call log) plus this buyer's call history below it. */
+function CallOutcomeSection({
+  buyerId,
+  direction,
+}: {
+  buyerId: string;
+  direction: 'in' | 'out';
+}) {
+  const { callApi } = useAuth();
+  const { show } = useToast();
+  const [outcome, setOutcome] = useState<CallOutcome>(OUTCOMES[0]);
+  const [note, setNote] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+
+  const historyLoader = useCallback(
+    () => callApi((token) => listCallLogsForBuyer(token, buyerId)),
+    [callApi, buyerId],
+  );
+  const { state: historyState, retry: retryHistory } = useAsyncData(
+    historyLoader,
+    (items) => items.length === 0,
+    [historyLoader],
+  );
+
+  async function handleSave(event: FormEvent): Promise<void> {
+    event.preventDefault();
+    setError(null);
+    setSubmitting(true);
+    try {
+      await callApi((token) =>
+        createCallLog(token, { buyerId, direction, kind: 'call', outcome, note }),
+      );
+      setNote('');
+      show('Call saved.');
+      retryHistory();
+    } catch (submitError) {
+      setError(submitError instanceof ApiError ? submitError.message : 'Could not save the call.');
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  return (
+    <>
+      <Card title="What the call produced">
+        <form onSubmit={handleSave} className="flex max-w-md flex-col gap-4">
+          <Select
+            id="co-outcome"
+            label="Outcome"
+            value={outcome}
+            onChange={(e) => setOutcome(e.target.value as CallOutcome)}
+          >
+            {OUTCOMES.map((o) => (
+              <option key={o} value={o}>
+                {humanizeCapitalized(o)}
+              </option>
+            ))}
+          </Select>
+          <Textarea
+            id="co-note"
+            label="Note"
+            value={note}
+            onChange={(e) => setNote(e.target.value)}
+            required
+          />
+          {error && (
+            <p role="alert" className="text-sm text-danger-500">
+              {error}
+            </p>
+          )}
+          <Button type="submit" loading={submitting}>
+            Save the call
+          </Button>
+        </form>
+      </Card>
+
+      <Card title="Call history">
+        <AsyncBoundary
+          state={historyState}
+          onRetry={retryHistory}
+          emptyMessage="No calls logged yet."
+        >
+          {(items: CallLogDto[]) => (
+            <Table>
+              <thead>
+                <tr>
+                  <Th>When</Th>
+                  <Th>Way</Th>
+                  <Th>Outcome</Th>
+                  <Th>Note</Th>
+                </tr>
+              </thead>
+              <tbody>
+                {items.map((c) => (
+                  <tr key={c.callLogId}>
+                    <Td>{new Date(c.at).toLocaleString()}</Td>
+                    <Td>{c.direction === 'in' ? '↓' : c.direction === 'out' ? '↑' : '—'}</Td>
+                    <Td>{c.outcome ? humanize(c.outcome) : '—'}</Td>
+                    <Td>{c.note}</Td>
+                  </tr>
+                ))}
+              </tbody>
+            </Table>
+          )}
+        </AsyncBoundary>
+      </Card>
+    </>
+  );
+}
+
+function UpdateRequestSection({ buyerId }: { buyerId: string }) {
+  const { callApi } = useAuth();
+  const { show } = useToast();
+  const [updateKind, setUpdateKind] = useState<CallLogUpdateKind>(UPDATE_KINDS[0]);
+  const [updateValue, setUpdateValue] = useState('');
+  const [note, setNote] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+
+  async function handleSubmit(event: FormEvent): Promise<void> {
+    event.preventDefault();
+    setError(null);
+    setSubmitting(true);
+    try {
+      await callApi((token) =>
+        createCallLog(token, { buyerId, kind: 'update_request', updateKind, updateValue, note }),
+      );
+      setUpdateValue('');
+      setNote('');
+      show('Update request logged.');
+    } catch (submitError) {
+      setError(
+        submitError instanceof ApiError ? submitError.message : 'Could not log this update.',
+      );
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  return (
+    <Card title="Record an update">
+      <form onSubmit={handleSubmit} className="flex max-w-md flex-col gap-4">
+        <Select
+          id="ur-kind"
+          label="What changed"
+          value={updateKind}
+          onChange={(e) => setUpdateKind(e.target.value as CallLogUpdateKind)}
+        >
+          {UPDATE_KINDS.map((k) => (
+            <option key={k} value={k}>
+              {humanizeCapitalized(k)}
+            </option>
+          ))}
+        </Select>
+        <Input
+          id="ur-value"
+          label="New value"
+          value={updateValue}
+          onChange={(e) => setUpdateValue(e.target.value)}
+          required
+        />
+        <Textarea
+          id="ur-note"
+          label="Note"
+          value={note}
+          onChange={(e) => setNote(e.target.value)}
+          required
+        />
+        {error && (
+          <p role="alert" className="text-sm text-danger-500">
+            {error}
+          </p>
+        )}
+        <Button type="submit" loading={submitting}>
+          Log the update
+        </Button>
+        <p className="text-xs text-slate-500">
+          A re-classification is a request, not a change — the desk sets position at approval,
+          volume never sets it.
+        </p>
+      </form>
+    </Card>
   );
 }
 

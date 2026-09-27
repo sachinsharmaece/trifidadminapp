@@ -290,12 +290,15 @@ export interface BuyerFileOpenAsk {
 export interface SalesOrderRow {
   soId: string;
   soNo: string;
+  buyerId: string;
+  buyerCounterpartyId: string;
   buyerFirm: string;
   productDisplay: string;
   totalPaise: number;
   state: string;
   payDeadline: string;
   claimNeedsApplying: boolean;
+  upcomingReceiptId: string | null;
   claimedAt: string | null;
   claimedAmountPaise: number | null;
 }

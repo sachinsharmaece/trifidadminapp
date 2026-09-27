@@ -24,6 +24,8 @@ describe('LoginPage', () => {
       callApi: vi.fn(),
       status: 'anonymous',
       me: null,
+      sessionExpiredNotice: false,
+      dismissSessionExpiredNotice: vi.fn(),
     });
 
     render(
@@ -52,6 +54,8 @@ describe('LoginPage', () => {
       callApi: vi.fn(),
       status: 'anonymous',
       me: null,
+      sessionExpiredNotice: false,
+      dismissSessionExpiredNotice: vi.fn(),
     });
 
     render(

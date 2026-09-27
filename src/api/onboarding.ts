@@ -69,7 +69,7 @@ export function staffRegisterBuyer(
     consent: { noticeVersion: string; marketingOptIn: boolean };
     callNote: string;
   },
-): Promise<{ registrationId: string }> {
+): Promise<{ registrationId: string; accountNameWarning: string | null }> {
   return apiFetch('/staff/registrations/buyer', { method: 'POST', body: input, accessToken });
 }
 
@@ -86,7 +86,7 @@ export function staffRegisterSeller(
     consent: { noticeVersion: string; marketingOptIn: boolean };
     callNote: string;
   },
-): Promise<{ registrationId: string }> {
+): Promise<{ registrationId: string; accountNameWarning: string | null }> {
   return apiFetch('/staff/registrations/seller', { method: 'POST', body: input, accessToken });
 }
 

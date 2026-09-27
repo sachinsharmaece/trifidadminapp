@@ -1,31 +1,54 @@
 @import 'tailwindcss';
 
 /*
- * Design tokens — one small palette shared in spirit with
- * trifid-buyersellerapp's own Tailwind theme (no shared package between
- * repos, TD-002, so the values are kept in sync by hand, not imported).
- * Brand hue matches this app's previous plain-CSS link color (#1261a0).
+ * Design tokens — copied exactly from `trifid data/purchase_desk_v2.html`'s
+ * own `:root` palette (the Purchase-desk v2 prototype), not approximated.
+ * Every anchor value below (the 50/100/200/300/500/700/900 slate steps, and
+ * the brand/success/warning/danger hues) is that file's literal hex; the
+ * in-between steps (400/600/800/950) are this app's own smooth interpolation
+ * to fill Tailwind's eleven-step scale, since the prototype only names eight
+ * neutral tones, not eleven.
+ *
+ * Overriding Tailwind's built-in `slate` scale (not inventing a new one)
+ * is deliberate: every desk screen already uses `bg-slate-50`/`text-slate-900`/
+ * `border-slate-200` etc. throughout, and Tailwind v4 generates those
+ * utilities from these very theme variables — so this one file reaches
+ * every screen without touching a single component's className.
  */
 @theme {
-  --color-brand-50: #eff8ff;
-  --color-brand-100: #dcefff;
-  --color-brand-500: #1261a0;
-  --color-brand-600: #0f5286;
-  --color-brand-700: #0c436c;
+  --color-slate-50: #f3f5f2; /* prototype --surface */
+  --color-slate-100: #e8ece7; /* prototype --surface-2 */
+  --color-slate-200: #d3dad1; /* prototype --line */
+  --color-slate-300: #a9b3a6; /* prototype --line-strong */
+  --color-slate-400: #8b968d;
+  --color-slate-500: #6d786f; /* prototype --ink-3 */
+  --color-slate-600: #586357;
+  --color-slate-700: #48524a; /* prototype --ink-2 */
+  --color-slate-800: #2d352f;
+  --color-slate-900: #131814; /* prototype --ink */
+  --color-slate-950: #0a0d0a;
 
-  --color-success-50: #ecfdf3;
-  --color-success-500: #1a7f37;
-  --color-success-600: #166c2f;
+  --color-brand-50: #e4f0e9; /* prototype --brand-soft */
+  --color-brand-100: #c9e1d3;
+  --color-brand-500: #0b5d3b; /* prototype --brand */
+  --color-brand-600: #094a30;
+  --color-brand-700: #073823;
 
-  --color-warning-50: #fffbeb;
-  --color-warning-500: #b45309;
-  --color-warning-600: #92400e;
+  /* Prototype's "ok" pill is the brand colour, not a separate green. */
+  --color-success-50: #e4f0e9;
+  --color-success-500: #0b5d3b;
+  --color-success-600: #094a30;
 
-  --color-danger-50: #fef2f2;
-  --color-danger-500: #9b1c1c;
-  --color-danger-600: #7f1616;
+  --color-warning-50: #fcefdd; /* prototype --wait-soft */
+  --color-warning-500: #8a4b08; /* prototype --wait */
+  --color-warning-600: #6e3b06;
 
-  --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
+  --color-danger-50: #fbe7e5; /* prototype --urgent-soft */
+  --color-danger-500: #9e1c13; /* prototype --urgent */
+  --color-danger-600: #7e160f;
+
+  --font-sans: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, monospace;
 }
 
 html,

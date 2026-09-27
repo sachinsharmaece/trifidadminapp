@@ -115,6 +115,7 @@ export function getReturnNoteAgeing(accessToken: string): Promise<ReturnNoteAgei
 export interface SellerRecoveryItem {
   complaintId: string;
   sellerId: string;
+  sellerFirm: string;
   debitNoteId: string | null;
   decidedAt: string | null;
 }
@@ -287,7 +288,10 @@ export interface PileAwaitingDecisionItem {
   pileId: string;
   sellerId: string;
   sellerCounterpartyId: string;
+  sellerFirm: string;
   skuId: string;
+  packLabel: string;
+  brand: string;
   ratePaise: number;
   boxes: number;
   buyers: number;
@@ -327,6 +331,7 @@ export interface InspectionPendingApplyItem {
   poId: string;
   poNo: string;
   sellerId: string;
+  sellerFirm: string;
   casesAccepted: number;
   casesRejected: number;
   reasons: string[];
@@ -447,6 +452,7 @@ export function postDraftSku(
 export interface OpenSellerDebitItem {
   debitId: string;
   sellerId: string;
+  sellerFirm: string;
   reason: string;
   amountPaise: number;
   raisedAt: string;

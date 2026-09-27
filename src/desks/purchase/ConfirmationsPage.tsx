@@ -31,7 +31,7 @@ export function ConfirmationsPage() {
             <Table>
               <thead>
                 <tr>
-                  <Th>Pile</Th>
+                  <Th>Seller · Product</Th>
                   <Th>Boxes</Th>
                   <Th>Buyers</Th>
                   <Th>Rate</Th>
@@ -80,7 +80,11 @@ function PileRow({ item, onDecided }: { item: PileAwaitingDecisionItem; onDecide
       <tr className="cursor-pointer" onClick={() => setOpen((v) => !v)}>
         <Td>
           {open ? '▾ ' : '▸ '}
-          {item.pileId.slice(-6)}
+          <span className="font-medium">{item.sellerFirm}</span>
+          <span className="text-slate-500">
+            {' '}
+            · {item.brand} {item.packLabel}
+          </span>
         </Td>
         <Td>{item.boxes}</Td>
         <Td>{item.buyers}</Td>

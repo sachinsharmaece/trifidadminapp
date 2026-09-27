@@ -37,7 +37,7 @@ function describeLoginError(error: unknown): string {
 }
 
 export function LoginPage() {
-  const { login, verifyMfa } = useAuth();
+  const { login, verifyMfa, sessionExpiredNotice } = useAuth();
   const navigate = useNavigate();
 
   const [step, setStep] = useState<Step>('credentials');
@@ -114,6 +114,15 @@ export function LoginPage() {
       <Card className="w-full max-w-sm">
         <h1 className="mb-4 text-lg font-semibold text-slate-900">Sign in</h1>
         <DevNote screen="admin_login" />
+        {sessionExpiredNotice && (
+          <p
+            role="alert"
+            className="mb-4 rounded-md bg-warning-50 px-3 py-2 text-sm text-warning-600"
+          >
+            Your session expired while you were working. Sign in again — anything you were filling
+            in on that screen was not saved.
+          </p>
+        )}
         <form onSubmit={handleCredentialsSubmit} className="flex flex-col gap-4">
           <Input
             id="email"

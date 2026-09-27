@@ -27,7 +27,10 @@ export function AddSellerPage() {
   const [refFirm2, setRefFirm2] = useState('');
   const [refPhone2, setRefPhone2] = useState('');
   const [callNote, setCallNote] = useState('');
-  const [result, setResult] = useState<{ registrationId: string } | null>(null);
+  const [result, setResult] = useState<{
+    registrationId: string;
+    accountNameWarning: string | null;
+  } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [duplicateOfId, setDuplicateOfId] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
@@ -71,12 +74,21 @@ export function AddSellerPage() {
     } catch (submitError) {
       if (submitError instanceof ApiError && submitError.fieldErrors) {
         setFieldErrors(submitError.fieldErrors);
+      } else if (submitError instanceof ApiError && submitError.field) {
+        // A single-field AppError (e.g. the GSTIN/mobile duplicate check) —
+        // pin it to that field instead of a generic page-level banner, same
+        // as the batch fieldErrors case above.
+        setFieldErrors({ [submitError.field]: submitError.message });
       } else {
         setError(
           submitError instanceof ApiError ? submitError.message : 'Could not register this seller.',
         );
       }
-      if (submitError instanceof ApiError && typeof submitError.meta?.existingCounterpartyId === 'string') {
+      if (
+        submitError instanceof ApiError &&
+        typeof submitError.meta?.existingCounterpartyId === 'string'
+      ) {
+        setError(submitError.message);
         setDuplicateOfId(submitError.meta.existingCounterpartyId);
       }
     } finally {
@@ -224,10 +236,21 @@ export function AddSellerPage() {
             </p>
           )}
           {result && (
-            <p className="col-span-2 text-sm text-success-600">
-              Registered as {result.registrationId} — pending OTP confirmation, then set his area
-              from Registrations.
-            </p>
+            <>
+              <p className="col-span-2 text-sm text-success-600">
+                Registered as {result.registrationId} — pending OTP confirmation, then set his area
+                from Registrations.
+              </p>
+              {result.accountNameWarning && (
+                <p
+                  role="alert"
+                  className="col-span-2 rounded-md bg-warning-50 px-3 py-2 text-sm text-warning-600"
+                >
+                  ⚠️ {result.accountNameWarning} Not blocked — logged for whoever approves this
+                  registration to check with him.
+                </p>
+              )}
+            </>
           )}
           <div className="col-span-2">
             <Button type="submit" loading={submitting} icon={<FiPhoneCall />}>

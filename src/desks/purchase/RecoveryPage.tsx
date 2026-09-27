@@ -64,7 +64,7 @@ function InspectionsSection() {
                 {items.map((i) => (
                   <tr key={i.inspectionId}>
                     <Td className="font-mono">{i.poNo}</Td>
-                    <Td className="font-mono text-xs">{i.sellerId.slice(-6)}</Td>
+                    <Td className="font-medium">{i.sellerFirm}</Td>
                     <Td>{i.casesAccepted}</Td>
                     <Td>
                       {i.casesRejected ? (
@@ -170,7 +170,7 @@ function DebitsSection() {
             <tbody>
               {items.map((d) => (
                 <tr key={d.debitId}>
-                  <Td className="font-mono text-xs">{d.sellerId.slice(-6)}</Td>
+                  <Td className="font-medium">{d.sellerFirm}</Td>
                   <Td>{d.reason}</Td>
                   <Td>₹{(d.amountPaise / 100).toFixed(2)}</Td>
                   <Td>{new Date(d.raisedAt).toLocaleDateString()}</Td>
@@ -205,7 +205,7 @@ function SellerRecoverySection() {
             <tbody>
               {items.map((item) => (
                 <tr key={item.complaintId}>
-                  <Td className="font-mono text-xs">{item.sellerId.slice(-6)}</Td>
+                  <Td className="font-medium">{item.sellerFirm}</Td>
                   <Td className="font-mono text-xs">
                     {item.debitNoteId ? item.debitNoteId.slice(-6) : '—'}
                   </Td>

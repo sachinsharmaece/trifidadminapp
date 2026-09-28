@@ -152,12 +152,15 @@ function RegistrationDetail({
                   }`}
                 >
                   {otpPending
-                    ? 'Staff-assisted registration — waiting on the OTP confirmation to the real phone number. Cannot be approved until then.'
+                    ? registration.kind === 'seller'
+                      ? 'Staff-assisted registration — waiting on the OTP confirmation to the real phone number. Cannot be approved until then.'
+                      // TEMP: buyer OTP gate disabled 2026-09-28 — see onboarding.service.ts's approveBuyer.
+                      : 'Staff-assisted registration — waiting on the OTP confirmation to the real phone number. Buyer approval is temporarily not blocked on this.'
                     : 'Staff-assisted registration — OTP confirmed to the real phone number.'}
                 </p>
               )}
               {registration.status === 'pending' &&
-                !otpPending &&
+                !(otpPending && registration.kind === 'seller') &&
                 (registration.kind === 'seller' ? (
                   <ApproveSellerForm
                     registrationId={registrationId}

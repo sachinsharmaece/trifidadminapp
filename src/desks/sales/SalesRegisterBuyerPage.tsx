@@ -13,6 +13,9 @@ import { Button } from '../../components/ui/Button';
  * Staff-assisted enquiries — the OTP-confirmation step itself is shown
  * honestly as pending on the Registrations desk once submitted here.
  * Relocated from the old flat `SalesDeskPage`.
+ * TEMP (2026-09-28): buyer's OTP approval gate is disabled — see
+ * onboarding.service.ts's approveBuyer — so the copy below no longer
+ * claims OTP blocks approval. Restore alongside that gate.
  */
 export function SalesRegisterBuyerPage() {
   const { callApi } = useAuth();
@@ -67,9 +70,7 @@ export function SalesRegisterBuyerPage() {
       </Button>
       <Card title="Staff-assisted buyer registration">
         <p className="mb-4 text-sm text-slate-500">
-          GSTIN stays mandatory, exactly as self-service registration. A single OTP goes to the real
-          mobile number to confirm this is genuine before it can be approved — check the
-          Registrations desk for that status once submitted.
+          GSTIN stays mandatory, exactly as self-service registration.
         </p>
         <form onSubmit={handleSubmit} className="grid max-w-2xl grid-cols-2 gap-4">
           <Input
@@ -152,7 +153,7 @@ export function SalesRegisterBuyerPage() {
           )}
           {result && (
             <p className="col-span-2 text-sm text-success-600">
-              Registered as {result.registrationId} — pending OTP confirmation.
+              Registered as {result.registrationId} — ready for approval on the Registrations desk.
             </p>
           )}
           <div className="col-span-2">

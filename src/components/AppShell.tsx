@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import type { ReactNode } from 'react';
-import { NavLink, useLocation } from 'react-router-dom';
+import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import {
   FiUsers,
   FiDatabase,
@@ -22,9 +22,11 @@ import {
   FiX,
   FiChevronDown,
   FiChevronRight,
+  FiPhoneCall,
 } from 'react-icons/fi';
 import { useAuth } from '../auth/AuthContext';
 import { PERMISSIONS } from '../lib/permissions';
+import { ToastProvider } from './ui/Toast';
 
 interface NavChild {
   to: string;
@@ -205,6 +207,48 @@ function SidebarLinks({ onNavigate }: { onNavigate?: () => void }) {
 }
 
 /**
+ * A quick "log a call" jump — Sales-only, so it's scoped to `/sales/*`
+ * rather than living in the sidebar. Typing a buyer's counterparty ID here
+ * and submitting takes the rep straight to that buyer's call workspace
+ * (`/sales/call/:buyerId`) without first opening his buyer file.
+ */
+function SalesQuickCallControl() {
+  const location = useLocation();
+  const navigate = useNavigate();
+  const [buyerId, setBuyerId] = useState('');
+
+  if (!location.pathname.startsWith('/sales')) return null;
+
+  return (
+    <form
+      className="mb-4 flex items-center justify-end gap-2"
+      onSubmit={(event) => {
+        event.preventDefault();
+        const trimmed = buyerId.trim();
+        if (trimmed) navigate(`/sales/call/${trimmed}`);
+      }}
+    >
+      <input
+        type="text"
+        value={buyerId}
+        onChange={(e) => setBuyerId(e.target.value)}
+        placeholder="Buyer counterparty ID"
+        aria-label="Buyer counterparty ID"
+        className="w-48 rounded-md border border-slate-300 bg-white px-2.5 py-1.5 text-sm text-slate-900 placeholder:text-slate-400 focus:border-brand-500 focus:outline focus:outline-2 focus:outline-brand-500/30"
+      />
+      <button
+        type="submit"
+        disabled={!buyerId.trim()}
+        className="inline-flex items-center gap-1.5 rounded-md bg-brand-500 px-3 py-1.5 text-sm font-medium text-white hover:bg-brand-600 disabled:cursor-not-allowed disabled:bg-brand-500/50"
+      >
+        <FiPhoneCall aria-hidden />
+        Log a call
+      </button>
+    </form>
+  );
+}
+
+/**
  * The persistent shell every authenticated route renders inside. Replaces
  * `App.tsx`'s old flat, repeated `<Nav/>` — a real sidebar on desktop that
  * collapses to a top bar + slide-over on narrow screens.
@@ -214,77 +258,82 @@ export function AppShell({ children }: { children: ReactNode }) {
   const [mobileOpen, setMobileOpen] = useState(false);
 
   return (
-    <div className="flex min-h-screen bg-slate-50">
-      {/* Desktop sidebar */}
-      <aside className="hidden w-60 shrink-0 flex-col border-r border-slate-200 bg-white md:flex">
-        <div className="border-b border-slate-200 px-4 py-4">
+    <ToastProvider>
+      <div className="flex min-h-screen bg-slate-50">
+        {/* Desktop sidebar */}
+        <aside className="hidden w-60 shrink-0 flex-col border-r border-slate-200 bg-white md:flex">
+          <div className="border-b border-slate-200 px-4 py-4">
+            <span className="text-lg font-semibold text-brand-600">TriFid</span>
+          </div>
+          <SidebarLinks />
+          <div className="border-t border-slate-200 p-3">
+            <div className="mb-2 truncate px-3 text-xs text-slate-500">{me?.email}</div>
+            <button
+              type="button"
+              onClick={() => void logout()}
+              className="flex w-full items-center gap-3 rounded-md px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+            >
+              <FiLogOut aria-hidden />
+              Sign out
+            </button>
+          </div>
+        </aside>
+
+        {/* Mobile top bar */}
+        <div className="fixed inset-x-0 top-0 z-30 flex items-center justify-between border-b border-slate-200 bg-white px-4 py-3 md:hidden">
           <span className="text-lg font-semibold text-brand-600">TriFid</span>
-        </div>
-        <SidebarLinks />
-        <div className="border-t border-slate-200 p-3">
-          <div className="mb-2 truncate px-3 text-xs text-slate-500">{me?.email}</div>
           <button
             type="button"
-            onClick={() => void logout()}
-            className="flex w-full items-center gap-3 rounded-md px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+            aria-label="Open menu"
+            onClick={() => setMobileOpen(true)}
+            className="rounded-md p-2 text-slate-600 hover:bg-slate-100"
           >
-            <FiLogOut aria-hidden />
-            Sign out
+            <FiMenu className="text-xl" />
           </button>
         </div>
-      </aside>
 
-      {/* Mobile top bar */}
-      <div className="fixed inset-x-0 top-0 z-30 flex items-center justify-between border-b border-slate-200 bg-white px-4 py-3 md:hidden">
-        <span className="text-lg font-semibold text-brand-600">TriFid</span>
-        <button
-          type="button"
-          aria-label="Open menu"
-          onClick={() => setMobileOpen(true)}
-          className="rounded-md p-2 text-slate-600 hover:bg-slate-100"
-        >
-          <FiMenu className="text-xl" />
-        </button>
-      </div>
-
-      {/* Mobile slide-over */}
-      {mobileOpen && (
-        <div className="fixed inset-0 z-40 md:hidden">
-          <div
-            className="absolute inset-0 bg-slate-900/40"
-            onClick={() => setMobileOpen(false)}
-            aria-hidden
-          />
-          <div className="absolute inset-y-0 left-0 flex w-64 flex-col bg-white shadow-lg">
-            <div className="flex items-center justify-between border-b border-slate-200 px-4 py-4">
-              <span className="text-lg font-semibold text-brand-600">TriFid</span>
-              <button
-                type="button"
-                aria-label="Close menu"
-                onClick={() => setMobileOpen(false)}
-                className="rounded-md p-2 text-slate-600 hover:bg-slate-100"
-              >
-                <FiX />
-              </button>
-            </div>
-            <SidebarLinks onNavigate={() => setMobileOpen(false)} />
-            <div className="border-t border-slate-200 p-3">
-              <button
-                type="button"
-                onClick={() => void logout()}
-                className="flex w-full items-center gap-3 rounded-md px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900"
-              >
-                <FiLogOut aria-hidden />
-                Sign out
-              </button>
+        {/* Mobile slide-over */}
+        {mobileOpen && (
+          <div className="fixed inset-0 z-40 md:hidden">
+            <div
+              className="absolute inset-0 bg-slate-900/40"
+              onClick={() => setMobileOpen(false)}
+              aria-hidden
+            />
+            <div className="absolute inset-y-0 left-0 flex w-64 flex-col bg-white shadow-lg">
+              <div className="flex items-center justify-between border-b border-slate-200 px-4 py-4">
+                <span className="text-lg font-semibold text-brand-600">TriFid</span>
+                <button
+                  type="button"
+                  aria-label="Close menu"
+                  onClick={() => setMobileOpen(false)}
+                  className="rounded-md p-2 text-slate-600 hover:bg-slate-100"
+                >
+                  <FiX />
+                </button>
+              </div>
+              <SidebarLinks onNavigate={() => setMobileOpen(false)} />
+              <div className="border-t border-slate-200 p-3">
+                <button
+                  type="button"
+                  onClick={() => void logout()}
+                  className="flex w-full items-center gap-3 rounded-md px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+                >
+                  <FiLogOut aria-hidden />
+                  Sign out
+                </button>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        )}
 
-      <main className="min-w-0 flex-1 px-4 py-6 pt-20 md:px-8 md:py-8 md:pt-8">
-        <div className="mx-auto max-w-5xl">{children}</div>
-      </main>
-    </div>
+        <main className="min-w-0 flex-1 px-4 py-6 pt-20 md:px-8 md:py-8 md:pt-8">
+          <div className="mx-auto max-w-5xl">
+            <SalesQuickCallControl />
+            {children}
+          </div>
+        </main>
+      </div>
+    </ToastProvider>
   );
 }

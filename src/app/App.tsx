@@ -28,7 +28,21 @@ import { EnterListingPage } from '../desks/purchase/EnterListingPage';
 import { SupplyMatrixPage } from '../desks/purchase/SupplyMatrixPage';
 import { RecoveryPage } from '../desks/purchase/RecoveryPage';
 import { PurchaseProductsPage } from '../desks/purchase/PurchaseProductsPage';
-import { SalesDeskPage } from '../desks/sales/SalesDeskPage';
+import { SalesLayout } from '../desks/sales/SalesLayout';
+import { SalesTodayPage } from '../desks/sales/SalesTodayPage';
+import { SalesFunnelPage } from '../desks/sales/SalesFunnelPage';
+import { SalesProductsPage } from '../desks/sales/SalesProductsPage';
+import { SalesProductDetailPage } from '../desks/sales/SalesProductDetailPage';
+import { SalesPoolsPage } from '../desks/sales/SalesPoolsPage';
+import { SalesPoolDetailPage } from '../desks/sales/SalesPoolDetailPage';
+import { SalesOrdersPage } from '../desks/sales/SalesOrdersPage';
+import { SalesBuyersPage } from '../desks/sales/SalesBuyersPage';
+import { SalesRegisterBuyerPage } from '../desks/sales/SalesRegisterBuyerPage';
+import { SalesBuyerFilePage } from '../desks/sales/SalesBuyerFilePage';
+import { SalesCallWorkspacePage } from '../desks/sales/SalesCallWorkspacePage';
+import { SalesPulsePage } from '../desks/sales/SalesPulsePage';
+import { SalesMspPage } from '../desks/sales/SalesMspPage';
+import { SalesComplaintsPage } from '../desks/sales/SalesComplaintsPage';
 import { LogisticsDeskPage } from '../desks/logistics/LogisticsDeskPage';
 import { ControllerDeskPage } from '../desks/controller/ControllerDeskPage';
 import { NotificationLogPage } from '../desks/notifications/NotificationLogPage';
@@ -200,11 +214,26 @@ export function App() {
           element={
             <RequireAuth permission={PERMISSIONS.SALES_WORKLIST_READ}>
               <AppShell>
-                <SalesDeskPage />
+                <SalesLayout />
               </AppShell>
             </RequireAuth>
           }
-        />
+        >
+          <Route index element={<SalesTodayPage />} />
+          <Route path="funnel" element={<SalesFunnelPage />} />
+          <Route path="products" element={<SalesProductsPage />} />
+          <Route path="products/:productId" element={<SalesProductDetailPage />} />
+          <Route path="pools" element={<SalesPoolsPage />} />
+          <Route path="pools/:poolId" element={<SalesPoolDetailPage />} />
+          <Route path="orders" element={<SalesOrdersPage />} />
+          <Route path="buyers" element={<SalesBuyersPage />} />
+          <Route path="buyers/new" element={<SalesRegisterBuyerPage />} />
+          <Route path="buyers/:buyerId" element={<SalesBuyerFilePage />} />
+          <Route path="call/:buyerId" element={<SalesCallWorkspacePage />} />
+          <Route path="pulse" element={<SalesPulsePage />} />
+          <Route path="msp" element={<SalesMspPage />} />
+          <Route path="complaints" element={<SalesComplaintsPage />} />
+        </Route>
         <Route
           path="/registers"
           element={

@@ -75,3 +75,302 @@ export function respondToMsp(
     accessToken,
   });
 }
+
+// ---------------------------------------------------------------------------
+// Sales desk v2 — calls.
+// ---------------------------------------------------------------------------
+
+export type CallOutcome =
+  | 'placed_an_order'
+  | 'asked_for_a_rate'
+  | 'wants_something_we_dont_stock'
+  | 'rate_too_high'
+  | 'already_holds_stock'
+  | 'buys_direct_from_company'
+  | 'not_now_call_later'
+  | 'no_answer'
+  | 'wrong_number';
+
+export type CallLogKind = 'call' | 'note' | 'update_request';
+
+export type CallLogUpdateKind =
+  'mobile' | 'delivery_address' | 'dealerships' | 'reclassify_request' | 'gst_details';
+
+export interface CallLogDto {
+  callLogId: string;
+  buyerId: string;
+  employeeId: string;
+  direction: 'in' | 'out' | null;
+  at: string;
+  kind: CallLogKind;
+  outcome: CallOutcome | null;
+  note: string;
+  producedAskId: string | null;
+  listingLineId: string | null;
+  updateKind: CallLogUpdateKind | null;
+  updateValue: string | null;
+  promiseDueAt: string | null;
+  promiseFulfilledAt: string | null;
+}
+
+export interface CreateCallLogInput {
+  buyerId: string;
+  direction?: 'in' | 'out' | null;
+  kind: CallLogKind;
+  outcome?: CallOutcome;
+  note: string;
+  producedAskId?: string;
+  listingLineId?: string;
+  updateKind?: CallLogUpdateKind;
+  updateValue?: string;
+  promiseDueAt?: string;
+}
+
+export function createCallLog(accessToken: string, input: CreateCallLogInput): Promise<CallLogDto> {
+  return apiFetch('/staff/sales/calls', { method: 'POST', body: input, accessToken });
+}
+
+export function listCallLogsForBuyer(accessToken: string, buyerId: string): Promise<CallLogDto[]> {
+  return apiFetch(`/staff/sales/calls?buyerId=${encodeURIComponent(buyerId)}`, { accessToken });
+}
+
+export function getSalesPromises(accessToken: string): Promise<CallLogDto[]> {
+  return apiFetch('/staff/sales/promises', { accessToken });
+}
+
+// ---------------------------------------------------------------------------
+// Sales desk v2 — board (rate ladder).
+// ---------------------------------------------------------------------------
+
+export interface BoardProductRow {
+  productId: string;
+  brand: string;
+  technicalName: string;
+  manufacturerName: string;
+  ladderCount: number;
+  cheapestRatePaise: number | null;
+  buyerCount: number;
+}
+
+export function getSalesBoard(accessToken: string): Promise<BoardProductRow[]> {
+  return apiFetch('/staff/sales/board', { accessToken });
+}
+
+export interface BoardLadderLine {
+  listingLineId: string;
+  skuId: string;
+  packLabel: string;
+  ratePaise: number | null;
+  qty: number;
+  expiryBand: string;
+  moqBand: string;
+  deliveryBand: string;
+  provenance: string;
+  tehsilCount: number;
+}
+
+export interface BoardOpenAsk {
+  askId: string;
+  buyerId: string;
+  skuId: string | null;
+  qty: number;
+  state: string;
+  createdAt: string;
+}
+
+export interface BuyerProductHistoryEntry {
+  soId: string;
+  soNo: string;
+  state: string;
+  totalPaise: number;
+  createdAt: string;
+}
+
+export interface BoardProductDetail {
+  productId: string;
+  brand: string;
+  technicalName: string;
+  manufacturerName: string;
+  ladder: BoardLadderLine[];
+  openAsks: BoardOpenAsk[];
+  buyerHistory?: BuyerProductHistoryEntry[];
+}
+
+export function getSalesBoardProduct(
+  accessToken: string,
+  productId: string,
+  filters?: { tier?: 'Distributor' | 'Dealer' | 'Retailer' | 'Trader'; buyerId?: string },
+): Promise<BoardProductDetail> {
+  const params = new URLSearchParams();
+  if (filters?.tier) params.set('tier', filters.tier);
+  if (filters?.buyerId) params.set('buyerId', filters.buyerId);
+  const qs = params.toString();
+  return apiFetch(`/staff/sales/board/${productId}${qs ? `?${qs}` : ''}`, { accessToken });
+}
+
+// ---------------------------------------------------------------------------
+// Sales desk v2 — pools.
+// ---------------------------------------------------------------------------
+
+export interface PoolCommitmentRow {
+  poolCommitmentId: string;
+  buyerId: string;
+  buyerFirm: string;
+  ownerName: string | null;
+  qty: number;
+  isBinding: boolean;
+  reconfirmedAt: string | null;
+  paidAt: string | null;
+  withdrawnAt: string | null;
+}
+
+export interface PoolRow {
+  poolId: string;
+  skuId: string;
+  conditionSetKey: string;
+  moq: number;
+  status: string;
+  isActive: boolean;
+  triggeredAt: string | null;
+  payDeadline: string | null;
+  committedQty: number;
+  bindingQty: number;
+  commitments: PoolCommitmentRow[];
+}
+
+export function getSalesPools(accessToken: string): Promise<PoolRow[]> {
+  return apiFetch('/staff/sales/pools', { accessToken });
+}
+
+export function getSalesPool(accessToken: string, poolId: string): Promise<PoolRow> {
+  return apiFetch(`/staff/sales/pools/${poolId}`, { accessToken });
+}
+
+// ---------------------------------------------------------------------------
+// Sales desk v2 — buyers.
+// ---------------------------------------------------------------------------
+
+export interface BuyerListRow {
+  buyerId: string;
+  firm: string;
+  gstin: string | null;
+  tehsil: string | null;
+  tier: string | null;
+  orderCount: number;
+  lastOrderAt: string | null;
+  rateViews: number;
+  ownerName: string | null;
+}
+
+export function listSalesBuyers(
+  accessToken: string,
+  filters?: { q?: string; tab?: 'book' | 'queue' },
+): Promise<BuyerListRow[]> {
+  const params = new URLSearchParams();
+  if (filters?.q) params.set('q', filters.q);
+  if (filters?.tab) params.set('tab', filters.tab);
+  const qs = params.toString();
+  return apiFetch(`/staff/sales/buyers${qs ? `?${qs}` : ''}`, { accessToken });
+}
+
+export interface BuyerProductHistoryRow {
+  productId: string;
+  brand: string;
+  orderCount: number;
+}
+
+export interface BuyerFileOpenAsk {
+  askId: string;
+  productId: string | null;
+  skuId: string | null;
+  qty: number;
+  state: string;
+}
+
+export interface SalesOrderRow {
+  soId: string;
+  soNo: string;
+  buyerId: string;
+  buyerCounterpartyId: string;
+  buyerFirm: string;
+  productDisplay: string;
+  totalPaise: number;
+  state: string;
+  payDeadline: string;
+  claimNeedsApplying: boolean;
+  upcomingReceiptId: string | null;
+  claimedAt: string | null;
+  claimedAmountPaise: number | null;
+}
+
+export interface BuyerFileDto {
+  buyerId: string;
+  firm: string;
+  gstin: string | null;
+  mobile: string;
+  tehsil: string | null;
+  tier: string | null;
+  classified: boolean;
+  rateViews: number;
+  ownerName: string | null;
+  productHistory: BuyerProductHistoryRow[];
+  openAsks: BuyerFileOpenAsk[];
+  callLogs: CallLogDto[];
+  orders: SalesOrderRow[];
+}
+
+export function getSalesBuyerFile(accessToken: string, buyerId: string): Promise<BuyerFileDto> {
+  return apiFetch(`/staff/sales/buyers/${buyerId}`, { accessToken });
+}
+
+// ---------------------------------------------------------------------------
+// Sales desk v2 — orders.
+// ---------------------------------------------------------------------------
+
+export function listSalesOrders(
+  accessToken: string,
+  filters?: { tab?: 'live' | 'closed' },
+): Promise<SalesOrderRow[]> {
+  const params = new URLSearchParams();
+  if (filters?.tab) params.set('tab', filters.tab);
+  const qs = params.toString();
+  return apiFetch(`/staff/sales/orders${qs ? `?${qs}` : ''}`, { accessToken });
+}
+
+// ---------------------------------------------------------------------------
+// Sales desk v2 — funnel.
+// ---------------------------------------------------------------------------
+
+export type SalesFunnelUnit = 'count' | 'percent' | 'hours';
+
+export interface SalesFunnelMetric {
+  key:
+    | 'registered'
+    | 'classified'
+    | 'viewing'
+    | 'asked'
+    | 'rate_held'
+    | 'took_it'
+    | 'paid'
+    | 'delivered'
+    | 'ordered_again';
+  label: string;
+  formula: string;
+  unit: SalesFunnelUnit;
+  value: number | null;
+  numerator: number | null;
+  denominator: number | null;
+  caveat: string | null;
+  leakCount?: number | null;
+}
+
+export interface SalesFunnelReport {
+  windowDays: number;
+  from: string;
+  to: string;
+  metrics: SalesFunnelMetric[];
+}
+
+export function getSalesFunnel(accessToken: string): Promise<SalesFunnelReport> {
+  return apiFetch('/staff/sales/funnel', { accessToken });
+}

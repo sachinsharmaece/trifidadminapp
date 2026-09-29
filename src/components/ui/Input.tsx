@@ -1,5 +1,11 @@
 import { useId } from 'react';
 import type { InputHTMLAttributes, SelectHTMLAttributes, TextareaHTMLAttributes } from 'react';
+import { env } from '../../lib/env';
+
+// When VITE_DISABLE_INPUT_VALIDATION is set (dev only — see lib/env.ts),
+// the native `required` attribute is dropped so forms can be submitted
+// with empty fields while testing.
+const validationDisabled = env.isDevelopment && env.disableInputValidation;
 
 const FIELD_CLASSES =
   'w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:border-brand-500 focus:outline focus:outline-2 focus:outline-brand-500/30 disabled:bg-slate-100 disabled:text-slate-400';
@@ -51,7 +57,7 @@ export function Input({ label, error, hint, required, id, className = '', ...res
       <FieldLabel htmlFor={fieldId} label={label} required={required} />
       <input
         id={fieldId}
-        required={required}
+        required={validationDisabled ? false : required}
         aria-invalid={!!error}
         className={`${FIELD_CLASSES} ${className}`}
         {...rest}
@@ -80,7 +86,7 @@ export function Textarea({
       <FieldLabel htmlFor={fieldId} label={label} required={required} />
       <textarea
         id={fieldId}
-        required={required}
+        required={validationDisabled ? false : required}
         aria-invalid={!!error}
         className={`${FIELD_CLASSES} min-h-24 ${className}`}
         {...rest}
@@ -109,7 +115,7 @@ export function Select({
       <FieldLabel htmlFor={fieldId} label={label} required={required} />
       <select
         id={fieldId}
-        required={required}
+        required={validationDisabled ? false : required}
         aria-invalid={!!error}
         className={`${FIELD_CLASSES} ${className}`}
         {...rest}

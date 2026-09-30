@@ -1,4 +1,5 @@
 import { apiFetch } from './client';
+import { ApiError } from './errors';
 import type { StaffMeDto } from './dto';
 
 export interface StaffLoginResult {
@@ -26,8 +27,23 @@ export function staffMfaVerify(
 }
 
 // API-005 — relies on the httpOnly refresh cookie; nothing else to send.
-export function refreshSession(): Promise<{ accessToken: string }> {
-  return apiFetch('/auth/refresh', { method: 'POST' });
+// B-46 — this call had no timeout or retry at all; a slow Render cold start
+// on the free tier looked identical to "session expired" (B-45). A short
+// retry-with-backoff, scoped to this one call site only — not a general
+// retry framework — masks that without touching the auth design.
+const REFRESH_RETRY_DELAYS_MS = [500, 1500];
+
+export async function refreshSession(): Promise<{ accessToken: string }> {
+  for (let attempt = 0; ; attempt += 1) {
+    try {
+      return await apiFetch<{ accessToken: string }>('/auth/refresh', { method: 'POST' });
+    } catch (error) {
+      const canRetry =
+        attempt < REFRESH_RETRY_DELAYS_MS.length && error instanceof ApiError && error.retryable;
+      if (!canRetry) throw error;
+      await new Promise((resolve) => setTimeout(resolve, REFRESH_RETRY_DELAYS_MS[attempt]));
+    }
+  }
 }
 
 // API-006

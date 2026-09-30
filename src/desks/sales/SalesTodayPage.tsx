@@ -42,9 +42,13 @@ export function SalesTodayPage() {
     [worklistLoader],
   );
   const pulseLoader = useCallback(() => callApi((token) => getMarketPulse(token)), [callApi]);
-  const { state: pulseState } = useAsyncData(pulseLoader, (items) => items.length === 0, [pulseLoader]);
+  const { state: pulseState } = useAsyncData(pulseLoader, (items) => items.length === 0, [
+    pulseLoader,
+  ]);
   const risingCount =
-    pulseState.status === 'success' ? pulseState.data.filter((c) => c.status === 'rising').length : null;
+    pulseState.status === 'success'
+      ? pulseState.data.filter((c) => c.status === 'rising').length
+      : null;
 
   return (
     <div className="flex flex-col gap-6">
@@ -60,13 +64,7 @@ export function SalesTodayPage() {
   );
 }
 
-function Worklist({
-  items,
-  risingCount,
-}: {
-  items: SalesWorkItem[];
-  risingCount: number | null;
-}) {
+function Worklist({ items, risingCount }: { items: SalesWorkItem[]; risingCount: number | null }) {
   const navigate = useNavigate();
   const grouped = useMemo(() => {
     const map = new Map<SalesWorkItem['bucket'], SalesWorkItem[]>();

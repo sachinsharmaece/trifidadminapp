@@ -8,6 +8,7 @@ import { Card } from '../../components/ui/Card';
 import { Table, Th, Td } from '../../components/ui/Table';
 import { Badge, type BadgeTone } from '../../components/ui/Badge';
 import { Button } from '../../components/ui/Button';
+import { poolConditionLabel } from '../../lib/labels';
 
 function statusTone(status: string): BadgeTone {
   switch (status) {
@@ -34,10 +35,7 @@ function FillBar({ committedQty, moq }: { committedQty: number; moq: number }) {
   return (
     <div className="flex items-center gap-3">
       <div className="h-2 flex-1 overflow-hidden rounded-full bg-slate-100">
-        <div
-          className="h-full bg-brand-500"
-          style={{ width: `${Math.min(100, pct)}%` }}
-        />
+        <div className="h-full bg-brand-500" style={{ width: `${Math.min(100, pct)}%` }} />
       </div>
       <span className="w-10 shrink-0 text-right text-sm font-semibold text-slate-900">{pct}%</span>
     </div>
@@ -62,9 +60,10 @@ export function SalesPoolsPage() {
                 key={pool.poolId}
                 title={
                   <span>
-                    SKU …{pool.skuId.slice(-6)}
+                    {pool.brand || `SKU …${pool.skuId.slice(-6)}`}
+                    {pool.packLabel && <span className="text-slate-500"> · {pool.packLabel}</span>}
                     <span className="ml-2 text-xs font-normal text-slate-400">
-                      {pool.conditionSetKey}
+                      {poolConditionLabel(pool)}
                     </span>
                   </span>
                 }
@@ -87,10 +86,7 @@ export function SalesPoolsPage() {
                     </thead>
                     <tbody>
                       {pool.commitments.map((c) => (
-                        <tr
-                          key={c.poolCommitmentId}
-                          className={c.withdrawnAt ? 'opacity-60' : ''}
-                        >
+                        <tr key={c.poolCommitmentId} className={c.withdrawnAt ? 'opacity-60' : ''}>
                           <Td className="font-medium">
                             {c.buyerFirm}
                             <div className="text-xs text-slate-500">{c.ownerName ?? 'queue'}</div>

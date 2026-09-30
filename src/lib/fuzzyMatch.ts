@@ -38,3 +38,16 @@ export function isNearMatch(a: string, b: string): boolean {
   const threshold = Math.max(1, Math.floor(0.2 * Math.min(na.length, nb.length)));
   return levenshteinDistance(na, nb) <= threshold;
 }
+
+/**
+ * B-19 — the same name up to case/spacing (`Syngenta` vs `syngenta`), as
+ * opposed to `isNearMatch`'s fuzzy typo/substring signal. The server
+ * already rejects this exact case unconditionally (case-insensitive
+ * collation on `Manufacturer`/`Product`); this lets the form disable the
+ * button instead of letting a submit round-trip just to be told so.
+ */
+export function isExactNameMatch(a: string, b: string): boolean {
+  const na = normalizeName(a);
+  const nb = normalizeName(b);
+  return na.length >= 2 && na === nb;
+}

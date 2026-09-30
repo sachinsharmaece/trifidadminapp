@@ -43,7 +43,9 @@ export function DemandPage() {
       <Card title="Active demand">
         <p className="mb-4 text-sm text-slate-500">
           BR-272 — how many sellers are quoted, active, dormant or dark against each open ask. No
-          buyer identity, no rupee figure (BR-069).
+          buyer identity, and open interest here is boxes only, never a rupee figure (BR-069) — a
+          seller's own rate still shows when you open a row (BR-066), that&apos;s not what BR-069
+          governs.
         </p>
         <label className="mb-4 flex items-center gap-2 text-sm text-slate-700">
           <input

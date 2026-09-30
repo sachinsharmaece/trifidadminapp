@@ -172,6 +172,7 @@ export interface BoardLadderLine {
 export interface BoardOpenAsk {
   askId: string;
   buyerId: string;
+  buyerFirm: string;
   skuId: string | null;
   qty: number;
   state: string;
@@ -227,7 +228,13 @@ export interface PoolCommitmentRow {
 export interface PoolRow {
   poolId: string;
   skuId: string;
+  brand: string;
+  packLabel: string;
   conditionSetKey: string;
+  expiryBand: string;
+  moqBand: string;
+  deliveryBand: string;
+  provenance: string;
   moq: number;
   status: string;
   isActive: boolean;
@@ -305,6 +312,7 @@ export interface SalesOrderRow {
 
 export interface BuyerFileDto {
   buyerId: string;
+  counterpartyId: string;
   firm: string;
   gstin: string | null;
   mobile: string;

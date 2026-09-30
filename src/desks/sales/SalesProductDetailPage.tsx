@@ -14,9 +14,17 @@ import { Card } from '../../components/ui/Card';
 import { Table, Th, Td } from '../../components/ui/Table';
 import { Badge } from '../../components/ui/Badge';
 import { Button } from '../../components/ui/Button';
+import {
+  askStateLabel,
+  deliveryBandLabel,
+  expiryBandLabel,
+  formatRupees,
+  moqBandLabel,
+  provenanceLabel,
+} from '../../lib/labels';
 
 function formatRate(ratePaise: number | null): string {
-  return ratePaise === null ? '—' : `₹${(ratePaise / 100).toFixed(2)}`;
+  return ratePaise === null ? '—' : formatRupees(ratePaise);
 }
 
 function sortedLadder(ladder: BoardLadderLine[]): BoardLadderLine[] {
@@ -84,10 +92,10 @@ export function SalesProductDetailPage() {
                             </Td>
                             <Td>
                               <div className="flex flex-wrap gap-1">
-                                <Badge variant="chip">{line.expiryBand}</Badge>
-                                <Badge variant="chip">{line.moqBand}</Badge>
-                                <Badge variant="chip">{line.deliveryBand}</Badge>
-                                <Badge variant="chip">{line.provenance}</Badge>
+                                <Badge variant="chip">{expiryBandLabel(line.expiryBand)}</Badge>
+                                <Badge variant="chip">{moqBandLabel(line.moqBand)}</Badge>
+                                <Badge variant="chip">{deliveryBandLabel(line.deliveryBand)}</Badge>
+                                <Badge variant="chip">{provenanceLabel(line.provenance)}</Badge>
                               </div>
                             </Td>
                             <Td numeric>{line.qty}</Td>
@@ -97,8 +105,8 @@ export function SalesProductDetailPage() {
                       </tbody>
                     </Table>
                     <p className="mt-3 text-sm text-slate-500">
-                      Cheapest is almost never what a small retailer can actually take — a big MOQ is
-                      a conversation worth having with him, not a reason to hide the rate.
+                      Cheapest is almost never what a small retailer can actually take — a big MOQ
+                      is a conversation worth having with him, not a reason to hide the rate.
                     </p>
                   </>
                 )}
@@ -126,12 +134,12 @@ export function SalesProductDetailPage() {
                               size="sm"
                               onClick={() => navigate(`/sales/buyers/${ask.buyerId}`)}
                             >
-                              …{ask.buyerId.slice(-6)}
+                              {ask.buyerFirm || `…${ask.buyerId.slice(-6)}`}
                             </Button>
                           </Td>
                           <Td numeric>{ask.qty}</Td>
                           <Td>
-                            <Badge tone={askStateTone(ask.state)}>{ask.state}</Badge>
+                            <Badge tone={askStateTone(ask.state)}>{askStateLabel(ask.state)}</Badge>
                           </Td>
                           <Td>{new Date(ask.createdAt).toLocaleString()}</Td>
                         </tr>

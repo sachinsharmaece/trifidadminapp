@@ -5,14 +5,19 @@ export function Card({
   actions,
   children,
   className = '',
+  onClick,
 }: {
   title?: ReactNode;
   actions?: ReactNode;
   children: ReactNode;
   className?: string;
+  onClick?: () => void;
 }) {
   return (
-    <section className={`rounded-lg border border-slate-200 bg-white p-5 shadow-sm ${className}`}>
+    <section
+      className={`rounded-lg border border-slate-200 bg-white p-5 shadow-sm ${className}`}
+      onClick={onClick}
+    >
       {(title || actions) && (
         <div className="mb-4 flex items-center justify-between gap-3">
           {title && <h2 className="text-base font-semibold text-slate-900">{title}</h2>}

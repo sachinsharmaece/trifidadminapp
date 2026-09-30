@@ -9,6 +9,7 @@ import { Card } from '../../components/ui/Card';
 import { Table, Th, Td } from '../../components/ui/Table';
 import { Badge, type BadgeTone } from '../../components/ui/Badge';
 import { Button } from '../../components/ui/Button';
+import { poolConditionLabel } from '../../lib/labels';
 
 function statusTone(status: string): BadgeTone {
   switch (status) {
@@ -81,8 +82,11 @@ export function SalesPoolDetailPage() {
         {(pool: PoolRow) => (
           <div className="flex flex-col gap-6">
             <div>
-              <h1 className="text-xl font-semibold text-slate-900">SKU …{pool.skuId.slice(-6)}</h1>
-              <p className="text-sm text-slate-500">{pool.conditionSetKey}</p>
+              <h1 className="text-xl font-semibold text-slate-900">
+                {pool.brand || `SKU …${pool.skuId.slice(-6)}`}
+                {pool.packLabel && ` · ${pool.packLabel}`}
+              </h1>
+              <p className="text-sm text-slate-500">{poolConditionLabel(pool)}</p>
             </div>
 
             <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
@@ -127,7 +131,9 @@ export function SalesPoolDetailPage() {
                         </Td>
                         <Td numeric>{c.qty}</Td>
                         <Td>{commitmentBadge(c)}</Td>
-                        <Td>{c.reconfirmedAt ? new Date(c.reconfirmedAt).toLocaleString() : '—'}</Td>
+                        <Td>
+                          {c.reconfirmedAt ? new Date(c.reconfirmedAt).toLocaleString() : '—'}
+                        </Td>
                         <Td>
                           {notPaid ? (
                             <Badge tone="bad">not paid</Badge>

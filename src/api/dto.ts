@@ -83,6 +83,8 @@ export interface RegistrationStatusDto {
   registrationId: string;
   kind: string;
   status: string;
+  firm: string;
+  gstin: string;
   rejectionReason?: string;
   staffAssisted: boolean;
   staffAssistedOtpVerifiedAt: string | null;

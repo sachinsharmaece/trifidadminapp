@@ -34,11 +34,15 @@ export function ProductCreatePage() {
   const [hsn, setHsn] = useState('');
   const [productClass, setProductClass] = useState<'A' | 'B' | 'C'>('B');
   const [error, setError] = useState<string | null>(null);
+  // B-36 — a raw single message at the bottom of the form instead of by the
+  // field, the same field-level mapping already used elsewhere.
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
 
   async function handleSubmit(event: FormEvent): Promise<void> {
     event.preventDefault();
     setError(null);
+    setFieldErrors({});
     setSubmitting(true);
     try {
       const result = await callApi((token) =>
@@ -46,9 +50,15 @@ export function ProductCreatePage() {
       );
       navigate(`/manage/products/${result.productId}`);
     } catch (submitError) {
-      setError(
-        submitError instanceof ApiError ? submitError.message : 'Could not create this product.',
-      );
+      if (submitError instanceof ApiError) {
+        setFieldErrors(
+          submitError.fieldErrors ??
+            (submitError.field ? { [submitError.field]: submitError.message } : {}),
+        );
+        if (!submitError.fieldErrors && !submitError.field) setError(submitError.message);
+      } else {
+        setError('Could not create this product.');
+      }
     } finally {
       setSubmitting(false);
     }
@@ -71,6 +81,7 @@ export function ProductCreatePage() {
             label="Brand"
             value={brand}
             onChange={(e) => setBrand(e.target.value)}
+            error={fieldErrors.brand}
             required
           />
           <div>
@@ -80,6 +91,7 @@ export function ProductCreatePage() {
               list="technicals"
               value={technical}
               onChange={(e) => setTechnical(e.target.value)}
+              error={fieldErrors.technical}
               required
             />
             {technicals.state.status === 'success' && (
@@ -95,6 +107,7 @@ export function ProductCreatePage() {
             label="Manufacturer"
             value={manufacturerId}
             onChange={(e) => setManufacturerId(e.target.value)}
+            error={fieldErrors.manufacturerId}
             required
           >
             <option value="">Select…</option>
@@ -108,8 +121,10 @@ export function ProductCreatePage() {
           <Input
             id="p-hsn"
             label="HSN"
+            hint="Chapter 3808, 6 or 8 digits (e.g. 380891 or 38089110). The server checks this exactly — this is just so a typo doesn't wait for the round trip to show up."
             value={hsn}
             onChange={(e) => setHsn(e.target.value)}
+            error={fieldErrors.hsn}
             required
           />
           <Select
@@ -123,7 +138,7 @@ export function ProductCreatePage() {
             <option value="C">C</option>
           </Select>
 
-          {error && (
+          {error && Object.keys(fieldErrors).length === 0 && (
             <p role="alert" className="text-sm text-danger-500">
               {error}
             </p>

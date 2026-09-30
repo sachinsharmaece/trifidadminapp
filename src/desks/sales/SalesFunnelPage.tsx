@@ -1,10 +1,25 @@
 import { useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { getSalesFunnel, type SalesFunnelMetric } from '../../api/sales';
 import { AsyncBoundary } from '../../components/AsyncBoundary';
 import { useAsyncData } from '../../lib/useAsyncData';
 import { useAuth } from '../../auth/AuthContext';
 import { Card } from '../../components/ui/Card';
 import { Badge } from '../../components/ui/Badge';
+
+// B-34 — the joints weren't clickable at all. Only wired where a screen
+// actually exists to show the records behind that count; `asked`,
+// `rate_held` and `ordered_again` have no dedicated Sales-desk list yet, so
+// they stay static rather than linking somewhere that wouldn't answer the
+// question a click implies.
+const FUNNEL_DESTINATIONS: Partial<Record<SalesFunnelMetric['key'], string>> = {
+  registered: '/registrations',
+  classified: '/sales/buyers',
+  viewing: '/sales/buyers',
+  took_it: '/sales/orders',
+  paid: '/sales/orders',
+  delivered: '/sales/orders',
+};
 
 function formatValue(metric: SalesFunnelMetric): string {
   if (metric.value == null) return '—';
@@ -16,6 +31,7 @@ function formatValue(metric: SalesFunnelMetric): string {
 /** Nine joints (BR-278-adjacent funnel report) — the ladder from registered to ordered-again. */
 export function SalesFunnelPage() {
   const { callApi } = useAuth();
+  const navigate = useNavigate();
   const loader = useCallback(() => callApi((token) => getSalesFunnel(token)), [callApi]);
   const { state, retry } = useAsyncData(loader, (report) => report.metrics.length === 0, [loader]);
 
@@ -31,7 +47,16 @@ export function SalesFunnelPage() {
         {(report) => (
           <div className="flex flex-col gap-3">
             {report.metrics.map((metric, index) => (
-              <FunnelRow key={metric.key} metric={metric} step={index + 1} />
+              <FunnelRow
+                key={metric.key}
+                metric={metric}
+                step={index + 1}
+                onOpen={
+                  FUNNEL_DESTINATIONS[metric.key]
+                    ? () => navigate(FUNNEL_DESTINATIONS[metric.key]!)
+                    : undefined
+                }
+              />
             ))}
           </div>
         )}
@@ -40,10 +65,21 @@ export function SalesFunnelPage() {
   );
 }
 
-function FunnelRow({ metric, step }: { metric: SalesFunnelMetric; step: number }) {
+function FunnelRow({
+  metric,
+  step,
+  onOpen,
+}: {
+  metric: SalesFunnelMetric;
+  step: number;
+  onOpen?: () => void;
+}) {
   const showLeak = metric.key === 'asked' && !!metric.leakCount && metric.leakCount > 0;
   return (
-    <Card>
+    <Card
+      className={onOpen ? 'cursor-pointer transition hover:bg-slate-50' : undefined}
+      onClick={onOpen}
+    >
       <div className="flex items-start gap-4">
         <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-slate-300 text-xs font-semibold text-slate-700">
           {step}

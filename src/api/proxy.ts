@@ -30,6 +30,35 @@ export function proxyRaiseAsk(
   return apiFetch('/staff/proxy/buyer/asks', { method: 'POST', body: input, accessToken });
 }
 
+export interface ProxyAskQuote {
+  quoteId: string;
+  ratePaiseForIndore: number | undefined;
+  qtyAvailable: number;
+  conditionSet: unknown;
+  daysToIndore: number;
+  status: string;
+}
+
+export interface ProxyAskItem {
+  askId: string;
+  qty: number;
+  state: string;
+  ttlAt: string;
+  holdExpiresAt: string | null;
+  quotes: ProxyAskQuote[];
+}
+
+/** Feeds the ask/quote pickers on "Advance an ask on a call" — same read the buyer's own GET /asks calls. */
+export function proxyListBuyerAsks(
+  accessToken: string,
+  buyerCounterpartyId: string,
+): Promise<ProxyAskItem[]> {
+  return apiFetch(
+    `/staff/proxy/buyer/asks?buyerCounterpartyId=${encodeURIComponent(buyerCounterpartyId)}`,
+    { accessToken },
+  );
+}
+
 export function proxyAcceptAskFill(
   accessToken: string,
   askId: string,

@@ -228,8 +228,8 @@ export function AddSellerPage() {
               {duplicateOfId && (
                 <>
                   {' '}
-                  <Link to="/registrations" className="underline">
-                    View existing registrations
+                  <Link to={`/registrations?open=${duplicateOfId}`} className="underline">
+                    Open it
                   </Link>
                 </>
               )}

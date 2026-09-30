@@ -161,7 +161,9 @@ export function SalesBuyerFilePage() {
                           {calls.map((c) => (
                             <tr key={c.callLogId}>
                               <Td>{new Date(c.at).toLocaleString()}</Td>
-                              <Td>{c.direction === 'in' ? '↓' : c.direction === 'out' ? '↑' : '—'}</Td>
+                              <Td>
+                                {c.direction === 'in' ? '↓' : c.direction === 'out' ? '↑' : '—'}
+                              </Td>
                               <Td>{c.outcome ? humanize(c.outcome) : '—'}</Td>
                               <Td>
                                 {c.note}
@@ -279,7 +281,10 @@ export function SalesBuyerFilePage() {
                       <div className="flex flex-col gap-3">
                         <ul className="flex flex-col gap-3 text-sm">
                           {updates.map((c) => (
-                            <li key={c.callLogId} className="rounded-md border border-slate-200 p-2">
+                            <li
+                              key={c.callLogId}
+                              className="rounded-md border border-slate-200 p-2"
+                            >
                               <div className="text-xs font-semibold text-slate-500">
                                 {c.updateKind ? humanize(c.updateKind) : '—'}
                               </div>

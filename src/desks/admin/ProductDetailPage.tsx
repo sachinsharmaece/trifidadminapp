@@ -216,6 +216,7 @@ function EditProductForm({
         <Input
           id="ep-hsn"
           label="HSN"
+          hint="Chapter 3808, 6 or 8 digits (e.g. 380891 or 38089110)."
           value={hsn}
           onChange={(e) => setHsn(e.target.value)}
           required

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import type { FormEvent } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { FiArrowLeft, FiPhoneCall } from 'react-icons/fi';
 import { staffRegisterBuyer } from '../../api/onboarding';
 import { ApiError } from '../../api/errors';
@@ -32,11 +32,18 @@ export function SalesRegisterBuyerPage() {
   const [callNote, setCallNote] = useState('');
   const [result, setResult] = useState<{ registrationId: string } | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // B-24 — every field the server flagged, not just the first; a duplicate
+  // additionally names which field (GSTIN or mobile) and links the existing
+  // record instead of a bare "already exists".
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  const [duplicate, setDuplicate] = useState<{ field: string; existingId: string } | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
   async function handleSubmit(event: FormEvent): Promise<void> {
     event.preventDefault();
     setError(null);
+    setFieldErrors({});
+    setDuplicate(null);
     setSubmitting(true);
     try {
       setResult(
@@ -48,16 +55,27 @@ export function SalesRegisterBuyerPage() {
             ownerName,
             licenceNo,
             gstPpobAddress,
-            bankDetail: { accountNumber, ifsc, accountName },
+            // B-25 — optional for a buyer; only sent if he actually gave one.
+            bankDetail: accountNumber ? { accountNumber, ifsc, accountName } : undefined,
             consent: { noticeVersion: 'v1', marketingOptIn: false },
             callNote,
           }),
         ),
       );
     } catch (submitError) {
-      setError(
-        submitError instanceof ApiError ? submitError.message : 'Could not register this buyer.',
-      );
+      if (submitError instanceof ApiError) {
+        setError(submitError.message);
+        setFieldErrors(
+          submitError.fieldErrors ??
+            (submitError.field ? { [submitError.field]: submitError.message } : {}),
+        );
+        const existingId = submitError.meta?.existingCounterpartyId;
+        if (typeof existingId === 'string' && submitError.field) {
+          setDuplicate({ field: submitError.field, existingId });
+        }
+      } else {
+        setError('Could not register this buyer.');
+      }
     } finally {
       setSubmitting(false);
     }
@@ -78,6 +96,7 @@ export function SalesRegisterBuyerPage() {
             label="Mobile"
             value={mobile}
             onChange={(e) => setMobile(e.target.value)}
+            error={fieldErrors.mobile}
             required
           />
           <Input
@@ -85,6 +104,7 @@ export function SalesRegisterBuyerPage() {
             label="Firm"
             value={firm}
             onChange={(e) => setFirm(e.target.value)}
+            error={fieldErrors.firm}
             required
           />
           <Input
@@ -92,6 +112,7 @@ export function SalesRegisterBuyerPage() {
             label="GSTIN"
             value={gstin}
             onChange={(e) => setGstin(e.target.value)}
+            error={fieldErrors.gstin}
             required
           />
           <Input
@@ -99,6 +120,7 @@ export function SalesRegisterBuyerPage() {
             label="Owner name"
             value={ownerName}
             onChange={(e) => setOwnerName(e.target.value)}
+            error={fieldErrors.ownerName}
             required
           />
           <Input
@@ -106,6 +128,7 @@ export function SalesRegisterBuyerPage() {
             label="Insecticide licence no."
             value={licenceNo}
             onChange={(e) => setLicenceNo(e.target.value)}
+            error={fieldErrors.licenceNo}
             required
           />
           <Input
@@ -113,28 +136,32 @@ export function SalesRegisterBuyerPage() {
             label="GST principal place of business"
             value={gstPpobAddress}
             onChange={(e) => setGstPpobAddress(e.target.value)}
+            error={fieldErrors.gstPpobAddress}
             required
           />
           <Input
             id="sr-account"
             label="Bank account number"
+            hint="Optional for a buyer (BR-018) — he pays TriFid, he isn't paid."
             value={accountNumber}
             onChange={(e) => setAccountNumber(e.target.value)}
-            required
+            error={fieldErrors['bankDetail.accountNumber']}
           />
           <Input
             id="sr-ifsc"
             label="IFSC"
             value={ifsc}
             onChange={(e) => setIfsc(e.target.value)}
-            required
+            error={fieldErrors['bankDetail.ifsc']}
+            required={Boolean(accountNumber)}
           />
           <Input
             id="sr-account-name"
             label="Account name"
             value={accountName}
             onChange={(e) => setAccountName(e.target.value)}
-            required
+            error={fieldErrors['bankDetail.accountName']}
+            required={Boolean(accountNumber)}
           />
           <div className="col-span-2">
             <Textarea
@@ -146,7 +173,17 @@ export function SalesRegisterBuyerPage() {
               required
             />
           </div>
-          {error && (
+          {duplicate && (
+            <p role="alert" className="col-span-2 text-sm text-danger-500">
+              That {duplicate.field === 'gstin' ? 'GSTIN' : 'mobile number'} already belongs to an
+              existing registration.{' '}
+              <Link className="underline" to={`/registrations?open=${duplicate.existingId}`}>
+                Open it
+              </Link>
+              .
+            </p>
+          )}
+          {error && !duplicate && Object.keys(fieldErrors).length === 0 && (
             <p role="alert" className="col-span-2 text-sm text-danger-500">
               {error}
             </p>

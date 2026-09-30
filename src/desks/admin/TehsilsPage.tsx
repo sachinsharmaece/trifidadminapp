@@ -7,6 +7,7 @@ import { AsyncBoundary } from '../../components/AsyncBoundary';
 import { DevNote } from '../../components/dev/DevNote';
 import { useAsyncData } from '../../lib/useAsyncData';
 import { useAuth } from '../../auth/AuthContext';
+import { useToast } from '../../components/ui/Toast';
 import { Card } from '../../components/ui/Card';
 import { Table, Th, Td } from '../../components/ui/Table';
 import { Input } from '../../components/ui/Input';
@@ -15,6 +16,7 @@ import { Button } from '../../components/ui/Button';
 /** Manage → Tehsils. */
 export function TehsilsPage() {
   const { callApi } = useAuth();
+  const { show } = useToast();
   const loader = useCallback(() => callApi((token) => getTehsils(token)), [callApi]);
   const { state, retry } = useAsyncData(loader, (items) => items.length === 0, [loader]);
 
@@ -33,6 +35,10 @@ export function TehsilsPage() {
       setName('');
       setDistrict('');
       setStateName('');
+      // B-54 — the list only reappeared once `retry()`'s own fetch landed,
+      // a few seconds with no confirmation, easy to read as "did that even
+      // work?" and click again. The toast gives feedback before the refetch does.
+      show(`${name} added.`);
       retry();
     } catch (submitError) {
       setError(

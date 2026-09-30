@@ -21,7 +21,7 @@ import { Badge } from '../../components/ui/Badge';
 import { Button } from '../../components/ui/Button';
 import { Input, Select } from '../../components/ui/Input';
 import { DevNote } from '../../components/dev/DevNote';
-import { isNearMatch } from '../../lib/fuzzyMatch';
+import { isExactNameMatch, isNearMatch } from '../../lib/fuzzyMatch';
 
 type MasterProductLite = Awaited<ReturnType<typeof getMastersProducts>>[number];
 
@@ -350,6 +350,14 @@ function NewMastersCard({
       companyName.length > 1 ? manufacturers.filter((m) => isNearMatch(m.name, companyName)) : [],
     [companyName, manufacturers],
   );
+  // B-19 — Syngenta vs syngenta: an exact match up to case/spacing, not just
+  // a fuzzy near-match, actually blocks rather than only warning. The
+  // server already refuses this case-insensitively; this just stops the
+  // pointless round trip.
+  const companyExactDupe = useMemo(
+    () => manufacturers.find((m) => isExactNameMatch(m.name, companyName)) ?? null,
+    [companyName, manufacturers],
+  );
   const productDupes = useMemo(
     () => (brand.length > 1 ? products.filter((p) => isNearMatch(p.brand, brand)) : []),
     [brand, products],
@@ -389,10 +397,17 @@ function NewMastersCard({
             onChange={(e) => setCompanyName(e.target.value)}
             error={fieldErrors.name}
           />
-          {companyDupes.length > 0 && (
-            <p className="mt-1 text-xs text-warning-600">
-              Already have: {companyDupes.map((d) => d.name).join(', ')}
+          {companyExactDupe ? (
+            <p className="mt-1 text-xs text-danger-500">
+              Already have &quot;{companyExactDupe.name}&quot; — same name, case and spacing aside.
+              Use that one instead.
             </p>
+          ) : (
+            companyDupes.length > 0 && (
+              <p className="mt-1 text-xs text-warning-600">
+                Already have: {companyDupes.map((d) => d.name).join(', ')}
+              </p>
+            )
           )}
           <Input
             id="pm-company-aka"
@@ -406,7 +421,8 @@ function NewMastersCard({
             variant="secondary"
             size="sm"
             className="mt-2"
-            disabled={!companyName}
+            disabled={!companyName || Boolean(companyExactDupe)}
+            title={companyExactDupe ? 'This company already exists.' : undefined}
             onClick={() => {
               setError(null);
               setFieldErrors({});

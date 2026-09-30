@@ -11,6 +11,7 @@ import { Badge, type BadgeTone } from '../../components/ui/Badge';
 import { Button } from '../../components/ui/Button';
 import { Textarea } from '../../components/ui/Input';
 import { useToast } from '../../components/ui/Toast';
+import { formatRupees, soStateLabel } from '../../lib/labels';
 
 const WARN_STATES = new Set(['awaiting_payment', 'payment_verifying']);
 const BAD_STATES = new Set(['cancelled', 'supply_failed', 'disputed']);
@@ -21,10 +22,6 @@ function stateTone(state: string): BadgeTone {
   if (BAD_STATES.has(state)) return 'bad';
   if (GOOD_STATES.has(state)) return 'good';
   return 'neutral';
-}
-
-function formatMoney(paise: number): string {
-  return `₹${(paise / 100).toFixed(2)}`;
 }
 
 /** Live vs closed orders, plus the two things that need Sales' hand: claims and promoted-fallback decisions. */
@@ -92,14 +89,16 @@ export function SalesOrdersPage() {
                     <tr>
                       <Td className="font-medium">
                         {row.soNo}
-                        <div className="font-mono text-xs text-slate-500">…{row.soId.slice(-6)}</div>
+                        <div className="font-mono text-xs text-slate-500">
+                          …{row.soId.slice(-6)}
+                        </div>
                       </Td>
                       <Td>{row.buyerFirm}</Td>
                       <Td>{row.productDisplay}</Td>
-                      <Td numeric>{formatMoney(row.totalPaise)}</Td>
+                      <Td numeric>{formatRupees(row.totalPaise)}</Td>
                       <Td>
                         <div className="flex flex-wrap gap-1">
-                          <Badge tone={stateTone(row.state)}>{row.state}</Badge>
+                          <Badge tone={stateTone(row.state)}>{soStateLabel(row.state)}</Badge>
                           {row.claimNeedsApplying && <Badge tone="warn">he says he paid</Badge>}
                         </div>
                       </Td>

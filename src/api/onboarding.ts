@@ -65,7 +65,8 @@ export function staffRegisterBuyer(
     licenceNo: string;
     gstPpobAddress: string;
     dealerships?: Array<{ manufacturerId: string; isStrong?: boolean }>;
-    bankDetail: { accountNumber: string; ifsc: string; accountName: string };
+    // B-25 — optional for a buyer (he pays TriFid, unlike a seller who is paid).
+    bankDetail?: { accountNumber: string; ifsc: string; accountName: string };
     consent: { noticeVersion: string; marketingOptIn: boolean };
     callNote: string;
   },

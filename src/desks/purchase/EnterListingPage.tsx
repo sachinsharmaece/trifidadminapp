@@ -70,7 +70,12 @@ function ListingForm({ file }: { file: SellerFileDto }) {
   const eligible = packs.filter((p) => p.eligible);
 
   const [skuId, setSkuId] = useState('');
-  const [ratePaise, setRatePaise] = useState(0);
+  // Sellers quote a rate in rupees on the phone (BR-055 stores it in paise,
+  // but nobody speaks paise) — the field takes rupees and this converts,
+  // rather than storing whatever's typed as paise directly.
+  const [rateRupeesText, setRateRupeesText] = useState('');
+  const parsedRatePaise =
+    rateRupeesText.trim() === '' ? null : Math.round(Number(rateRupeesText) * 100);
   const [expiryBand, setExpiryBand] = useState<'over12' | 'under12'>('over12');
   const [moqExact, setMoqExact] = useState(1);
   const [deliveryBand, setDeliveryBand] = useState<'48h' | '2-5d'>('48h');
@@ -89,6 +94,10 @@ function ListingForm({ file }: { file: SellerFileDto }) {
     event.preventDefault();
     const pack = eligible.find((p) => p.skuId === skuId);
     if (!pack) return;
+    if (parsedRatePaise === null || Number.isNaN(parsedRatePaise) || parsedRatePaise <= 0) {
+      setError('Enter the rate in rupees, e.g. 280.00.');
+      return;
+    }
     setError(null);
     setSubmitting(true);
     try {
@@ -101,7 +110,7 @@ function ListingForm({ file }: { file: SellerFileDto }) {
             lines: [
               {
                 skuId,
-                ratePaise,
+                ratePaise: parsedRatePaise,
                 expiryBand,
                 moqExact,
                 deliveryBand,
@@ -114,6 +123,19 @@ function ListingForm({ file }: { file: SellerFileDto }) {
           }),
         ),
       );
+      // B-03 — this page stays put on success (unlike the seller's own
+      // screen, which navigates away); leaving the form populated invites a
+      // second, identical submit. Reset back to the form's own defaults.
+      setSkuId('');
+      setRateRupeesText('');
+      setExpiryBand('over12');
+      setMoqExact(1);
+      setDeliveryBand('48h');
+      setProvenance('company');
+      setBatch('');
+      setQty(1);
+      setScopeType('my_area');
+      setCallNote('');
     } catch (submitError) {
       setError(submitError instanceof ApiError ? submitError.message : 'Could not log this call.');
     } finally {
@@ -160,11 +182,17 @@ function ListingForm({ file }: { file: SellerFileDto }) {
         </Select>
         <Input
           id="el-rate"
-          label="Rate, FOR Indore (paise)"
+          label="Rate, FOR Indore (₹)"
           type="number"
-          min={1}
-          value={ratePaise}
-          onChange={(e) => setRatePaise(Number(e.target.value))}
+          min={0.01}
+          step={0.01}
+          value={rateRupeesText}
+          onChange={(e) => setRateRupeesText(e.target.value)}
+          hint={
+            parsedRatePaise !== null && !Number.isNaN(parsedRatePaise) && parsedRatePaise > 0
+              ? `Saves as ₹${(parsedRatePaise / 100).toFixed(2)} — check this matches what he quoted before you submit.`
+              : 'Enter the rupee figure he quoted on the phone, e.g. 280.00.'
+          }
           required
         />
         <Select

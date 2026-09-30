@@ -1,5 +1,6 @@
 import { useCallback, useState } from 'react';
 import type { FormEvent } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { FiCheck, FiX } from 'react-icons/fi';
 import {
   approveBuyer,
@@ -30,7 +31,11 @@ const STATUS_TONE: Record<string, BadgeTone> = {
 export function RegistrationsPage() {
   const { callApi } = useAuth();
   const [stage, setStage] = useState('pending');
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  // B-24 — a duplicate-registration error links here with the existing
+  // record's id (`?open=<id>`) so staff land straight on it, rather than
+  // being told a duplicate exists with nowhere to go look at it.
+  const [searchParams] = useSearchParams();
+  const [selectedId, setSelectedId] = useState<string | null>(searchParams.get('open'));
 
   const listLoader = useCallback(
     () => callApi((token) => listRegistrations(token, stage)),
@@ -139,6 +144,14 @@ function RegistrationDetail({
           const otpPending = registration.staffAssisted && !registration.staffAssistedOtpVerifiedAt;
           return (
             <div className="flex flex-col gap-4">
+              <div>
+                <p className="text-base font-semibold text-slate-900">
+                  {registration.firm || '(no firm name on file)'}
+                </p>
+                <p className="font-mono text-sm text-slate-500">
+                  {registration.gstin || '(no GSTIN on file)'}
+                </p>
+              </div>
               <p className="text-sm text-slate-700">
                 Status: <strong>{registration.status}</strong>
                 {registration.rejectionReason ? ` — ${registration.rejectionReason}` : ''}
@@ -154,8 +167,8 @@ function RegistrationDetail({
                   {otpPending
                     ? registration.kind === 'seller'
                       ? 'Staff-assisted registration — waiting on the OTP confirmation to the real phone number. Cannot be approved until then.'
-                      // TEMP: buyer OTP gate disabled 2026-09-28 — see onboarding.service.ts's approveBuyer.
-                      : 'Staff-assisted registration — waiting on the OTP confirmation to the real phone number. Buyer approval is temporarily not blocked on this.'
+                      : // TEMP: buyer OTP gate disabled 2026-09-28 — see onboarding.service.ts's approveBuyer.
+                        'Staff-assisted registration — waiting on the OTP confirmation to the real phone number. Buyer approval is temporarily not blocked on this.'
                     : 'Staff-assisted registration — OTP confirmed to the real phone number.'}
                 </p>
               )}

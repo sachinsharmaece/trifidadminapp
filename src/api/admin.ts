@@ -33,3 +33,13 @@ export function createAbsence(
 ): Promise<{ absenceId: string }> {
   return apiFetch('/admin/absences', { method: 'POST', body: input, accessToken });
 }
+
+// New — B-10. BR-261/BR-276's manual queue-to-book action (the automatic
+// trigger fires on a buyer's first order; this is the fallback when it
+// hasn't — e.g. no active Sales employee existed at that moment).
+export function assignBook(
+  accessToken: string,
+  input: { buyerId: string; ownerEmployeeId: string; reason?: string },
+): Promise<{ bookAssignmentId: string }> {
+  return apiFetch('/admin/book-assignments', { method: 'POST', body: input, accessToken });
+}

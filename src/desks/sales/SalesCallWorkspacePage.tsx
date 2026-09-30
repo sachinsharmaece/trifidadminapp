@@ -8,7 +8,11 @@ import {
   proxyDeclineAsk,
   proxyAcceptPromotion,
   proxyRejectPromotion,
+  proxyListBuyerAsks,
+  type ProxyAskItem,
+  type ProxyAskQuote,
 } from '../../api/proxy';
+import { PackPicker } from '../enquiries/enquiryPickers';
 import {
   getSalesBuyerFile,
   getSalesBoardProduct,
@@ -31,6 +35,7 @@ import { Table, Th, Td } from '../../components/ui/Table';
 import { Badge } from '../../components/ui/Badge';
 import { Input, Select, Textarea } from '../../components/ui/Input';
 import { Button } from '../../components/ui/Button';
+import { deliveryBandLabel, expiryBandLabel, formatRupees, moqBandLabel } from '../../lib/labels';
 
 const OUTCOMES: CallOutcome[] = [
   'placed_an_order',
@@ -86,7 +91,9 @@ export function SalesCallWorkspacePage() {
     () => callApi((token) => getSalesBuyerFile(token, buyerId)),
     [callApi, buyerId],
   );
-  const { state: fileState, retry: retryFile } = useAsyncData(fileLoader, () => false, [fileLoader]);
+  const { state: fileState, retry: retryFile } = useAsyncData(fileLoader, () => false, [
+    fileLoader,
+  ]);
 
   return (
     <div className="flex flex-col gap-6">
@@ -110,17 +117,17 @@ export function SalesCallWorkspacePage() {
               </p>
             </div>
             <BoardForHimSection buyerId={buyerId} productHistory={file.productHistory} />
+
+            <DirectionToggle direction={direction} onChange={setDirection} />
+
+            <LogBuyerCallSection buyerCounterpartyId={file.counterpartyId} />
+            <AdvanceAskSection buyerCounterpartyId={file.counterpartyId} />
+
+            <CallOutcomeSection buyerId={buyerId} direction={direction} />
+            <UpdateRequestSection buyerId={buyerId} />
           </div>
         )}
       </AsyncBoundary>
-
-      <DirectionToggle direction={direction} onChange={setDirection} />
-
-      <LogBuyerCallSection buyerId={buyerId} />
-      <AdvanceAskSection buyerId={buyerId} />
-
-      <CallOutcomeSection buyerId={buyerId} direction={direction} />
-      <UpdateRequestSection buyerId={buyerId} />
     </div>
   );
 }
@@ -207,13 +214,7 @@ function BoardForHimSection({
   );
 }
 
-function BoardProductBlock({
-  buyerId,
-  detail,
-}: {
-  buyerId: string;
-  detail: BoardProductDetail;
-}) {
+function BoardProductBlock({ buyerId, detail }: { buyerId: string; detail: BoardProductDetail }) {
   const { callApi } = useAuth();
   const { show } = useToast();
   const [submittingLine, setSubmittingLine] = useState<string | null>(null);
@@ -252,16 +253,17 @@ function BoardProductBlock({
             >
               <div className="flex flex-wrap items-center gap-2">
                 <span className="font-semibold text-slate-900">
-                  {line.ratePaise != null ? `₹${(line.ratePaise / 100).toFixed(2)}` : 'no rate'}
+                  {line.ratePaise != null ? formatRupees(line.ratePaise) : 'no rate'}
                 </span>
+                {line.packLabel && <span className="text-xs text-slate-500">{line.packLabel}</span>}
                 <Badge tone="neutral" variant="chip">
-                  {line.expiryBand}
+                  {expiryBandLabel(line.expiryBand)}
                 </Badge>
                 <Badge tone="neutral" variant="chip">
-                  {line.moqBand}
+                  {moqBandLabel(line.moqBand)}
                 </Badge>
                 <Badge tone="neutral" variant="chip">
-                  {line.deliveryBand}
+                  {deliveryBandLabel(line.deliveryBand)}
                 </Badge>
                 <span className="text-xs text-slate-500">qty {line.qty}</span>
               </div>
@@ -282,13 +284,7 @@ function BoardProductBlock({
 }
 
 /** "What the call produced" (a fresh call log) plus this buyer's call history below it. */
-function CallOutcomeSection({
-  buyerId,
-  direction,
-}: {
-  buyerId: string;
-  direction: 'in' | 'out';
-}) {
+function CallOutcomeSection({ buyerId, direction }: { buyerId: string; direction: 'in' | 'out' }) {
   const { callApi } = useAuth();
   const { show } = useToast();
   const [outcome, setOutcome] = useState<CallOutcome>(OUTCOMES[0]);
@@ -472,9 +468,10 @@ function UpdateRequestSection({ buyerId }: { buyerId: string }) {
  * Same validation as the buyer's own POST /asks: no price field exists on
  * this form at all (BR-121), exactly as the real endpoint refuses one sent.
  */
-function LogBuyerCallSection({ buyerId }: { buyerId: string }) {
+function LogBuyerCallSection({ buyerCounterpartyId }: { buyerCounterpartyId: string }) {
   const { callApi } = useAuth();
   const [skuId, setSkuId] = useState('');
+  const [skuKey, setSkuKey] = useState(0);
   const [qty, setQty] = useState(1);
   const [expiryBand, setExpiryBand] = useState<'over12' | 'under12'>('over12');
   const [callNote, setCallNote] = useState('');
@@ -490,7 +487,7 @@ function LogBuyerCallSection({ buyerId }: { buyerId: string }) {
       setResult(
         await callApi((token) =>
           proxyRaiseAsk(token, {
-            buyerCounterpartyId: buyerId,
+            buyerCounterpartyId,
             skuId,
             qty,
             conditionRequirement: { expiryBand },
@@ -498,9 +495,11 @@ function LogBuyerCallSection({ buyerId }: { buyerId: string }) {
           }),
         ),
       );
-      setSkuId('');
       setQty(1);
       setCallNote('');
+      // PackPicker holds its own technical/product/pack state internally —
+      // remounting it is the simplest way to reset the selection after submit.
+      setSkuKey((k) => k + 1);
     } catch (submitError) {
       setError(submitError instanceof ApiError ? submitError.message : 'Could not log this call.');
     } finally {
@@ -515,14 +514,8 @@ function LogBuyerCallSection({ buyerId }: { buyerId: string }) {
         price; TriFid never names one before a seller has (BR-121).
       </p>
       <form onSubmit={handleSubmit} className="flex max-w-md flex-col gap-4">
-        <Input id="lbc-buyer" label="Buyer counterparty ID" value={buyerId} disabled />
-        <Input
-          id="lbc-sku"
-          label="SKU ID"
-          value={skuId}
-          onChange={(e) => setSkuId(e.target.value)}
-          required
-        />
+        <Input id="lbc-buyer" label="Buyer counterparty ID" value={buyerCounterpartyId} disabled />
+        <PackPicker key={skuKey} onChange={setSkuId} />
         <Input
           id="lbc-qty"
           label="Quantity (boxes)"
@@ -568,11 +561,91 @@ function LogBuyerCallSection({ buyerId }: { buyerId: string }) {
  * / API-043 walk-away), and the WF-11 promoted-fallback decision (API-071)
  * a buyer might also decide over the phone.
  */
-function AdvanceAskSection({ buyerId }: { buyerId: string }) {
+/**
+ * `AskPicker` / `QuotePicker` — B-17's other half. Same shape as
+ * `enquiryPickers.tsx`'s pickers, kept local because they need the buyer
+ * already on this page rather than picking one themselves: list the
+ * buyer's open asks via the same read `GET /asks` uses (`listMyAsks`), then
+ * for the chosen ask list its own live quotes — no comma-separated IDs.
+ */
+function AskPicker({
+  buyerCounterpartyId,
+  asks,
+  value,
+  onChange,
+}: {
+  buyerCounterpartyId: string;
+  asks: ProxyAskItem[];
+  value: string;
+  onChange: (askId: string) => void;
+}) {
+  const advanceable = asks.filter((a) => a.state === 'open' || a.state === 'quoted');
+  return (
+    <Select
+      id="aa-ask"
+      label="Ask"
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      disabled={!buyerCounterpartyId}
+      required
+    >
+      <option value="">Choose one of his open asks…</option>
+      {advanceable.map((a) => (
+        <option key={a.askId} value={a.askId}>
+          {a.qty} boxes · {a.quotes.length} live quote{a.quotes.length === 1 ? '' : 's'} · {a.state}
+        </option>
+      ))}
+    </Select>
+  );
+}
+
+function QuotePicker({
+  quotes,
+  selected,
+  onChange,
+}: {
+  quotes: ProxyAskQuote[];
+  selected: string[];
+  onChange: (quoteIds: string[]) => void;
+}) {
+  const live = quotes.filter((q) => q.status === 'live');
+  if (live.length === 0) {
+    return <p className="text-sm text-slate-500">No live quotes on this ask yet.</p>;
+  }
+  function toggle(quoteId: string): void {
+    onChange(
+      selected.includes(quoteId) ? selected.filter((id) => id !== quoteId) : [...selected, quoteId],
+    );
+  }
+  return (
+    <div className="flex flex-col gap-2">
+      <span className="text-sm font-medium text-slate-700">Quote(s) the buyer accepted</span>
+      {live.map((q) => (
+        <label
+          key={q.quoteId}
+          className="flex items-center gap-2 rounded-md border border-slate-200 p-2 text-sm"
+        >
+          <input
+            type="checkbox"
+            checked={selected.includes(q.quoteId)}
+            onChange={() => toggle(q.quoteId)}
+          />
+          <span className="font-semibold text-slate-900">
+            {q.ratePaiseForIndore != null ? formatRupees(q.ratePaiseForIndore) : 'no rate'}
+          </span>
+          <span className="text-slate-500">qty {q.qtyAvailable}</span>
+          <span className="text-slate-500">{q.daysToIndore}d to Indore</span>
+        </label>
+      ))}
+    </div>
+  );
+}
+
+function AdvanceAskSection({ buyerCounterpartyId }: { buyerCounterpartyId: string }) {
   const { callApi } = useAuth();
   const [askId, setAskId] = useState('');
   const [option, setOption] = useState<'partial' | 'full'>('full');
-  const [quoteIdsText, setQuoteIdsText] = useState('');
+  const [quoteIds, setQuoteIds] = useState<string[]>([]);
   const [callNote, setCallNote] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
@@ -583,23 +656,39 @@ function AdvanceAskSection({ buyerId }: { buyerId: string }) {
   const [promotionError, setPromotionError] = useState<string | null>(null);
   const [promotionMessage, setPromotionMessage] = useState<string | null>(null);
 
+  const asksLoader = useCallback(
+    () => callApi((token) => proxyListBuyerAsks(token, buyerCounterpartyId)),
+    [callApi, buyerCounterpartyId],
+  );
+  const { state: asksState, retry: retryAsks } = useAsyncData(
+    asksLoader,
+    (items) => items.length === 0,
+    [asksLoader],
+  );
+  const asks = asksState.status === 'success' ? asksState.data : [];
+  const selectedAsk = asks.find((a) => a.askId === askId);
+
+  function handleAskChange(nextAskId: string): void {
+    setAskId(nextAskId);
+    setQuoteIds([]);
+  }
+
   async function handleAccept(): Promise<void> {
     setError(null);
     setSubmitting(true);
     try {
-      const quoteIds = quoteIdsText
-        .split(',')
-        .map((id) => id.trim())
-        .filter(Boolean);
       const result = await callApi((token) =>
         proxyAcceptAskFill(token, askId, {
-          buyerCounterpartyId: buyerId,
+          buyerCounterpartyId,
           option,
           quoteIds,
           callNote,
         }),
       );
       setMessage(`Accepted — order(s): ${result.soIds.join(', ')}.`);
+      setAskId('');
+      setQuoteIds([]);
+      retryAsks();
     } catch (submitError) {
       setError(
         submitError instanceof ApiError ? submitError.message : 'Could not accept this fill.',
@@ -613,10 +702,11 @@ function AdvanceAskSection({ buyerId }: { buyerId: string }) {
     setError(null);
     setSubmitting(true);
     try {
-      await callApi((token) =>
-        proxyDeclineAsk(token, askId, { buyerCounterpartyId: buyerId, callNote }),
-      );
+      await callApi((token) => proxyDeclineAsk(token, askId, { buyerCounterpartyId, callNote }));
       setMessage('Walked away — free, no strike.');
+      setAskId('');
+      setQuoteIds([]);
+      retryAsks();
     } catch (submitError) {
       setError(submitError instanceof ApiError ? submitError.message : 'Could not decline.');
     } finally {
@@ -629,7 +719,7 @@ function AdvanceAskSection({ buyerId }: { buyerId: string }) {
     try {
       await callApi((token) =>
         proxyAcceptPromotion(token, soId, {
-          buyerCounterpartyId: buyerId,
+          buyerCounterpartyId,
           callNote: promotionNote,
         }),
       );
@@ -646,7 +736,7 @@ function AdvanceAskSection({ buyerId }: { buyerId: string }) {
     try {
       await callApi((token) =>
         proxyRejectPromotion(token, soId, {
-          buyerCounterpartyId: buyerId,
+          buyerCounterpartyId,
           callNote: promotionNote,
         }),
       );
@@ -662,66 +752,71 @@ function AdvanceAskSection({ buyerId }: { buyerId: string }) {
     <Card title="Advance an ask on a call">
       <p className="mb-4 text-sm text-slate-500">
         Confirming a rate over the phone and accepting a fill are the same action in this system
-        (API-042) — enter the quote(s) the buyer accepted below. Walking away is free and never a
+        (API-042) — pick the quote(s) the buyer accepted below. Walking away is free and never a
         strike (API-043).
       </p>
-      <div className="flex max-w-md flex-col gap-4">
-        <Input
-          id="aa-ask"
-          label="Ask ID"
-          value={askId}
-          onChange={(e) => setAskId(e.target.value)}
-          required
-        />
-        <Input id="aa-buyer" label="Buyer counterparty ID" value={buyerId} disabled />
-        <Select
-          id="aa-option"
-          label="Option"
-          value={option}
-          onChange={(e) => setOption(e.target.value as typeof option)}
-        >
-          <option value="full">Full — the partial plus the balance</option>
-          <option value="partial">Partial — the cheap portion alone</option>
-        </Select>
-        <Input
-          id="aa-quotes"
-          label="Quote ID(s), comma-separated"
-          value={quoteIdsText}
-          onChange={(e) => setQuoteIdsText(e.target.value)}
-        />
-        <Textarea
-          id="aa-note"
-          label="Call note"
-          value={callNote}
-          onChange={(e) => setCallNote(e.target.value)}
-          required
-        />
-        {error && (
-          <p role="alert" className="text-sm text-danger-500">
-            {error}
-          </p>
+      <AsyncBoundary state={asksState} onRetry={retryAsks} emptyMessage="He has no open asks.">
+        {() => (
+          <div className="flex max-w-md flex-col gap-4">
+            <AskPicker
+              buyerCounterpartyId={buyerCounterpartyId}
+              asks={asks}
+              value={askId}
+              onChange={handleAskChange}
+            />
+            <Input
+              id="aa-buyer"
+              label="Buyer counterparty ID"
+              value={buyerCounterpartyId}
+              disabled
+            />
+            <Select
+              id="aa-option"
+              label="Option"
+              value={option}
+              onChange={(e) => setOption(e.target.value as typeof option)}
+            >
+              <option value="full">Full — the partial plus the balance</option>
+              <option value="partial">Partial — the cheap portion alone</option>
+            </Select>
+            {selectedAsk && (
+              <QuotePicker quotes={selectedAsk.quotes} selected={quoteIds} onChange={setQuoteIds} />
+            )}
+            <Textarea
+              id="aa-note"
+              label="Call note"
+              value={callNote}
+              onChange={(e) => setCallNote(e.target.value)}
+              required
+            />
+            {error && (
+              <p role="alert" className="text-sm text-danger-500">
+                {error}
+              </p>
+            )}
+            {message && <p className="text-sm text-success-600">{message}</p>}
+            <div className="flex gap-2">
+              <Button
+                loading={submitting}
+                disabled={!askId || !buyerCounterpartyId || !callNote || quoteIds.length === 0}
+                onClick={() => void handleAccept()}
+                icon={<FiCheck />}
+              >
+                Accept fill
+              </Button>
+              <Button
+                variant="secondary"
+                loading={submitting}
+                disabled={!askId || !buyerCounterpartyId || !callNote}
+                onClick={() => void handleDecline()}
+                icon={<FiX />}
+              >
+                Walk away
+              </Button>
+            </div>
+          </div>
         )}
-        {message && <p className="text-sm text-success-600">{message}</p>}
-        <div className="flex gap-2">
-          <Button
-            loading={submitting}
-            disabled={!askId || !buyerId || !callNote}
-            onClick={() => void handleAccept()}
-            icon={<FiCheck />}
-          >
-            Accept fill
-          </Button>
-          <Button
-            variant="secondary"
-            loading={submitting}
-            disabled={!askId || !buyerId || !callNote}
-            onClick={() => void handleDecline()}
-            icon={<FiX />}
-          >
-            Walk away
-          </Button>
-        </div>
-      </div>
+      </AsyncBoundary>
 
       <div className="mt-6 flex max-w-md flex-col gap-4 border-t border-slate-200 pt-4">
         <h3 className="text-sm font-semibold text-slate-900">Promoted-fallback decision (WF-11)</h3>
@@ -746,7 +841,7 @@ function AdvanceAskSection({ buyerId }: { buyerId: string }) {
         <div className="flex gap-2">
           <Button
             variant="secondary"
-            disabled={!soId || !buyerId || !promotionNote}
+            disabled={!soId || !buyerCounterpartyId || !promotionNote}
             onClick={() => void handlePromotionAccept()}
             icon={<FiCheck />}
           >
@@ -754,7 +849,7 @@ function AdvanceAskSection({ buyerId }: { buyerId: string }) {
           </Button>
           <Button
             variant="secondary"
-            disabled={!soId || !buyerId || !promotionNote}
+            disabled={!soId || !buyerCounterpartyId || !promotionNote}
             onClick={() => void handlePromotionReject()}
             icon={<FiX />}
           >

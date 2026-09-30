@@ -6,9 +6,10 @@ import { useAsyncData } from '../../lib/useAsyncData';
 import { useAuth } from '../../auth/AuthContext';
 import { Card } from '../../components/ui/Card';
 import { Table, Th, Td } from '../../components/ui/Table';
+import { formatRupees } from '../../lib/labels';
 
 function formatRate(ratePaise: number | null): string {
-  return ratePaise === null ? '—' : `₹${(ratePaise / 100).toFixed(2)}`;
+  return ratePaise === null ? '—' : formatRupees(ratePaise);
 }
 
 /** The rate board — one row per product, cheapest rate and how many buyers actually take it. */

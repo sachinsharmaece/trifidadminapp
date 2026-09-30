@@ -30,8 +30,8 @@ function PulseSection() {
           them — the only calculation on this desk, on purpose (BR-278).
         </p>
         <div className="rounded-md border border-slate-200 bg-slate-50 p-3 font-mono text-xs text-slate-700">
-          <strong>rising</strong> now ≥ 5 and now ≥ before × 2 &nbsp;·&nbsp; <strong>falling</strong>{' '}
-          now × 2 ≤ before &nbsp;·&nbsp; <strong>steady</strong> otherwise
+          <strong>rising</strong> now ≥ 5 and now ≥ before × 2 &nbsp;·&nbsp;{' '}
+          <strong>falling</strong> now × 2 ≤ before &nbsp;·&nbsp; <strong>steady</strong> otherwise
         </div>
         <p className="mt-3 text-sm text-slate-500">
           <strong className="text-slate-700">The echo rule (BR-279).</strong> Orders arising from
@@ -68,7 +68,9 @@ function PulseSection() {
                       <Td numeric>{item.now}</Td>
                       <Td numeric>{item.before}</Td>
                       <Td>
-                        <Badge tone={item.status === 'rising' ? 'good' : 'bad'}>{item.status}</Badge>
+                        <Badge tone={item.status === 'rising' ? 'good' : 'bad'}>
+                          {item.status}
+                        </Badge>
                       </Td>
                     </tr>
                   ))}
@@ -96,8 +98,8 @@ function RetentionSection() {
   return (
     <Card title="Retention (BR-281)">
       <p className="mb-4 text-sm text-slate-500">
-        Of the buyers whose first order fell in a month, how many ordered again within 90 days.
-        One cohort, one window, one number per month.
+        Of the buyers whose first order fell in a month, how many ordered again within 90 days. One
+        cohort, one window, one number per month.
       </p>
       <AsyncBoundary state={state} onRetry={retry} emptyMessage="Not enough history yet.">
         {(items: RetentionCohort[]) => (

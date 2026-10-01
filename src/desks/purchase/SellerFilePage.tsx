@@ -1,7 +1,7 @@
 import { useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { FiArrowLeft, FiPlus } from 'react-icons/fi';
-import { getSellerFile, type SellerFileDto } from '../../api/purchase';
+import { getSellerFile, type SellerCatalogueItem, type SellerFileDto } from '../../api/purchase';
 import { AsyncBoundary } from '../../components/AsyncBoundary';
 import { useAsyncData } from '../../lib/useAsyncData';
 import { useAuth } from '../../auth/AuthContext';
@@ -44,6 +44,40 @@ export function SellerFilePage() {
               <Kpi label="Requoted" value={String(file.scorecard.requoteTotal)} />
             </div>
 
+            {/* BR-275's own metrics, read for this one seller. */}
+            <Card title="Performance">
+              <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+                <Kpi
+                  label="Answer rate"
+                  value={
+                    file.performance.answerRatePct === null
+                      ? '—'
+                      : `${file.performance.answerRatePct}%`
+                  }
+                />
+                <Kpi
+                  label="Same-day dispatch"
+                  value={
+                    file.performance.sameDayDispatchPct === null
+                      ? '—'
+                      : `${file.performance.sameDayDispatchPct}%`
+                  }
+                />
+                <Kpi
+                  label="Rejection rate"
+                  value={
+                    file.performance.rejectionRatePct === null
+                      ? '—'
+                      : `${file.performance.rejectionRatePct}%`
+                  }
+                />
+                <Kpi
+                  label="Debits recovered"
+                  value={`${file.performance.debitsRecoveredCount} of ${file.performance.debitsRaisedCount}`}
+                />
+              </div>
+            </Card>
+
             <div className="grid gap-6 md:grid-cols-[1fr_320px]">
               <div className="flex flex-col gap-6">
                 <Card
@@ -66,45 +100,58 @@ export function SellerFilePage() {
                       Nothing recorded. Nobody has asked him what he sells.
                     </p>
                   ) : (
-                    <ul className="flex flex-col gap-3">
-                      {file.catalogue.map((c) => (
-                        <li key={c.entryId} className="rounded-md border border-slate-200 p-3">
-                          <div className="flex items-center justify-between">
-                            <span className="font-medium">
-                              {c.brand}
-                              {c.productState === 'draft' && (
-                                <span className="ml-2">
-                                  <Badge tone="warn">draft</Badge>
-                                </span>
-                              )}
-                            </span>
-                            <span className="text-xs text-slate-500">{c.manufacturerName}</span>
-                          </div>
-                          <p className="text-xs text-slate-500">{c.technical}</p>
-                          <div className="mt-2 flex flex-wrap gap-1">
-                            {c.packsDetailed ? (
-                              c.packs.map((p) => (
-                                <span
-                                  key={p.skuId}
-                                  className={`rounded border px-2 py-0.5 text-xs ${
-                                    p.listed
-                                      ? 'border-success-500 text-success-600'
-                                      : 'border-slate-300 text-slate-600'
-                                  }`}
-                                >
-                                  {p.packLabel}
-                                  {p.listed ? ` · ${(p.listingRatePaise! / 100).toFixed(2)}` : ''}
-                                </span>
-                              ))
-                            ) : (
-                              <span className="text-xs italic text-slate-400">
-                                packs not detailed
-                              </span>
-                            )}
-                          </div>
-                        </li>
+                    <div className="flex flex-col gap-5">
+                      {groupByCompany(file.catalogue).map(([manufacturerName, entries]) => (
+                        <div key={manufacturerName}>
+                          <h3 className="mb-2 text-xs font-medium uppercase tracking-wide text-slate-500">
+                            {manufacturerName}
+                          </h3>
+                          <ul className="flex flex-col gap-3">
+                            {entries.map((c) => (
+                              <li
+                                key={c.entryId}
+                                className="rounded-md border border-slate-200 p-3"
+                              >
+                                <div className="flex items-center justify-between">
+                                  <span className="font-medium">
+                                    {c.brand}
+                                    {c.productState === 'draft' && (
+                                      <span className="ml-2">
+                                        <Badge tone="warn">draft</Badge>
+                                      </span>
+                                    )}
+                                  </span>
+                                </div>
+                                <p className="text-xs text-slate-500">{c.technical}</p>
+                                <div className="mt-2 flex flex-wrap gap-1">
+                                  {c.packsDetailed ? (
+                                    c.packs.map((p) => (
+                                      <span
+                                        key={p.skuId}
+                                        className={`rounded border px-2 py-0.5 text-xs ${
+                                          p.listed
+                                            ? 'border-success-500 text-success-600'
+                                            : 'border-slate-300 text-slate-600'
+                                        }`}
+                                      >
+                                        {p.packLabel}
+                                        {p.listed
+                                          ? ` · ${(p.listingRatePaise! / 100).toFixed(2)}`
+                                          : ''}
+                                      </span>
+                                    ))
+                                  ) : (
+                                    <span className="text-xs italic text-slate-400">
+                                      packs not detailed
+                                    </span>
+                                  )}
+                                </div>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
                       ))}
-                    </ul>
+                    </div>
                   )}
                 </Card>
 
@@ -216,6 +263,7 @@ export function SellerFilePage() {
                             <Th>Return note</Th>
                             <Th numeric>Cases</Th>
                             <Th>Age</Th>
+                            <Th>Due</Th>
                           </tr>
                         </thead>
                         <tbody>
@@ -230,6 +278,7 @@ export function SellerFilePage() {
                                   <Badge tone="warn">{r.daysOld}d of 30</Badge>
                                 )}
                               </Td>
+                              <Td>{new Date(r.dueDate).toLocaleDateString()}</Td>
                             </tr>
                           ))}
                         </tbody>
@@ -283,6 +332,18 @@ export function SellerFilePage() {
       </AsyncBoundary>
     </div>
   );
+}
+
+/** The catalogue read is flat (one entry per product); grouping by company
+ * is purely a display concern, so it's done here rather than on the server. */
+function groupByCompany(entries: SellerCatalogueItem[]): Array<[string, SellerCatalogueItem[]]> {
+  const byCompany = new Map<string, SellerCatalogueItem[]>();
+  for (const entry of entries) {
+    const key = entry.manufacturerName;
+    if (!byCompany.has(key)) byCompany.set(key, []);
+    byCompany.get(key)!.push(entry);
+  }
+  return [...byCompany.entries()];
 }
 
 function Kpi({ label, value }: { label: string; value: string }) {

@@ -85,6 +85,32 @@ export function soStateLabel(value: string): string {
   return SO_STATE_LABEL[value] ?? humanizeCode(value);
 }
 
+// BR-030/031 — the coarse 7-step chain strip, already a field (`chain.stage`)
+// this just orders and labels for display.
+export const CHAIN_STAGE_ORDER = [
+  'so',
+  'payment',
+  'po',
+  'leg1',
+  'marg',
+  'dispatch',
+  'done',
+] as const;
+
+export const CHAIN_STAGE_LABEL: Record<string, string> = {
+  so: 'Order placed',
+  payment: 'Payment',
+  po: 'PO released',
+  leg1: 'To Indore',
+  marg: 'Billed in Marg',
+  dispatch: 'To buyer',
+  done: 'Done',
+};
+
+export function chainStageLabel(value: string): string {
+  return CHAIN_STAGE_LABEL[value] ?? humanizeCode(value);
+}
+
 export function askStateLabel(value: string): string {
   return ASK_STATE_LABEL[value] ?? humanizeCode(value);
 }

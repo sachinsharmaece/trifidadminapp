@@ -100,6 +100,7 @@ export interface CallLogDto {
   callLogId: string;
   buyerId: string;
   employeeId: string;
+  employeeName: string;
   direction: 'in' | 'out' | null;
   at: string;
   kind: CallLogKind;
@@ -284,6 +285,7 @@ export interface BuyerProductHistoryRow {
   productId: string;
   brand: string;
   orderCount: number;
+  lastPaidRatePaise: number | null;
 }
 
 export interface BuyerFileOpenAsk {
@@ -294,6 +296,10 @@ export interface BuyerFileOpenAsk {
   state: string;
 }
 
+// BR-030/031 — the coarse 7-step chain-strip position; `state` above is the
+// finer per-SO state.
+export type ChainStage = 'so' | 'payment' | 'po' | 'leg1' | 'marg' | 'dispatch' | 'done';
+
 export interface SalesOrderRow {
   soId: string;
   soNo: string;
@@ -303,6 +309,7 @@ export interface SalesOrderRow {
   productDisplay: string;
   totalPaise: number;
   state: string;
+  chainStage: ChainStage;
   payDeadline: string;
   claimNeedsApplying: boolean;
   upcomingReceiptId: string | null;

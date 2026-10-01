@@ -74,6 +74,9 @@ export function SalesPoolsPage() {
                   <p className="text-sm text-slate-500">
                     {pool.committedQty} of {pool.moq} committed · {pool.bindingQty} binding ·{' '}
                     {pool.commitments.length} parties
+                    {pool.payDeadline && (
+                      <> · pay by {new Date(pool.payDeadline).toLocaleDateString()}</>
+                    )}
                   </p>
                   <Table>
                     <thead>

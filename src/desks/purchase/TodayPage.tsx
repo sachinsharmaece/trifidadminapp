@@ -10,12 +10,15 @@ import {
   getFunnelReport,
   getSupplyMatrixByProduct,
   getAbsorptionQueue,
+  getOnBoardNotQuotedQueue,
+  type ActiveDemandItem,
   type PileAwaitingDecisionItem,
   type DispatchQueueItem,
   type InspectionPendingApplyItem,
   type ReturnNoteAgeingItem,
   type FunnelReport,
   type AbsorptionQueueItem,
+  type OnBoardNotQuotedItem,
 } from '../../api/purchase';
 import { listRegistrations } from '../../api/onboarding';
 import type { RegistrationListItem } from '../../api/dto';
@@ -29,7 +32,7 @@ import { DevNote } from '../../components/dev/DevNote';
 import { FunnelMetricsGrid } from './FunnelMetrics';
 
 interface TodaySummary {
-  noSellerAsks: number;
+  noSellerAsks: ActiveDemandItem[];
   openBoxes: number;
   catalogueEntries: number;
   carryNeverListed: number;
@@ -39,6 +42,7 @@ interface TodaySummary {
   returnNotesOld: ReturnNoteAgeingItem[];
   sellersPendingApproval: RegistrationListItem[];
   absorptionPending: AbsorptionQueueItem[];
+  onBoardNotQuoted: OnBoardNotQuotedItem[];
   funnel: FunnelReport | null;
 }
 
@@ -63,6 +67,7 @@ export function TodayPage() {
       matrix,
       funnel,
       absorption,
+      onBoardNotQuoted,
     ] = await Promise.all([
       callApi((token) => getActiveDemandList(token)),
       callApi((token) => getPilesAwaitingDecision(token)),
@@ -77,9 +82,10 @@ export function TodayPage() {
       hasPermission(PERMISSIONS.ABSORPTION_READ)
         ? callApi((token) => getAbsorptionQueue(token))
         : Promise.resolve([]),
+      callApi((token) => getOnBoardNotQuotedQueue(token)),
     ]);
     return {
-      noSellerAsks: demand.filter((d) => d.noSeller).length,
+      noSellerAsks: demand.filter((d) => d.noSeller),
       openBoxes: demand.reduce((sum, d) => sum + d.qty, 0),
       catalogueEntries: matrix.reduce((sum, r) => sum + r.carryCount, 0),
       carryNeverListed: matrix.filter((r) => r.carryCount > 0 && r.listedCount === 0).length,
@@ -89,6 +95,7 @@ export function TodayPage() {
       returnNotesOld: returns.filter((r) => r.daysOld > 21),
       sellersPendingApproval: registrations.filter((r) => r.kind !== 'buyer'),
       absorptionPending: absorption.filter((a) => a.status === 'pending'),
+      onBoardNotQuoted,
       funnel,
     };
   }, [callApi, hasPermission]);
@@ -96,13 +103,14 @@ export function TodayPage() {
   const { state, retry } = useAsyncData(
     loader,
     (s) =>
-      s.noSellerAsks +
+      s.noSellerAsks.length +
         s.pilesChasing.length +
         s.dispatchOverdue.length +
         s.inspectionsPending.length +
         s.returnNotesOld.length +
         s.sellersPendingApproval.length +
-        s.absorptionPending.length ===
+        s.absorptionPending.length +
+        s.onBoardNotQuoted.length ===
       0,
     [loader],
   );
@@ -127,13 +135,14 @@ export function TodayPage() {
               <Kpi
                 label="On your plate"
                 value={
-                  s.noSellerAsks +
+                  s.noSellerAsks.length +
                   s.pilesChasing.length +
                   s.dispatchOverdue.length +
                   s.inspectionsPending.length +
                   s.returnNotesOld.length +
                   s.sellersPendingApproval.length +
-                  s.absorptionPending.length
+                  s.absorptionPending.length +
+                  s.onBoardNotQuoted.length
                 }
               />
             </div>
@@ -165,7 +174,8 @@ export function TodayPage() {
                   {s.pilesChasing.map((p) => (
                     <li key={p.pileId} className="flex items-center justify-between text-sm">
                       <span>
-                        {p.boxes} boxes · {p.buyers} buyer{p.buyers === 1 ? '' : 's'}
+                        {p.sellerFirm} — {p.brand} · {p.boxes} boxes · {p.buyers} buyer
+                        {p.buyers === 1 ? '' : 's'}
                       </span>
                       <Badge tone="bad">chase in {p.chaseLeftHours}h</Badge>
                     </li>
@@ -180,12 +190,45 @@ export function TodayPage() {
               </Card>
             )}
 
-            {s.noSellerAsks > 0 && (
+            {s.noSellerAsks.length > 0 && (
               <Card title="Nobody can supply this">
-                <p className="text-sm text-slate-600">
-                  {s.noSellerAsks} open ask{s.noSellerAsks === 1 ? '' : 's'} with no seller in scope
-                  at all — a brief for the next seller, not a leak.
+                <ul className="flex flex-col gap-2">
+                  {s.noSellerAsks.map((d) => (
+                    <li key={d.askId} className="flex items-center justify-between text-sm">
+                      <span>
+                        {d.brand} — {d.qty} boxes
+                      </span>
+                      <Badge tone="bad">no seller in scope</Badge>
+                    </li>
+                  ))}
+                </ul>
+                <button
+                  className="mt-3 text-sm font-medium text-brand-600 hover:underline"
+                  onClick={() => navigate('/purchase/demand')}
+                >
+                  Open Demand →
+                </button>
+              </Card>
+            )}
+
+            {s.onBoardNotQuoted.length > 0 && (
+              <Card title="On the board, not quoted">
+                <p className="mb-3 text-sm text-slate-600">
+                  A seller already has a live listing reaching the ask but hasn't quoted it yet.
                 </p>
+                <ul className="flex flex-col gap-2">
+                  {s.onBoardNotQuoted.map((o) => (
+                    <li key={o.askId} className="flex items-center justify-between text-sm">
+                      <span>
+                        {o.brand} — {o.qty} boxes
+                      </span>
+                      <Badge tone="warn">
+                        {o.sellersListedNotQuoted} seller{o.sellersListedNotQuoted === 1 ? '' : 's'}{' '}
+                        listed, silent
+                      </Badge>
+                    </li>
+                  ))}
+                </ul>
                 <button
                   className="mt-3 text-sm font-medium text-brand-600 hover:underline"
                   onClick={() => navigate('/purchase/demand')}

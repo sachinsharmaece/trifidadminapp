@@ -115,6 +115,7 @@ export interface ReturnNoteAgeingItem {
   poId: string;
   cases: number;
   daysOld: number;
+  dueDate: string;
   overdue: boolean;
 }
 
@@ -228,6 +229,16 @@ export interface SellerScorecard {
   blacklisted: boolean;
 }
 
+// BR-275's own metrics, read for one seller. Counts/percents only — never a
+// rupee figure, same wall as the desk-wide funnel report.
+export interface SellerFunnelMetrics {
+  sameDayDispatchPct: number | null;
+  rejectionRatePct: number | null;
+  debitsRaisedCount: number;
+  debitsRecoveredCount: number;
+  answerRatePct: number | null;
+}
+
 export interface SellerOpenDemandItem {
   askId: string;
   skuId: string | null;
@@ -252,12 +263,14 @@ export interface SellerFileDto {
   area: Array<{ tehsilId: string; name: string; district: string }>;
   references: Array<{ firm: string; phone: string; whatTheySaid: string }>;
   scorecard: SellerScorecard;
+  performance: SellerFunnelMetrics;
   openDebits: Array<{ debitId: string; reason: string; amountPaise: number; netted: boolean }>;
   openReturnNotes: Array<{
     returnNoteId: string;
     poId: string;
     cases: number;
     daysOld: number;
+    dueDate: string;
     overdue: boolean;
   }>;
   catalogue: SellerCatalogueItem[];
@@ -275,12 +288,28 @@ export interface SupplyMatrixProductRow {
   technical: string;
   manufacturerName: string;
   productState: string;
+  // BR-040 — "how well does the market know this price", not a margin value.
+  class: 'A' | 'B' | 'C';
   carryCount: number;
   listedCount: number;
 }
 
 export function getSupplyMatrixByProduct(accessToken: string): Promise<SupplyMatrixProductRow[]> {
   return apiFetch('/staff/purchase/matrix/by-product', { accessToken });
+}
+
+export interface SupplyMatrixCallListItem {
+  sellerId: string;
+  firm: string;
+  state: 'listed' | 'carries';
+  ratePaise: number | null;
+}
+
+export function getSupplyMatrixCallList(
+  accessToken: string,
+  productId: string,
+): Promise<SupplyMatrixCallListItem[]> {
+  return apiFetch(`/staff/purchase/matrix/by-product/${productId}/call-list`, { accessToken });
 }
 
 export interface SupplyMatrixSellerRow {
@@ -488,4 +517,16 @@ export interface OpenSellerDebitItem {
 
 export function getOpenSellerDebits(accessToken: string): Promise<OpenSellerDebitItem[]> {
   return apiFetch('/staff/purchase/debits', { accessToken });
+}
+
+export interface OnBoardNotQuotedItem {
+  askId: string;
+  productId: string | null;
+  brand: string;
+  qty: number;
+  sellersListedNotQuoted: number;
+}
+
+export function getOnBoardNotQuotedQueue(accessToken: string): Promise<OnBoardNotQuotedItem[]> {
+  return apiFetch('/staff/purchase/demand/on-board-not-quoted', { accessToken });
 }

@@ -9,6 +9,7 @@ import { Card } from '../../components/ui/Card';
 import { Table, Th, Td } from '../../components/ui/Table';
 import { Badge } from '../../components/ui/Badge';
 import { Button } from '../../components/ui/Button';
+import { formatRupees } from '../../lib/labels';
 
 function humanize(value: string): string {
   return value.replace(/_/g, ' ');
@@ -87,6 +88,7 @@ export function SalesBuyerFilePage() {
                         <tr>
                           <Th>Product</Th>
                           <Th numeric>Orders</Th>
+                          <Th numeric>Last paid</Th>
                         </tr>
                       </thead>
                       <tbody>
@@ -98,6 +100,11 @@ export function SalesBuyerFilePage() {
                           >
                             <Td>{p.brand}</Td>
                             <Td numeric>{p.orderCount}</Td>
+                            <Td numeric>
+                              {p.lastPaidRatePaise === null
+                                ? '—'
+                                : formatRupees(p.lastPaidRatePaise)}
+                            </Td>
                           </tr>
                         ))}
                       </tbody>
@@ -153,6 +160,7 @@ export function SalesBuyerFilePage() {
                           <tr>
                             <Th>When</Th>
                             <Th>Way</Th>
+                            <Th>By</Th>
                             <Th>Outcome</Th>
                             <Th>Note</Th>
                           </tr>
@@ -164,6 +172,7 @@ export function SalesBuyerFilePage() {
                               <Td>
                                 {c.direction === 'in' ? '↓' : c.direction === 'out' ? '↑' : '—'}
                               </Td>
+                              <Td>{c.employeeName}</Td>
                               <Td>{c.outcome ? humanize(c.outcome) : '—'}</Td>
                               <Td>
                                 {c.note}

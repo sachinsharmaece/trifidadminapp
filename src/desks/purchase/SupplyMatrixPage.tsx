@@ -1,8 +1,10 @@
-import { useCallback, useState } from 'react';
+import { Fragment, useCallback, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
   getSupplyMatrixByProduct,
   getSupplyMatrixBySeller,
+  getSupplyMatrixCallList,
+  type SupplyMatrixCallListItem,
   type SupplyMatrixProductRow,
   type SupplyMatrixSellerRow,
 } from '../../api/purchase';
@@ -14,6 +16,9 @@ import { Badge } from '../../components/ui/Badge';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { DevNote } from '../../components/dev/DevNote';
+import { formatRupees } from '../../lib/labels';
+
+const CLASS_TONE = { A: 'good', B: 'neutral', C: 'warn' } as const;
 
 // BR-274 — "two sources per cell" is the coverage target elsewhere in this
 // codebase (`purchase.service.ts#getCoverageMap`'s own comment); reused here
@@ -54,6 +59,7 @@ export function SupplyMatrixPage() {
 function ByProduct({ initialQuery }: { initialQuery: string }) {
   const { callApi } = useAuth();
   const [query, setQuery] = useState(initialQuery);
+  const [expanded, setExpanded] = useState<string | null>(null);
   const loader = useCallback(() => callApi((token) => getSupplyMatrixByProduct(token)), [callApi]);
   const { state, retry } = useAsyncData(loader, (items) => items.length === 0, [loader]);
 
@@ -79,52 +85,110 @@ function ByProduct({ initialQuery }: { initialQuery: string }) {
               <thead>
                 <tr>
                   <Th>Product</Th>
+                  <Th>Class</Th>
                   <Th numeric>Carries it</Th>
                   <Th numeric>On the board</Th>
                   <Th>State</Th>
+                  <Th />
                 </tr>
               </thead>
               <tbody>
                 {filtered.map((r) => (
-                  <tr key={r.productId}>
-                    <Td className="font-medium">
-                      {r.brand}
-                      {r.productState === 'draft' && (
-                        <span className="ml-2">
-                          <Badge tone="warn">draft</Badge>
-                        </span>
-                      )}
-                      <div className="text-xs text-slate-500">
-                        {r.technical} · {r.manufacturerName}
-                      </div>
-                    </Td>
-                    <Td numeric className={r.carryCount === 0 ? 'text-danger-500' : ''}>
-                      {r.carryCount}
-                    </Td>
-                    <Td
-                      numeric
-                      className={r.listedCount === 0 && r.carryCount > 0 ? 'text-warning-600' : ''}
-                    >
-                      {r.listedCount}
-                    </Td>
-                    <Td>
-                      {r.carryCount === 0 ? (
-                        <Badge tone="bad">nobody carries it</Badge>
-                      ) : r.listedCount === 0 ? (
-                        <Badge tone="warn">carried, none on the board</Badge>
-                      ) : r.listedCount < TWO_SOURCE_TARGET ? (
-                        <Badge tone="neutral">single source</Badge>
-                      ) : (
-                        <Badge tone="good">at target</Badge>
-                      )}
-                    </Td>
-                  </tr>
+                  <Fragment key={r.productId}>
+                    <tr>
+                      <Td className="font-medium">
+                        {r.brand}
+                        {r.productState === 'draft' && (
+                          <span className="ml-2">
+                            <Badge tone="warn">draft</Badge>
+                          </span>
+                        )}
+                        <div className="text-xs text-slate-500">
+                          {r.technical} · {r.manufacturerName}
+                        </div>
+                      </Td>
+                      <Td>
+                        <Badge tone={CLASS_TONE[r.class]}>{r.class}</Badge>
+                      </Td>
+                      <Td numeric className={r.carryCount === 0 ? 'text-danger-500' : ''}>
+                        {r.carryCount}
+                      </Td>
+                      <Td
+                        numeric
+                        className={
+                          r.listedCount === 0 && r.carryCount > 0 ? 'text-warning-600' : ''
+                        }
+                      >
+                        {r.listedCount}
+                      </Td>
+                      <Td>
+                        {r.carryCount === 0 ? (
+                          <Badge tone="bad">nobody carries it</Badge>
+                        ) : r.listedCount === 0 ? (
+                          <Badge tone="warn">carried, none on the board</Badge>
+                        ) : r.listedCount < TWO_SOURCE_TARGET ? (
+                          <Badge tone="neutral">single source</Badge>
+                        ) : (
+                          <Badge tone="good">at target</Badge>
+                        )}
+                      </Td>
+                      <Td>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setExpanded(expanded === r.productId ? null : r.productId)}
+                        >
+                          {expanded === r.productId ? 'Hide call list' : 'Call list'}
+                        </Button>
+                      </Td>
+                    </tr>
+                    {expanded === r.productId && (
+                      <tr>
+                        <Td colSpan={6} className="bg-slate-50">
+                          <CallListPanel productId={r.productId} />
+                        </Td>
+                      </tr>
+                    )}
+                  </Fragment>
                 ))}
               </tbody>
             </Table>
           </div>
         );
       }}
+    </AsyncBoundary>
+  );
+}
+
+/** Fetched on expand, not embedded in every row by default — a product's
+ * call list is only worth the read when someone is about to work it. */
+function CallListPanel({ productId }: { productId: string }) {
+  const { callApi } = useAuth();
+  const loader = useCallback(
+    () => callApi((token) => getSupplyMatrixCallList(token, productId)),
+    [callApi, productId],
+  );
+  const { state, retry } = useAsyncData(loader, (items) => items.length === 0, [loader]);
+
+  return (
+    <AsyncBoundary
+      state={state}
+      onRetry={retry}
+      emptyMessage="Nobody left to call — every seller who carries or lists this has already quoted."
+    >
+      {(items: SupplyMatrixCallListItem[]) => (
+        <ul className="flex flex-col gap-1 text-sm">
+          {items.map((s) => (
+            <li key={s.sellerId} className="flex items-center justify-between">
+              <span className="font-medium">{s.firm}</span>
+              <span className="text-xs text-slate-500">
+                {s.state === 'listed' ? 'On the board' : 'Carries it, not listed'}
+                {s.ratePaise !== null && ` · ${formatRupees(s.ratePaise)}`}
+              </span>
+            </li>
+          ))}
+        </ul>
+      )}
     </AsyncBoundary>
   );
 }

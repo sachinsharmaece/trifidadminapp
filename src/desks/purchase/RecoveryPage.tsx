@@ -125,6 +125,7 @@ function ReturnNotesSection() {
                 <Th>PO</Th>
                 <Th numeric>Cases</Th>
                 <Th numeric>Days old</Th>
+                <Th>Due</Th>
                 <Th>Overdue</Th>
               </tr>
             </thead>
@@ -134,6 +135,7 @@ function ReturnNotesSection() {
                   <Td className="font-mono">{item.poId.slice(-6)}</Td>
                   <Td numeric>{item.cases}</Td>
                   <Td numeric>{item.daysOld}</Td>
+                  <Td>{new Date(item.dueDate).toLocaleDateString()}</Td>
                   <Td>{item.overdue && <Badge tone="bad">Past 30 days</Badge>}</Td>
                 </tr>
               ))}

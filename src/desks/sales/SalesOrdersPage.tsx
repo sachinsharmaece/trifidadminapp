@@ -11,7 +11,7 @@ import { Badge, type BadgeTone } from '../../components/ui/Badge';
 import { Button } from '../../components/ui/Button';
 import { Textarea } from '../../components/ui/Input';
 import { useToast } from '../../components/ui/Toast';
-import { formatRupees, soStateLabel } from '../../lib/labels';
+import { CHAIN_STAGE_ORDER, chainStageLabel, formatRupees, soStateLabel } from '../../lib/labels';
 
 const WARN_STATES = new Set(['awaiting_payment', 'payment_verifying']);
 const BAD_STATES = new Set(['cancelled', 'supply_failed', 'disputed']);
@@ -22,6 +22,31 @@ function stateTone(state: string): BadgeTone {
   if (BAD_STATES.has(state)) return 'bad';
   if (GOOD_STATES.has(state)) return 'good';
   return 'neutral';
+}
+
+/** The chain strip is a normal-path presentation — an exception state
+ * (cancelled/failed/disputed) is shown as its own badge instead of forced
+ * into a step that never truly applied. */
+function ChainStrip({ stage, state }: { stage: string; state: string }) {
+  if (BAD_STATES.has(state)) {
+    return <Badge tone="bad">{soStateLabel(state)}</Badge>;
+  }
+  const currentIndex = CHAIN_STAGE_ORDER.indexOf(stage as (typeof CHAIN_STAGE_ORDER)[number]);
+  return (
+    <div className="flex items-center gap-1" title={chainStageLabel(stage)}>
+      {CHAIN_STAGE_ORDER.map((step, i) => (
+        <span
+          key={step}
+          className={`h-1.5 w-4 rounded-full ${
+            i <= currentIndex ? 'bg-brand-500' : 'bg-slate-200'
+          }`}
+        />
+      ))}
+      <span className="ml-1 whitespace-nowrap text-xs text-slate-500">
+        {chainStageLabel(stage)}
+      </span>
+    </div>
+  );
 }
 
 /** Live vs closed orders, plus the two things that need Sales' hand: claims and promoted-fallback decisions. */
@@ -80,6 +105,7 @@ export function SalesOrdersPage() {
                   <Th>Goods</Th>
                   <Th numeric>Value</Th>
                   <Th>State</Th>
+                  <Th>Progress</Th>
                   <Th>Actions</Th>
                 </tr>
               </thead>
@@ -101,6 +127,14 @@ export function SalesOrdersPage() {
                           <Badge tone={stateTone(row.state)}>{soStateLabel(row.state)}</Badge>
                           {row.claimNeedsApplying && <Badge tone="warn">he says he paid</Badge>}
                         </div>
+                        {WARN_STATES.has(row.state) && (
+                          <div className="mt-1 text-xs text-slate-500">
+                            Pay by {new Date(row.payDeadline).toLocaleString()}
+                          </div>
+                        )}
+                      </Td>
+                      <Td>
+                        <ChainStrip stage={row.chainStage} state={row.state} />
                       </Td>
                       <Td>
                         <div className="flex flex-col items-start gap-2">
@@ -130,7 +164,7 @@ export function SalesOrdersPage() {
                     </tr>
                     {promotionRowId === row.soId && (
                       <tr>
-                        <td colSpan={6} className="border-b border-slate-100 bg-slate-50 px-3 py-3">
+                        <td colSpan={7} className="border-b border-slate-100 bg-slate-50 px-3 py-3">
                           <PromotionForm
                             row={row}
                             onDone={() => {

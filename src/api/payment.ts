@@ -1,6 +1,12 @@
 import { apiFetch } from './client';
 import type { PurchaseRegisterRow, SalesRegisterRow, UpcomingReceiptListItem } from './dto';
 
+// The server requires an Idempotency-Key on every money-moving POST (middleware/idempotency.ts).
+// One key per user action: a retry of the same click may reuse it, a new click gets a new one.
+export function newIdempotencyKey(): string {
+  return `admin-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+}
+
 // API-080.
 export function getUpcomingReceipts(accessToken: string): Promise<UpcomingReceiptListItem[]> {
   return apiFetch('/staff/upcoming-receipts', { accessToken });
@@ -29,6 +35,7 @@ export function postBankCredit(
     method: 'POST',
     body: input,
     accessToken,
+    idempotencyKey: newIdempotencyKey(),
   });
 }
 
@@ -53,6 +60,7 @@ export function repostBankEntry(
     body: input,
     accessToken,
     reauthToken,
+    idempotencyKey: newIdempotencyKey(),
   });
 }
 
@@ -91,7 +99,12 @@ export function buildPaymentRun(
   accessToken: string,
   items: Array<{ kind: 'payout' | 'refund'; refId: string }>,
 ): Promise<{ paymentRunId: string }> {
-  return apiFetch('/staff/payment-runs', { method: 'POST', body: { items }, accessToken });
+  return apiFetch('/staff/payment-runs', {
+    method: 'POST',
+    body: { items },
+    accessToken,
+    idempotencyKey: newIdempotencyKey(),
+  });
 }
 
 // API-085 release — INV-16, requires X-Reauth-Token; 403 if the releaser built it.
@@ -106,6 +119,31 @@ export function releasePaymentRun(
     body: { utrs },
     accessToken,
     reauthToken,
+    idempotencyKey: newIdempotencyKey(),
+  });
+}
+
+// The checker's "no" on a built batch. Nothing moves; its items are free for a new batch.
+export function sendBackPaymentRun(
+  accessToken: string,
+  paymentRunId: string,
+  reason: string,
+): Promise<{ sentBack: boolean }> {
+  return apiFetch(`/staff/payment-runs/${paymentRunId}/send-back`, {
+    method: 'POST',
+    body: { reason },
+    accessToken,
+    idempotencyKey: newIdempotencyKey(),
+  });
+}
+
+// BR-017 — logs the call-back to the number already on file; the new account becomes
+// payable 24 hours later. `bankDetailId` is the pending detail, not the counterparty.
+export function logBankDetailCallback(accessToken: string, bankDetailId: string): Promise<unknown> {
+  return apiFetch(`/staff/bank-details/${bankDetailId}/callback`, {
+    method: 'POST',
+    body: {},
+    accessToken,
   });
 }
 

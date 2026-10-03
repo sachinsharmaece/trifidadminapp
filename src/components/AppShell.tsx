@@ -89,7 +89,7 @@ const NAV_ITEMS: NavItem[] = [
     to: '/accounts',
     label: 'Accounts',
     icon: <FiDollarSign />,
-    permission: PERMISSIONS.RECEIPT_READ,
+    permission: PERMISSIONS.CHAIN_READ_FULL,
   },
   { to: '/marg', label: 'Marg', icon: <FiFileText />, permission: PERMISSIONS.MARG_KEY },
   {
@@ -260,6 +260,8 @@ function SalesQuickCallControl() {
 export function AppShell({ children }: { children: ReactNode }) {
   const { logout, me } = useAuth();
   const [mobileOpen, setMobileOpen] = useState(false);
+  // The Accounts desk brings its own rail and padding and uses the full width (accounts.css).
+  const fullBleed = useLocation().pathname.startsWith('/accounts');
 
   return (
     <ToastProvider>
@@ -331,8 +333,12 @@ export function AppShell({ children }: { children: ReactNode }) {
           </div>
         )}
 
-        <main className="min-w-0 flex-1 px-4 py-6 pt-20 md:px-8 md:py-8 md:pt-8">
-          <div className="mx-auto max-w-5xl">
+        <main
+          className={`min-w-0 flex-1 pt-20 md:pt-0 ${
+            fullBleed ? '' : 'px-4 py-6 pt-20 md:px-8 md:py-8 md:pt-8'
+          }`}
+        >
+          <div className={fullBleed ? '' : 'mx-auto max-w-5xl'}>
             <SalesQuickCallControl />
             {children}
           </div>

@@ -13,7 +13,23 @@ import { RegistrationsPage } from '../desks/admin/RegistrationsPage';
 // ChainDeskPage — only used by the commented-out /chain route below; restore
 // this import alongside it.
 // import { ChainDeskPage } from '../desks/chain/ChainDeskPage';
-import { AccountsDeskPage } from '../desks/accounts/AccountsDeskPage';
+import { AccountsLayout } from '../desks/accounts/AccountsLayout';
+import { TodayView } from '../desks/accounts/views/TodayView';
+import { ProcessView } from '../desks/accounts/views/ProcessView';
+import { SosView, SoView } from '../desks/accounts/views/SosView';
+import { PosView, PoView } from '../desks/accounts/views/PosView';
+import { BillingView } from '../desks/accounts/views/BillingView';
+import { UpcomingView } from '../desks/accounts/views/UpcomingView';
+import { BankView } from '../desks/accounts/views/BankView';
+import { PaymentsView } from '../desks/accounts/views/PaymentsView';
+import { BuyersView, SellersView, PartyView } from '../desks/accounts/views/PartiesView';
+import {
+  CloseView,
+  GstView,
+  MovementsView,
+  PurchasesView,
+  RegisterView,
+} from '../desks/accounts/views/BooksViews';
 import { MargDeskPage } from '../desks/marg/MargDeskPage';
 import { DockDeskPage } from '../desks/dock/DockDeskPage';
 import { RegistersPage } from '../desks/registers/RegistersPage';
@@ -169,16 +185,39 @@ export function App() {
           }
         />
         */}
+        {/*
+          The Accounts desk shows a buyer and a seller on the same record, so it needs the
+          un-projected chain view (BR-070) — not `receipt:read`, which Sales also holds.
+        */}
         <Route
           path="/accounts"
           element={
-            <RequireAuth permission={PERMISSIONS.RECEIPT_READ}>
+            <RequireAuth permission={PERMISSIONS.CHAIN_READ_FULL}>
               <AppShell>
-                <AccountsDeskPage />
+                <AccountsLayout />
               </AppShell>
             </RequireAuth>
           }
-        />
+        >
+          <Route index element={<TodayView />} />
+          <Route path="process" element={<ProcessView />} />
+          <Route path="sos" element={<SosView />} />
+          <Route path="so/:id" element={<SoView />} />
+          <Route path="pos" element={<PosView />} />
+          <Route path="po/:id" element={<PoView />} />
+          <Route path="billing" element={<BillingView />} />
+          <Route path="upcoming" element={<UpcomingView />} />
+          <Route path="bank" element={<BankView />} />
+          <Route path="payments" element={<PaymentsView />} />
+          <Route path="buyers" element={<BuyersView />} />
+          <Route path="sellers" element={<SellersView />} />
+          <Route path="party/:id" element={<PartyView />} />
+          <Route path="register" element={<RegisterView />} />
+          <Route path="purchases" element={<PurchasesView />} />
+          <Route path="movements" element={<MovementsView />} />
+          <Route path="gst" element={<GstView />} />
+          <Route path="close" element={<CloseView />} />
+        </Route>
         <Route
           path="/marg"
           element={

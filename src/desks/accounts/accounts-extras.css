@@ -1,0 +1,37 @@
+/*
+ * What the template got for free from the browser, and Tailwind's reset takes away.
+ * `accounts.css` is the template's stylesheet verbatim; this restores the three browser
+ * defaults it leans on (card headings, links, form fields) so the desk looks the same
+ * inside this app. Scoped to `.acx`; nothing here touches another desk.
+ */
+.acx {
+  /* Card titles are bare <h3>s in the template. */
+  h3 {
+    font-size: 1.17em;
+    font-weight: 700;
+  }
+
+  /* Document and party links are plain <a>s in the template, underlined by default. */
+  a {
+    text-decoration: underline;
+  }
+
+  /* Form fields: styled as the template's own `select.win`, so the desk has one field look. */
+  input.win,
+  textarea.win {
+    border: 1px solid var(--line-strong);
+    border-radius: var(--r);
+    padding: 5px 8px;
+    background: var(--ground);
+    font-size: 12.5px;
+  }
+  input.win::placeholder {
+    color: var(--ink-3);
+  }
+
+  /* A disabled action reads as unavailable, not as a broken button. */
+  .btn:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+  }
+}

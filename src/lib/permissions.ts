@@ -29,6 +29,8 @@ export const PERMISSIONS = {
   PAYOUT_RELEASE: 'payout:release',
   PAYOUT_READ: 'payout:read',
   MARG_KEY: 'marg:key',
+  // BR-017 — logging the call-back that starts a changed bank account's cooling.
+  BANK_DETAIL_WRITE: 'bank_detail:write',
   DAY_CLOSE_RUN: 'day_close:run',
   DOCK_INSPECT: 'dock:inspect',
   MOVEMENT_WRITE: 'movement:write',

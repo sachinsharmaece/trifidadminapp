@@ -151,7 +151,7 @@ function EditProductForm({
   const [technical, setTechnical] = useState(product.technical ?? '');
   const [manufacturerId, setManufacturerId] = useState(product.manufacturerId ?? '');
   const [hsn, setHsn] = useState(product.hsn);
-  const [productClass, setProductClass] = useState<'A' | 'B' | 'C'>(product.class);
+  const [productClass, setProductClass] = useState<'High' | 'Medium' | 'Low'>(product.class);
   const [active, setActive] = useState(product.active ?? true);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -225,11 +225,11 @@ function EditProductForm({
           id="ep-class"
           label="Class"
           value={productClass}
-          onChange={(e) => setProductClass(e.target.value as 'A' | 'B' | 'C')}
+          onChange={(e) => setProductClass(e.target.value as 'High' | 'Medium' | 'Low')}
         >
-          <option value="A">A</option>
-          <option value="B">B</option>
-          <option value="C">C</option>
+          <option value="High">High</option>
+          <option value="Medium">Medium</option>
+          <option value="Low">Low</option>
         </Select>
         <label className="flex items-center gap-2 text-sm text-slate-700">
           <input

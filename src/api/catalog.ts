@@ -75,7 +75,7 @@ export function createProduct(
     technical: string;
     manufacturerId: string;
     hsn: string;
-    class?: 'A' | 'B' | 'C';
+    class?: 'High' | 'Medium' | 'Low';
   },
 ): Promise<{ productId: string }> {
   return apiFetch('/admin/products', { method: 'POST', body: input, accessToken });
@@ -90,7 +90,7 @@ export function updateProduct(
     technical: string;
     manufacturerId: string;
     hsn: string;
-    class: 'A' | 'B' | 'C';
+    class: 'High' | 'Medium' | 'Low';
     active: boolean;
     state: 'live';
   }>,

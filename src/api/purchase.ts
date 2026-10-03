@@ -289,7 +289,7 @@ export interface SupplyMatrixProductRow {
   manufacturerName: string;
   productState: string;
   // BR-040 — "how well does the market know this price", not a margin value.
-  class: 'A' | 'B' | 'C';
+  class: 'High' | 'Medium' | 'Low';
   carryCount: number;
   listedCount: number;
 }
@@ -487,7 +487,7 @@ export function postDraftProduct(
     technical: string;
     manufacturerId: string;
     hsn: string;
-    class?: 'A' | 'B' | 'C';
+    class?: 'High' | 'Medium' | 'Low';
   },
 ): Promise<{ productId: string }> {
   return apiFetch('/staff/purchase/masters/products', { method: 'POST', body: input, accessToken });

@@ -32,7 +32,7 @@ export function ProductCreatePage() {
   const [technical, setTechnical] = useState('');
   const [manufacturerId, setManufacturerId] = useState('');
   const [hsn, setHsn] = useState('');
-  const [productClass, setProductClass] = useState<'A' | 'B' | 'C'>('B');
+  const [productClass, setProductClass] = useState<'High' | 'Medium' | 'Low'>('Medium');
   const [error, setError] = useState<string | null>(null);
   // B-36 — a raw single message at the bottom of the form instead of by the
   // field, the same field-level mapping already used elsewhere.
@@ -131,11 +131,11 @@ export function ProductCreatePage() {
             id="p-class"
             label="Class"
             value={productClass}
-            onChange={(e) => setProductClass(e.target.value as 'A' | 'B' | 'C')}
+            onChange={(e) => setProductClass(e.target.value as 'High' | 'Medium' | 'Low')}
           >
-            <option value="A">A</option>
-            <option value="B">B</option>
-            <option value="C">C</option>
+            <option value="High">High</option>
+            <option value="Medium">Medium</option>
+            <option value="Low">Low</option>
           </Select>
 
           {error && Object.keys(fieldErrors).length === 0 && (

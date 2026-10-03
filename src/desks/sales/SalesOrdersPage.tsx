@@ -127,6 +127,17 @@ export function SalesOrdersPage() {
                         <div className="font-mono text-xs text-slate-500">
                           …{row.soId.slice(-6)}
                         </div>
+                        {/* B-56 — the Chain ID the dispatch desk's "Record a
+                            dispatch" form asks for; no longer shown anywhere
+                            else since the Chain Desk pivot. Shown in full
+                            (not truncated like the SO id above) since it
+                            needs to be copied into that form as-is. */}
+                        <div
+                          className="select-all font-mono text-xs text-slate-400"
+                          title="Chain ID, for Record a dispatch"
+                        >
+                          chain: {row.chainId}
+                        </div>
                       </Td>
                       <Td>{row.buyerFirm}</Td>
                       <Td>{row.productDisplay}</Td>

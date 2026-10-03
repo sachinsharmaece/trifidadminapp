@@ -1,5 +1,9 @@
 import { apiFetch } from './client';
 
+function idempotencyKey(): string {
+  return `admin-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+}
+
 // API-087 — BR-182/BR-184, outer box only, immutable once submitted.
 export function recordInspection(
   accessToken: string,
@@ -10,6 +14,7 @@ export function recordInspection(
 }
 
 // BR-190 — Purchase converts the dock's finding into a payment consequence.
+// Money-moving (B-55): needs Idempotency-Key like every other stage-moving POST.
 export function applyInspection(
   accessToken: string,
   poId: string,
@@ -18,5 +23,6 @@ export function applyInspection(
     method: 'POST',
     body: {},
     accessToken,
+    idempotencyKey: idempotencyKey(),
   });
 }

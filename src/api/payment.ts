@@ -57,7 +57,18 @@ export function repostBankEntry(
 }
 
 // API-086 — isPayable derives from the three gates and bank_detail (INV-17).
-export function getPoPayable(accessToken: string, poId: string): Promise<{ payable: boolean }> {
+// B-59 — now also names which gate is blocking, not just a bare boolean.
+export type PoPayabilityReason =
+  | 'PO_NOT_ACTIVE'
+  | 'INSPECTION_PENDING'
+  | 'SELLER_BILL_NOT_BOOKED'
+  | 'ACCOUNTS_CONFIRMATION_PENDING'
+  | 'BANK_DETAIL_NOT_PAYABLE';
+
+export function getPoPayable(
+  accessToken: string,
+  poId: string,
+): Promise<{ payable: boolean; reason?: PoPayabilityReason }> {
   return apiFetch(`/staff/payables/${poId}`, { accessToken });
 }
 

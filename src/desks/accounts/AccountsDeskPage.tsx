@@ -14,7 +14,19 @@ import {
   releasePaymentRun,
   repostBankEntry,
   runDayClose,
+  type PoPayabilityReason,
 } from '../../api/payment';
+
+// B-59 — plain-English text for each gate, shown next to "Not payable"
+// instead of leaving staff to guess which of the five checks failed.
+const PAYABILITY_REASON_LABEL: Record<PoPayabilityReason, string> = {
+  PO_NOT_ACTIVE: 'The PO has failed, is already paid, or is on hold.',
+  INSPECTION_PENDING: "The dock's inspection has not been signed off yet.",
+  SELLER_BILL_NOT_BOOKED: "The seller's bill has not been booked yet.",
+  ACCOUNTS_CONFIRMATION_PENDING:
+    "Accounts' own product/quantity confirmation has not been recorded yet.",
+  BANK_DETAIL_NOT_PAYABLE: "The seller's bank detail is missing or not yet payable.",
+};
 import { ApiError } from '../../api/errors';
 import { AsyncBoundary } from '../../components/AsyncBoundary';
 import { DevNote } from '../../components/dev/DevNote';
@@ -181,8 +193,11 @@ function PostBankCreditSection() {
 function ReceiptConfirmationSection() {
   const { callApi } = useAuth();
   const [poId, setPoId] = useState('');
-  const [productMatches, setProductMatches] = useState(true);
-  const [qtyMatches, setQtyMatches] = useState(true);
+  // B-60 — these defaulted to true, so submitting immediately after loading
+  // the form recorded a confirmation nobody had actually made: both must now
+  // be explicitly ticked.
+  const [productMatches, setProductMatches] = useState(false);
+  const [qtyMatches, setQtyMatches] = useState(false);
   const [notes, setNotes] = useState('');
   const [result, setResult] = useState<{ receiptConfirmationId: string } | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -272,6 +287,8 @@ function PayablesSection() {
   const { callApi } = useAuth();
   const [poId, setPoId] = useState('');
   const [payable, setPayable] = useState<boolean | null>(null);
+  // B-59 — which of the five gates is blocking, not just true/false.
+  const [reason, setReason] = useState<PoPayabilityReason | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   async function check(): Promise<void> {
@@ -279,6 +296,7 @@ function PayablesSection() {
     try {
       const result = await callApi((token) => getPoPayable(token, poId));
       setPayable(result.payable);
+      setReason(result.reason ?? null);
     } catch (submitError) {
       setError(submitError instanceof ApiError ? submitError.message : 'Could not check.');
     }
@@ -303,6 +321,9 @@ function PayablesSection() {
           <Badge tone={payable ? 'good' : 'bad'}>{payable ? 'Payable' : 'Not payable'}</Badge>
         )}
       </div>
+      {payable === false && reason && (
+        <p className="mt-2 text-sm text-slate-600">{PAYABILITY_REASON_LABEL[reason]}</p>
+      )}
       {error && (
         <p role="alert" className="mt-2 text-sm text-danger-500">
           {error}

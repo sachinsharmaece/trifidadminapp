@@ -42,7 +42,7 @@ export interface ProductDto {
   productId: string;
   brand: string;
   hsn: string;
-  class: 'A' | 'B' | 'C';
+  class: 'High' | 'Medium' | 'Low';
   technical?: string;
   manufacturerId?: string;
   manufacturerName?: string;
@@ -94,7 +94,7 @@ export interface RegistrationStatusDto {
 
 export interface MarginMatrixCellDto {
   marginMatrixId: string;
-  class: 'A' | 'B' | 'C';
+  class: 'High' | 'Medium' | 'Low';
   tier: 'Distributor' | 'Dealer' | 'Retailer' | 'Trader';
   pct: number;
   creditPct: number;

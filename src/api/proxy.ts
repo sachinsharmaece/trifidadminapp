@@ -142,6 +142,32 @@ export function proxyCreateListing(
   return apiFetch('/staff/proxy/seller/listings', { method: 'POST', body: input, accessToken });
 }
 
+export interface ProxyPostQuoteInput {
+  sellerCounterpartyId: string;
+  ratePaiseForIndore: number;
+  qtyAvailable: number;
+  expiryBand: 'over12' | 'under12';
+  expiryExact: string;
+  deliveryBand: '48h' | '2-5d';
+  provenance: 'company' | 'auth';
+  batch?: string;
+  daysToIndore: number;
+  callNote: string;
+}
+
+/** Purchase raises a quote on a seller's behalf from the Demand screen. */
+export function proxyPostQuote(
+  accessToken: string,
+  askId: string,
+  input: ProxyPostQuoteInput,
+): Promise<{ quoteId: string }> {
+  return apiFetch(`/staff/proxy/seller/asks/${askId}/quotes`, {
+    method: 'POST',
+    body: input,
+    accessToken,
+  });
+}
+
 export function proxyConfirmPile(
   accessToken: string,
   pileId: string,

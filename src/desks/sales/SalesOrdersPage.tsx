@@ -11,7 +11,10 @@ import { Badge, type BadgeTone } from '../../components/ui/Badge';
 import { Button } from '../../components/ui/Button';
 import { Textarea } from '../../components/ui/Input';
 import { useToast } from '../../components/ui/Toast';
-import { CHAIN_STAGE_ORDER, chainStageLabel, formatRupees, soStateLabel } from '../../lib/labels';
+import { formatRupees, soStateLabel } from '../../lib/labels';
+// CHAIN_STAGE_ORDER, chainStageLabel — only used by the commented-out
+// ChainStrip/Progress column below; restore this import alongside them.
+// import { CHAIN_STAGE_ORDER, chainStageLabel } from '../../lib/labels';
 
 const WARN_STATES = new Set(['awaiting_payment', 'payment_verifying']);
 const BAD_STATES = new Set(['cancelled', 'supply_failed', 'disputed']);
@@ -24,30 +27,36 @@ function stateTone(state: string): BadgeTone {
   return 'neutral';
 }
 
-/** The chain strip is a normal-path presentation — an exception state
- * (cancelled/failed/disputed) is shown as its own badge instead of forced
- * into a step that never truly applied. */
-function ChainStrip({ stage, state }: { stage: string; state: string }) {
-  if (BAD_STATES.has(state)) {
-    return <Badge tone="bad">{soStateLabel(state)}</Badge>;
-  }
-  const currentIndex = CHAIN_STAGE_ORDER.indexOf(stage as (typeof CHAIN_STAGE_ORDER)[number]);
-  return (
-    <div className="flex items-center gap-1" title={chainStageLabel(stage)}>
-      {CHAIN_STAGE_ORDER.map((step, i) => (
-        <span
-          key={step}
-          className={`h-1.5 w-4 rounded-full ${
-            i <= currentIndex ? 'bg-brand-500' : 'bg-slate-200'
-          }`}
-        />
-      ))}
-      <span className="ml-1 whitespace-nowrap text-xs text-slate-500">
-        {chainStageLabel(stage)}
-      </span>
-    </div>
-  );
-}
+// 2026-10-02 — pivoting away from Trade chain stage-tracking for now (see
+// CHAIN_STAGE_TRACKING_ENABLED, trifidserverapp's config/env.ts) — the
+// backend keeps `chainStage` on SalesOrderRow (harmless, just frozen at
+// 'so'), but this screen no longer renders it. Uncomment to restore,
+// alongside the Progress <Th>/<Td> below and the CHAIN_STAGE_ORDER import.
+//
+// /** The chain strip is a normal-path presentation — an exception state
+//  * (cancelled/failed/disputed) is shown as its own badge instead of forced
+//  * into a step that never truly applied. */
+// function ChainStrip({ stage, state }: { stage: string; state: string }) {
+//   if (BAD_STATES.has(state)) {
+//     return <Badge tone="bad">{soStateLabel(state)}</Badge>;
+//   }
+//   const currentIndex = CHAIN_STAGE_ORDER.indexOf(stage as (typeof CHAIN_STAGE_ORDER)[number]);
+//   return (
+//     <div className="flex items-center gap-1" title={chainStageLabel(stage)}>
+//       {CHAIN_STAGE_ORDER.map((step, i) => (
+//         <span
+//           key={step}
+//           className={`h-1.5 w-4 rounded-full ${
+//             i <= currentIndex ? 'bg-brand-500' : 'bg-slate-200'
+//           }`}
+//         />
+//       ))}
+//       <span className="ml-1 whitespace-nowrap text-xs text-slate-500">
+//         {chainStageLabel(stage)}
+//       </span>
+//     </div>
+//   );
+// }
 
 /** Live vs closed orders, plus the two things that need Sales' hand: claims and promoted-fallback decisions. */
 export function SalesOrdersPage() {
@@ -105,7 +114,7 @@ export function SalesOrdersPage() {
                   <Th>Goods</Th>
                   <Th numeric>Value</Th>
                   <Th>State</Th>
-                  <Th>Progress</Th>
+                  {/* <Th>Progress</Th> — see the ChainStrip comment above. */}
                   <Th>Actions</Th>
                 </tr>
               </thead>
@@ -117,6 +126,17 @@ export function SalesOrdersPage() {
                         {row.soNo}
                         <div className="font-mono text-xs text-slate-500">
                           …{row.soId.slice(-6)}
+                        </div>
+                        {/* B-56 — the Chain ID the dispatch desk's "Record a
+                            dispatch" form asks for; no longer shown anywhere
+                            else since the Chain Desk pivot. Shown in full
+                            (not truncated like the SO id above) since it
+                            needs to be copied into that form as-is. */}
+                        <div
+                          className="select-all font-mono text-xs text-slate-400"
+                          title="Chain ID, for Record a dispatch"
+                        >
+                          chain: {row.chainId}
                         </div>
                       </Td>
                       <Td>{row.buyerFirm}</Td>
@@ -133,9 +153,7 @@ export function SalesOrdersPage() {
                           </div>
                         )}
                       </Td>
-                      <Td>
-                        <ChainStrip stage={row.chainStage} state={row.state} />
-                      </Td>
+                      {/* <Td><ChainStrip stage={row.chainStage} state={row.state} /></Td> */}
                       <Td>
                         <div className="flex flex-col items-start gap-2">
                           {row.claimNeedsApplying && (
@@ -164,7 +182,7 @@ export function SalesOrdersPage() {
                     </tr>
                     {promotionRowId === row.soId && (
                       <tr>
-                        <td colSpan={7} className="border-b border-slate-100 bg-slate-50 px-3 py-3">
+                        <td colSpan={6} className="border-b border-slate-100 bg-slate-50 px-3 py-3">
                           <PromotionForm
                             row={row}
                             onDone={() => {

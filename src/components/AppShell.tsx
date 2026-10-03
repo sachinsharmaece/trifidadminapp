@@ -5,8 +5,8 @@ import {
   FiUsers,
   FiDatabase,
   FiUserCheck,
-  FiGitBranch,
-  FiInbox,
+  // FiGitBranch, FiInbox — only used by the commented-out Enquiries/Trade
+  // chain nav items below; restore this import alongside them.
   FiDollarSign,
   FiFileText,
   FiTruck,
@@ -62,13 +62,17 @@ const NAV_ITEMS: NavItem[] = [
     icon: <FiUserCheck />,
     permission: PERMISSIONS.ONBOARDING_READ,
   },
-  {
-    to: '/enquiries',
-    label: 'Enquiries',
-    icon: <FiInbox />,
-    permission: PERMISSIONS.CHAIN_READ,
-  },
-  { to: '/chain', label: 'Trade chain', icon: <FiGitBranch />, permission: PERMISSIONS.CHAIN_READ },
+  // 2026-10-02 — pivoting away from Enquiry and Trade chain for now (see
+  // ENQUIRY_FLOW_ENABLED/CHAIN_STAGE_TRACKING_ENABLED, trifidserverapp's
+  // config/env.ts). Uncomment to restore; the matching routes in App.tsx are
+  // commented out the same way.
+  // {
+  //   to: '/enquiries',
+  //   label: 'Enquiries',
+  //   icon: <FiInbox />,
+  //   permission: PERMISSIONS.CHAIN_READ,
+  // },
+  // { to: '/chain', label: 'Trade chain', icon: <FiGitBranch />, permission: PERMISSIONS.CHAIN_READ },
   {
     to: '/purchase',
     label: 'Purchase',

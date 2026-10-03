@@ -10,7 +10,9 @@ import { ProductDetailPage } from '../desks/admin/ProductDetailPage';
 import { ManufacturersPage } from '../desks/admin/ManufacturersPage';
 import { TehsilsPage } from '../desks/admin/TehsilsPage';
 import { RegistrationsPage } from '../desks/admin/RegistrationsPage';
-import { ChainDeskPage } from '../desks/chain/ChainDeskPage';
+// ChainDeskPage — only used by the commented-out /chain route below; restore
+// this import alongside it.
+// import { ChainDeskPage } from '../desks/chain/ChainDeskPage';
 import { AccountsDeskPage } from '../desks/accounts/AccountsDeskPage';
 import { MargDeskPage } from '../desks/marg/MargDeskPage';
 import { DockDeskPage } from '../desks/dock/DockDeskPage';
@@ -28,6 +30,7 @@ import { EnterListingPage } from '../desks/purchase/EnterListingPage';
 import { SupplyMatrixPage } from '../desks/purchase/SupplyMatrixPage';
 import { RecoveryPage } from '../desks/purchase/RecoveryPage';
 import { PurchaseProductsPage } from '../desks/purchase/PurchaseProductsPage';
+import { PurchaseProductDetailPage } from '../desks/purchase/PurchaseProductDetailPage';
 import { SalesLayout } from '../desks/sales/SalesLayout';
 import { SalesTodayPage } from '../desks/sales/SalesTodayPage';
 import { SalesFunnelPage } from '../desks/sales/SalesFunnelPage';
@@ -47,8 +50,10 @@ import { LogisticsDeskPage } from '../desks/logistics/LogisticsDeskPage';
 import { ControllerDeskPage } from '../desks/controller/ControllerDeskPage';
 import { NotificationLogPage } from '../desks/notifications/NotificationLogPage';
 import { FounderDeskPage } from '../desks/founder/FounderDeskPage';
-import { EnquiriesPage } from '../desks/enquiries/EnquiriesPage';
-import { EnquiryDetailPage } from '../desks/enquiries/EnquiryDetailPage';
+// EnquiriesPage/EnquiryDetailPage — only used by the commented-out
+// /enquiries routes below; restore these imports alongside them.
+// import { EnquiriesPage } from '../desks/enquiries/EnquiriesPage';
+// import { EnquiryDetailPage } from '../desks/enquiries/EnquiryDetailPage';
 import { PERMISSIONS } from '../lib/permissions';
 
 export function App() {
@@ -126,6 +131,13 @@ export function App() {
             </RequireAuth>
           }
         />
+        {/*
+          2026-10-02 — pivoting away from Enquiry and Trade chain for now
+          (see ENQUIRY_FLOW_ENABLED/CHAIN_STAGE_TRACKING_ENABLED,
+          trifidserverapp's config/env.ts). The pages themselves
+          (EnquiriesPage/EnquiryDetailPage/ChainDeskPage) are untouched —
+          just unrouted. Uncomment these three Route blocks, their nav
+          entries in AppShell.tsx, and the three imports above to restore.
         <Route
           path="/enquiries"
           element={
@@ -156,6 +168,7 @@ export function App() {
             </RequireAuth>
           }
         />
+        */}
         <Route
           path="/accounts"
           element={
@@ -208,6 +221,7 @@ export function App() {
           <Route path="matrix" element={<SupplyMatrixPage />} />
           <Route path="recovery" element={<RecoveryPage />} />
           <Route path="products" element={<PurchaseProductsPage />} />
+          <Route path="products/:productId" element={<PurchaseProductDetailPage />} />
         </Route>
         <Route
           path="/sales"

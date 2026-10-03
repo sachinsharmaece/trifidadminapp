@@ -303,6 +303,10 @@ export type ChainStage = 'so' | 'payment' | 'po' | 'leg1' | 'marg' | 'dispatch' 
 export interface SalesOrderRow {
   soId: string;
   soNo: string;
+  // B-56 — the one remaining reachable source for the Chain ID the "Record
+  // a dispatch" screen requires, now that the Chain Desk/Enquiry detail
+  // screens are unrouted.
+  chainId: string;
   buyerId: string;
   buyerCounterpartyId: string;
   buyerFirm: string;

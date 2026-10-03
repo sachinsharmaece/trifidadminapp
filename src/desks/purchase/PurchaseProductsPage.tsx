@@ -1,4 +1,5 @@
 import { useCallback, useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   getProductFunnelAll,
   getMastersProducts,
@@ -53,6 +54,7 @@ export function PurchaseProductsPage() {
 
 function AnalysisTab() {
   const { callApi } = useAuth();
+  const navigate = useNavigate();
   const funnelLoader = useCallback(() => callApi((token) => getProductFunnelAll(token)), [callApi]);
   const funnel = useAsyncData(funnelLoader, (items) => items.length === 0, [funnelLoader]);
   const productsLoader = useCallback(
@@ -113,8 +115,12 @@ function AnalysisTab() {
               {rows.map((r) => {
                 const p = productById.get(r.productId);
                 return (
-                  <tr key={r.productId}>
-                    <Td className="font-medium">
+                  <tr
+                    key={r.productId}
+                    className="cursor-pointer hover:bg-slate-50"
+                    onClick={() => navigate(`/purchase/products/${r.productId}`)}
+                  >
+                    <Td className="font-medium text-brand-600">
                       {p?.brand ?? r.productId.slice(-6)}
                       {p && (
                         <div className="text-xs text-slate-500">

@@ -18,7 +18,7 @@ import { Input } from '../../components/ui/Input';
 import { DevNote } from '../../components/dev/DevNote';
 import { formatRupees } from '../../lib/labels';
 
-const CLASS_TONE = { A: 'good', B: 'neutral', C: 'warn' } as const;
+const CLASS_TONE = { High: 'good', Medium: 'neutral', Low: 'warn' } as const;
 
 // BR-274 — "two sources per cell" is the coverage target elsewhere in this
 // codebase (`purchase.service.ts#getCoverageMap`'s own comment); reused here

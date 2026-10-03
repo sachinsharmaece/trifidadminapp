@@ -15,7 +15,9 @@ import { useAuth } from '../../auth/AuthContext';
 import { Card } from '../../components/ui/Card';
 import { Table, Th, Td } from '../../components/ui/Table';
 import { Badge } from '../../components/ui/Badge';
-import { Select } from '../../components/ui/Input';
+import { Input, Select, Textarea } from '../../components/ui/Input';
+import { ApiError } from '../../api/errors';
+import { proxyPostQuote } from '../../api/proxy';
 import { Button } from '../../components/ui/Button';
 import { DevNote } from '../../components/dev/DevNote';
 
@@ -159,7 +161,7 @@ function QuoteGapsDetail({ askId }: { askId: string }) {
       {(sellers: AskSellerStateItem[]) => (
         <ul className="flex flex-col gap-1 py-2 pl-6 text-sm">
           {sellers.map((s) => (
-            <SellerStateRow key={s.sellerId} askId={askId} seller={s} />
+            <SellerStateRow key={s.sellerId} askId={askId} seller={s} onQuoted={retry} />
           ))}
         </ul>
       )}
@@ -167,12 +169,21 @@ function QuoteGapsDetail({ askId }: { askId: string }) {
   );
 }
 
-function SellerStateRow({ askId, seller: s }: { askId: string; seller: AskSellerStateItem }) {
+function SellerStateRow({
+  askId,
+  seller: s,
+  onQuoted,
+}: {
+  askId: string;
+  seller: AskSellerStateItem;
+  onQuoted: () => void;
+}) {
   const { callApi } = useAuth();
   const [chased, setChased] = useState(false);
+  const [quoting, setQuoting] = useState(false);
   const { label, tone } = SELLER_STATE_LABEL[s.state];
   return (
-    <li className="flex items-center gap-2">
+    <li className="flex flex-wrap items-center gap-2">
       <span className="font-medium text-slate-800">{s.firm}</span>
       <Badge tone={tone}>{label}</Badge>
       {s.ratePaise !== null && (
@@ -194,7 +205,173 @@ function SellerStateRow({ askId, seller: s }: { askId: string; seller: AskSeller
           {chased ? 'Chased' : 'Chase'}
         </Button>
       )}
+      {s.state !== 'quoted' && (
+        <Button variant="secondary" size="sm" onClick={() => setQuoting((v) => !v)}>
+          {quoting ? 'Cancel' : 'Raise quote'}
+        </Button>
+      )}
+      {quoting && (
+        <RaiseQuoteForm
+          askId={askId}
+          seller={s}
+          onDone={() => {
+            setQuoting(false);
+            onQuoted();
+          }}
+        />
+      )}
     </li>
+  );
+}
+
+function RaiseQuoteForm({
+  askId,
+  seller,
+  onDone,
+}: {
+  askId: string;
+  seller: AskSellerStateItem;
+  onDone: () => void;
+}) {
+  const { callApi } = useAuth();
+  const [rupees, setRupees] = useState('');
+  const [qty, setQty] = useState('');
+  const [expiryBand, setExpiryBand] = useState<'over12' | 'under12'>('over12');
+  const [expiryExact, setExpiryExact] = useState('');
+  const [deliveryBand, setDeliveryBand] = useState<'48h' | '2-5d'>('48h');
+  const [provenance, setProvenance] = useState<'company' | 'auth'>('company');
+  const [batch, setBatch] = useState('');
+  const [days, setDays] = useState('');
+  const [callNote, setCallNote] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+
+  const ready =
+    Number(rupees) > 0 &&
+    Number(qty) >= 1 &&
+    /^(0[1-9]|1[0-2])\/\d{4}$/.test(expiryExact) &&
+    days !== '' &&
+    callNote.trim() !== '' &&
+    (provenance !== 'auth' || batch.trim() !== '');
+
+  async function submit() {
+    setError(null);
+    setSubmitting(true);
+    try {
+      await callApi((token) =>
+        proxyPostQuote(token, askId, {
+          sellerCounterpartyId: seller.sellerCounterpartyId,
+          ratePaiseForIndore: Math.round(Number(rupees) * 100),
+          qtyAvailable: Number(qty),
+          expiryBand,
+          expiryExact,
+          deliveryBand,
+          provenance,
+          batch: provenance === 'auth' ? batch.trim() : undefined,
+          daysToIndore: Number(days),
+          callNote: callNote.trim(),
+        }),
+      );
+      onDone();
+    } catch (submitError) {
+      setError(submitError instanceof ApiError ? submitError.message : 'Could not raise this quote.');
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  const id = (name: string) => `rq-${askId}-${seller.sellerId}-${name}`;
+  return (
+    <div className="mt-2 flex w-full flex-col gap-3 rounded border border-slate-200 p-3">
+      <p className="text-slate-500">
+        Raised on {seller.firm}&apos;s behalf, on a call. Same checks as his own quote.
+      </p>
+      <div className="grid max-w-3xl grid-cols-2 gap-3 md:grid-cols-4">
+        <Input
+          id={id('rate')}
+          label="Rate for Indore (₹)"
+          type="number"
+          min={0}
+          step="0.01"
+          value={rupees}
+          onChange={(e) => setRupees(e.target.value)}
+        />
+        <Input
+          id={id('qty')}
+          label="Boxes available"
+          type="number"
+          min={1}
+          value={qty}
+          onChange={(e) => setQty(e.target.value)}
+        />
+        <Input
+          id={id('days')}
+          label="Days to Indore"
+          type="number"
+          min={0}
+          value={days}
+          onChange={(e) => setDays(e.target.value)}
+        />
+        <Input
+          id={id('expiry')}
+          label="Exact expiry (MM/YYYY)"
+          value={expiryExact}
+          onChange={(e) => setExpiryExact(e.target.value)}
+        />
+        <Select
+          id={id('band')}
+          label="Expiry band"
+          value={expiryBand}
+          onChange={(e) => setExpiryBand(e.target.value as 'over12' | 'under12')}
+        >
+          <option value="over12">Over 12 months</option>
+          <option value="under12">Under 12 months</option>
+        </Select>
+        <Select
+          id={id('delivery')}
+          label="Delivery"
+          value={deliveryBand}
+          onChange={(e) => setDeliveryBand(e.target.value as '48h' | '2-5d')}
+        >
+          <option value="48h">48 hours</option>
+          <option value="2-5d">2–5 days</option>
+        </Select>
+        <Select
+          id={id('prov')}
+          label="Stock"
+          value={provenance}
+          onChange={(e) => setProvenance(e.target.value as 'company' | 'auth')}
+        >
+          <option value="company">Company stock</option>
+          <option value="auth">His own (authorised) stock</option>
+        </Select>
+        {provenance === 'auth' && (
+          <Input
+            id={id('batch')}
+            label="Batch"
+            value={batch}
+            onChange={(e) => setBatch(e.target.value)}
+          />
+        )}
+      </div>
+      <Textarea
+        id={id('note')}
+        label="Call note"
+        required
+        value={callNote}
+        onChange={(e) => setCallNote(e.target.value)}
+      />
+      {error && (
+        <p role="alert" className="text-danger-500">
+          {error}
+        </p>
+      )}
+      <div>
+        <Button loading={submitting} disabled={!ready} onClick={() => void submit()}>
+          Raise quote
+        </Button>
+      </div>
+    </div>
   );
 }
 

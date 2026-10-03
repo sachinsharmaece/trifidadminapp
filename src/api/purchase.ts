@@ -33,6 +33,7 @@ export function getQuoteGaps(accessToken: string, askId: string): Promise<AskQuo
 
 export interface AskSellerStateItem {
   sellerId: string;
+  sellerCounterpartyId: string;
   firm: string;
   state: 'quoted' | 'listed' | 'carries';
   ratePaise: number | null;
@@ -83,6 +84,29 @@ export function getProductAnalysis(
   productId: string,
 ): Promise<ProductAnalysis> {
   return apiFetch(`/staff/purchase/products/${productId}/analysis`, { accessToken });
+}
+
+export interface ProductSellerListedPack {
+  packLabel: string;
+  ratePaise: number;
+  qty: number;
+  expiryBand: string;
+  deliveryBand: string;
+  moqExact: number;
+}
+
+export interface ProductSellerItem {
+  sellerId: string;
+  firm: string;
+  state: 'listed' | 'carries';
+  listings: ProductSellerListedPack[];
+}
+
+export function getProductSellers(
+  accessToken: string,
+  productId: string,
+): Promise<ProductSellerItem[]> {
+  return apiFetch(`/staff/purchase/products/${productId}/sellers`, { accessToken });
 }
 
 // IC-06 — never the cap, never the two source rates.

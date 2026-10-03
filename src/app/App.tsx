@@ -30,6 +30,7 @@ import { EnterListingPage } from '../desks/purchase/EnterListingPage';
 import { SupplyMatrixPage } from '../desks/purchase/SupplyMatrixPage';
 import { RecoveryPage } from '../desks/purchase/RecoveryPage';
 import { PurchaseProductsPage } from '../desks/purchase/PurchaseProductsPage';
+import { PurchaseProductDetailPage } from '../desks/purchase/PurchaseProductDetailPage';
 import { SalesLayout } from '../desks/sales/SalesLayout';
 import { SalesTodayPage } from '../desks/sales/SalesTodayPage';
 import { SalesFunnelPage } from '../desks/sales/SalesFunnelPage';
@@ -220,6 +221,7 @@ export function App() {
           <Route path="matrix" element={<SupplyMatrixPage />} />
           <Route path="recovery" element={<RecoveryPage />} />
           <Route path="products" element={<PurchaseProductsPage />} />
+          <Route path="products/:productId" element={<PurchaseProductDetailPage />} />
         </Route>
         <Route
           path="/sales"

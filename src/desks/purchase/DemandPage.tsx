@@ -274,7 +274,9 @@ function RaiseQuoteForm({
       );
       onDone();
     } catch (submitError) {
-      setError(submitError instanceof ApiError ? submitError.message : 'Could not raise this quote.');
+      setError(
+        submitError instanceof ApiError ? submitError.message : 'Could not raise this quote.',
+      );
     } finally {
       setSubmitting(false);
     }

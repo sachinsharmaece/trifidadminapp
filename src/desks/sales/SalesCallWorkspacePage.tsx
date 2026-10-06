@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useState } from 'react';
 import type { FormEvent } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { FiArrowLeft, FiCheck, FiX, FiPhoneCall } from 'react-icons/fi';
@@ -15,12 +15,11 @@ import {
 import { PackPicker } from '../enquiries/enquiryPickers';
 import {
   getSalesBuyerFile,
-  getSalesBoardProduct,
+  getSalesBoardForBuyer,
   createCallLog,
   listCallLogsForBuyer,
   type BuyerFileDto,
-  type BuyerProductHistoryRow,
-  type BoardProductDetail,
+  type BoardForBuyerProduct,
   type CallLogDto,
   type CallOutcome,
   type CallLogUpdateKind,
@@ -116,7 +115,7 @@ export function SalesCallWorkspacePage() {
                 {file.tier && ` · ${file.tier}`}
               </p>
             </div>
-            <BoardForHimSection buyerId={buyerId} productHistory={file.productHistory} />
+            <BoardForHimSection buyerId={buyerId} />
 
             <DirectionToggle direction={direction} onChange={setDirection} />
 
@@ -163,46 +162,26 @@ function DirectionToggle({
 }
 
 /**
- * "On the board for him" — only his own product history (capped at 5), not
- * the whole catalogue: this fetches a handful of `getSalesBoardProduct`
- * calls, never `getSalesBoard()` followed by one call per catalog product.
+ * "On the board for him" — everything available for him to buy, which is what
+ * reaches his tehsil (client item 16). It is never his order history: a buyer
+ * who has never ordered sees the same board as one who orders every week.
  */
-function BoardForHimSection({
-  buyerId,
-  productHistory,
-}: {
-  buyerId: string;
-  productHistory: BuyerProductHistoryRow[];
-}) {
+function BoardForHimSection({ buyerId }: { buyerId: string }) {
   const { callApi } = useAuth();
-  const capped = useMemo(() => productHistory.slice(0, 5), [productHistory]);
   const loader = useCallback(
-    () =>
-      callApi((token) =>
-        Promise.all(capped.map((p) => getSalesBoardProduct(token, p.productId, { buyerId }))),
-      ),
-    [callApi, buyerId, capped],
+    () => callApi((token) => getSalesBoardForBuyer(token, buyerId)),
+    [callApi, buyerId],
   );
   const { state, retry } = useAsyncData(loader, (items) => items.length === 0, [loader]);
-
-  if (productHistory.length === 0) {
-    return (
-      <Card title="On the board for him">
-        <p className="text-sm text-slate-500">
-          He has never ordered — nothing to show him from his own history yet.
-        </p>
-      </Card>
-    );
-  }
 
   return (
     <Card title="On the board for him">
       <AsyncBoundary
         state={state}
         onRetry={retry}
-        emptyMessage="Nothing on the board for his products right now."
+        emptyMessage="Nothing on the board reaches his tehsil right now."
       >
-        {(details: BoardProductDetail[]) => (
+        {(details: BoardForBuyerProduct[]) => (
           <div className="flex flex-col gap-5">
             {details.map((detail) => (
               <BoardProductBlock key={detail.productId} buyerId={buyerId} detail={detail} />
@@ -214,7 +193,7 @@ function BoardForHimSection({
   );
 }
 
-function BoardProductBlock({ buyerId, detail }: { buyerId: string; detail: BoardProductDetail }) {
+function BoardProductBlock({ buyerId, detail }: { buyerId: string; detail: BoardForBuyerProduct }) {
   const { callApi } = useAuth();
   const { show } = useToast();
   const [submittingLine, setSubmittingLine] = useState<string | null>(null);

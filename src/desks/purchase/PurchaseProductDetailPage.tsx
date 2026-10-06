@@ -115,9 +115,7 @@ export function PurchaseProductDetailPage() {
                 <Button
                   variant="secondary"
                   size="sm"
-                  onClick={() =>
-                    navigate(`/purchase/matrix?q=${encodeURIComponent(d.technical)}`)
-                  }
+                  onClick={() => navigate(`/purchase/matrix?q=${encodeURIComponent(d.technical)}`)}
                 >
                   Who could carry it →
                 </Button>
@@ -161,7 +159,9 @@ export function PurchaseProductDetailPage() {
                               className="cursor-pointer hover:bg-slate-50"
                               onClick={() => navigate(`/purchase/sellers/${s.sellerId}`)}
                             >
-                              <Td className="font-medium text-brand-600">{i === 0 ? s.firm : ''}</Td>
+                              <Td className="font-medium text-brand-600">
+                                {i === 0 ? s.firm : ''}
+                              </Td>
                               <Td>{l.packLabel}</Td>
                               <Td numeric>{formatRupees(l.ratePaise)}</Td>
                               <Td numeric>{l.qty}</Td>
@@ -169,9 +169,7 @@ export function PurchaseProductDetailPage() {
                                 <div className="flex flex-wrap gap-1">
                                   <Badge variant="chip">{expiryBandLabel(l.expiryBand)}</Badge>
                                   <Badge variant="chip">{deliveryBandLabel(l.deliveryBand)}</Badge>
-                                  {l.moqExact > 1 && (
-                                    <Badge variant="chip">MOQ {l.moqExact}</Badge>
-                                  )}
+                                  {l.moqExact > 1 && <Badge variant="chip">MOQ {l.moqExact}</Badge>}
                                 </div>
                               </Td>
                             </tr>

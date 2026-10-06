@@ -210,6 +210,35 @@ export function getSalesBoardProduct(
   return apiFetch(`/staff/sales/board/${productId}${qs ? `?${qs}` : ''}`, { accessToken });
 }
 
+/** One priced line that reaches a buyer's tehsil — his own tier rate, no seller identity. */
+export interface BoardForBuyerLine {
+  listingLineId: string;
+  skuId: string;
+  packLabel: string;
+  ratePaise: number;
+  qty: number;
+  expiryBand: string;
+  moqBand: string;
+  deliveryBand: string;
+  provenance: string;
+}
+
+export interface BoardForBuyerProduct {
+  productId: string;
+  brand: string;
+  technicalName: string;
+  manufacturerName: string;
+  ladder: BoardForBuyerLine[];
+}
+
+/** "On the board for him" — everything that reaches his tehsil, never his order history (item 16). */
+export function getSalesBoardForBuyer(
+  accessToken: string,
+  buyerId: string,
+): Promise<BoardForBuyerProduct[]> {
+  return apiFetch(`/staff/sales/buyers/${buyerId}/board`, { accessToken });
+}
+
 // ---------------------------------------------------------------------------
 // Sales desk v2 — pools.
 // ---------------------------------------------------------------------------

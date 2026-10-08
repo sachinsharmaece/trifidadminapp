@@ -222,7 +222,9 @@ export function SellerFilePage() {
                       <tbody>
                         {file.openDemand.map((d) => (
                           <tr key={d.askId}>
-                            <Td className="font-mono text-xs">{d.askId.slice(-6)}</Td>
+                            <Td>
+                              {d.brand} · {d.technical}
+                            </Td>
                             <Td numeric>{d.qty}</Td>
                             <Td numeric>
                               {d.ageHours >= 24

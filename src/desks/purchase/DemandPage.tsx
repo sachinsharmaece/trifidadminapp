@@ -31,6 +31,9 @@ const SUPPLY_GAP_CODES = [
   'no_seller_in_scope',
 ] as const;
 
+// The reason picker + "Log reason" button are hidden for now; flip to true to bring them back.
+const SHOW_NON_ORDER_REASON = false;
+
 export function DemandPage() {
   const { callApi } = useAuth();
   const [noSellerOnly, setNoSellerOnly] = useState(false);
@@ -121,7 +124,7 @@ function DemandRow({ item, onRecorded }: { item: ActiveDemandItem; onRecorded: (
           )}
         </Td>
         <Td onClick={(e) => e.stopPropagation()}>
-          <NonOrderReasonForm askId={item.askId} onRecorded={onRecorded} />
+          {SHOW_NON_ORDER_REASON && <NonOrderReasonForm askId={item.askId} onRecorded={onRecorded} />}
         </Td>
         <Td />
       </tr>

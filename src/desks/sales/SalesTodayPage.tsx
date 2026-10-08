@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { getSalesWorklist, getMarketPulse, type SalesWorkItem } from '../../api/sales';
 import { allocateUpcomingReceipt, getUpcomingReceipts } from '../../api/payment';
 import { ApiError } from '../../api/errors';
@@ -115,12 +115,27 @@ const REF_LABEL: Record<SalesWorkItem['refType'], string> = {
 const linkClass = 'underline-offset-2 hover:underline';
 
 function WorkRow({ item }: { item: SalesWorkItem }) {
+  const navigate = useNavigate();
   const isMarket = item.bucket === 'market';
   const due = item.dueAt ? new Date(item.dueAt) : null;
   const overdue = due ? due < new Date() : false;
-  // Name first; the short id is only a fallback for an item whose product can't be resolved.
-  const title = item.productName ?? `${REF_LABEL[item.refType]} …${item.refId.slice(-6)}`;
+  const idLabel = `${REF_LABEL[item.refType]} …${item.refId.slice(-6)}`;
 
+  // The party leads, as it did before product names came in — and the whole row opens his
+  // file. A market row has no buyer (it's an area × product cell), so there the product leads.
+  const hasBuyer = !!item.buyerId;
+  const title = hasBuyer ? item.buyerFirm || idLabel : (item.productName ?? idLabel);
+
+  const productLink =
+    item.productId && item.productName ? (
+      <Link
+        to={`/sales/products/${item.productId}`}
+        onClick={(e) => e.stopPropagation()}
+        className={`text-slate-700 ${linkClass}`}
+      >
+        {item.productName}
+      </Link>
+    ) : null;
   const details = [
     isMarket
       ? item.tehsilName
@@ -128,12 +143,39 @@ function WorkRow({ item }: { item: SalesWorkItem }) {
         : 'Rising'
       : REF_LABEL[item.refType],
     item.qty != null ? `${item.qty} boxes` : null,
+    due ? `due ${due.toLocaleString()}` : null,
   ].filter(Boolean);
 
-  return (
+  const content = (
+    <>
+      <div className="flex flex-col text-left">
+        <span className="text-sm font-semibold text-slate-900">{title}</span>
+        <span className="text-xs text-slate-500">
+          {hasBuyer && productLink}
+          {hasBuyer && productLink && details.length > 0 && ' · '}
+          {details.join(' · ')}
+        </span>
+      </div>
+      {due && <Badge tone={overdue ? 'bad' : 'warn'}>{overdue ? 'overdue' : 'due'}</Badge>}
+    </>
+  );
+
+  return hasBuyer ? (
+    <div
+      role="link"
+      tabIndex={0}
+      onClick={() => navigate(`/sales/buyers/${item.buyerId}`)}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter') navigate(`/sales/buyers/${item.buyerId}`);
+      }}
+      className="flex cursor-pointer items-center justify-between gap-3 px-4 py-3 hover:bg-slate-50"
+    >
+      {content}
+    </div>
+  ) : (
     <div className="flex items-center justify-between gap-3 px-4 py-3">
       <div className="flex flex-col text-left">
-        {item.productId ? (
+        {productLink ? (
           <Link
             to={`/sales/products/${item.productId}`}
             className={`text-sm font-semibold text-slate-900 ${linkClass}`}
@@ -143,18 +185,7 @@ function WorkRow({ item }: { item: SalesWorkItem }) {
         ) : (
           <span className="text-sm font-semibold text-slate-900">{title}</span>
         )}
-        <span className="text-xs text-slate-500">
-          {details.join(' · ')}
-          {item.buyerId && (
-            <>
-              {details.length > 0 && ' · '}
-              <Link to={`/sales/buyers/${item.buyerId}`} className={`text-slate-700 ${linkClass}`}>
-                {item.buyerFirm || 'Open buyer'}
-              </Link>
-            </>
-          )}
-          {due && ` · due ${due.toLocaleString()}`}
-        </span>
+        <span className="text-xs text-slate-500">{details.join(' · ')}</span>
       </div>
       {due && <Badge tone={overdue ? 'bad' : 'warn'}>{overdue ? 'overdue' : 'due'}</Badge>}
     </div>

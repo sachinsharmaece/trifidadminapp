@@ -119,6 +119,7 @@ export function SalesBuyerFilePage() {
                     <Table>
                       <thead>
                         <tr>
+                          <Th>Product</Th>
                           <Th numeric>Qty</Th>
                           <Th>State</Th>
                           <Th />
@@ -127,6 +128,13 @@ export function SalesBuyerFilePage() {
                       <tbody>
                         {file.openAsks.map((a) => (
                           <tr key={a.askId}>
+                            <Td>
+                              <div className="font-medium text-slate-900">
+                                {a.brand}
+                                {a.packLabel ? ` · ${a.packLabel}` : ''}
+                              </div>
+                              <div className="text-xs text-slate-500">{a.technical}</div>
+                            </Td>
                             <Td numeric>{a.qty}</Td>
                             <Td>
                               <Badge tone="neutral">{a.state}</Badge>

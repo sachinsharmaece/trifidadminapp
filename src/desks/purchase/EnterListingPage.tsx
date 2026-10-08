@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useState } from 'react';
 import type { FormEvent } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { FiArrowLeft, FiPhoneCall } from 'react-icons/fi';
 import { getSellerFile, type SellerFileDto } from '../../api/purchase';
 import { proxyCreateListing } from '../../api/proxy';
@@ -69,7 +69,12 @@ function ListingForm({ file }: { file: SellerFileDto }) {
   const blocked = packs.filter((p) => !p.eligible);
   const eligible = packs.filter((p) => p.eligible);
 
-  const [skuId, setSkuId] = useState('');
+  // "Add to listing" on the seller file's catalogue lands here with ?productId= —
+  // preselect that product's first selectable pack so the rep only fills the rate.
+  const preselectProductId = useSearchParams()[0].get('productId');
+  const [skuId, setSkuId] = useState(
+    () => (preselectProductId && eligible.find((p) => p.productId === preselectProductId)?.skuId) || '',
+  );
   // Sellers quote a rate in rupees on the phone (BR-055 stores it in paise,
   // but nobody speaks paise) — the field takes rupees and this converts,
   // rather than storing whatever's typed as paise directly.

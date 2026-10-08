@@ -432,3 +432,35 @@ export interface SalesFunnelReport {
 export function getSalesFunnel(accessToken: string): Promise<SalesFunnelReport> {
   return apiFetch('/staff/sales/funnel', { accessToken });
 }
+
+// The records behind the Funnel's "Asked" and "Rate held" counts.
+interface FunnelDrillRowBase {
+  buyerId: string;
+  buyerFirm: string;
+  productId: string | null;
+  brand: string;
+  technical: string;
+  packLabel: string | null;
+  qty: number;
+}
+
+export interface FunnelAskRow extends FunnelDrillRowBase {
+  askId: string;
+  state: string;
+  createdAt: string;
+  pastSla: boolean;
+}
+
+export interface FunnelHeldRateRow extends FunnelDrillRowBase {
+  quoteId: string;
+  askId: string;
+  heldUntil: string;
+}
+
+export function getFunnelAsks(accessToken: string): Promise<FunnelAskRow[]> {
+  return apiFetch('/staff/sales/funnel/asked', { accessToken });
+}
+
+export function getFunnelHeldRates(accessToken: string): Promise<FunnelHeldRateRow[]> {
+  return apiFetch('/staff/sales/funnel/rate-held', { accessToken });
+}

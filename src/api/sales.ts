@@ -6,6 +6,11 @@ export interface SalesWorkItem {
   refId: string;
   buyerId?: string;
   dueAt?: string;
+  productId?: string;
+  productName?: string;
+  buyerFirm?: string;
+  tehsilName?: string;
+  qty?: number;
 }
 
 export function getSalesWorklist(accessToken: string): Promise<SalesWorkItem[]> {
@@ -325,6 +330,9 @@ export interface BuyerFileOpenAsk {
   skuId: string | null;
   qty: number;
   state: string;
+  brand: string;
+  technical: string;
+  packLabel: string | null;
 }
 
 // BR-030/031 — the coarse 7-step chain-strip position; `state` above is the

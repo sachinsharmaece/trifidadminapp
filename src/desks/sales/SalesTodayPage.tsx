@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { getSalesWorklist, getMarketPulse, type SalesWorkItem } from '../../api/sales';
 import { allocateUpcomingReceipt, getUpcomingReceipts } from '../../api/payment';
 import { ApiError } from '../../api/errors';
@@ -65,7 +65,6 @@ export function SalesTodayPage() {
 }
 
 function Worklist({ items, risingCount }: { items: SalesWorkItem[]; risingCount: number | null }) {
-  const navigate = useNavigate();
   const grouped = useMemo(() => {
     const map = new Map<SalesWorkItem['bucket'], SalesWorkItem[]>();
     for (const bucket of BUCKET_ORDER) map.set(bucket, []);
@@ -97,11 +96,7 @@ function Worklist({ items, risingCount }: { items: SalesWorkItem[]; risingCount:
           <p className="mb-3 text-sm text-slate-500">{BUCKET_NOTE[bucket]}</p>
           <div className="flex flex-col divide-y divide-slate-100 overflow-hidden rounded-md border border-slate-200">
             {grouped.get(bucket)!.map((item, index) => (
-              <WorkRow
-                key={`${item.refType}-${item.refId}-${index}`}
-                item={item}
-                onOpen={item.buyerId ? () => navigate(`/sales/buyers/${item.buyerId}`) : undefined}
-              />
+              <WorkRow key={`${item.refType}-${item.refId}-${index}`} item={item} />
             ))}
           </div>
         </Card>
@@ -110,35 +105,59 @@ function Worklist({ items, risingCount }: { items: SalesWorkItem[]; risingCount:
   );
 }
 
-function WorkRow({ item, onOpen }: { item: SalesWorkItem; onOpen?: () => void }) {
+const REF_LABEL: Record<SalesWorkItem['refType'], string> = {
+  so: 'Order',
+  po: 'Purchase order',
+  ask: 'Ask',
+  quote: 'Rate held',
+};
+
+const linkClass = 'underline-offset-2 hover:underline';
+
+function WorkRow({ item }: { item: SalesWorkItem }) {
   const isMarket = item.bucket === 'market';
-  const [tehsilId, productId] = isMarket ? item.refId.split(':') : [null, null];
-  const main = isMarket
-    ? `Tehsil …${(tehsilId ?? '').slice(-6)} × product …${(productId ?? '').slice(-6)}`
-    : `${item.refType.toUpperCase()} …${item.refId.slice(-6)}`;
   const due = item.dueAt ? new Date(item.dueAt) : null;
   const overdue = due ? due < new Date() : false;
+  // Name first; the short id is only a fallback for an item whose product can't be resolved.
+  const title = item.productName ?? `${REF_LABEL[item.refType]} …${item.refId.slice(-6)}`;
 
-  const content = (
-    <>
+  const details = [
+    isMarket
+      ? item.tehsilName
+        ? `Rising in ${item.tehsilName}`
+        : 'Rising'
+      : REF_LABEL[item.refType],
+    item.qty != null ? `${item.qty} boxes` : null,
+  ].filter(Boolean);
+
+  return (
+    <div className="flex items-center justify-between gap-3 px-4 py-3">
       <div className="flex flex-col text-left">
-        <span className="text-sm font-semibold text-slate-900">{main}</span>
-        {due && <span className="text-xs text-slate-500">due {due.toLocaleString()}</span>}
+        {item.productId ? (
+          <Link
+            to={`/sales/products/${item.productId}`}
+            className={`text-sm font-semibold text-slate-900 ${linkClass}`}
+          >
+            {title}
+          </Link>
+        ) : (
+          <span className="text-sm font-semibold text-slate-900">{title}</span>
+        )}
+        <span className="text-xs text-slate-500">
+          {details.join(' · ')}
+          {item.buyerId && (
+            <>
+              {details.length > 0 && ' · '}
+              <Link to={`/sales/buyers/${item.buyerId}`} className={`text-slate-700 ${linkClass}`}>
+                {item.buyerFirm || 'Open buyer'}
+              </Link>
+            </>
+          )}
+          {due && ` · due ${due.toLocaleString()}`}
+        </span>
       </div>
       {due && <Badge tone={overdue ? 'bad' : 'warn'}>{overdue ? 'overdue' : 'due'}</Badge>}
-    </>
-  );
-
-  return onOpen ? (
-    <button
-      type="button"
-      onClick={onOpen}
-      className="flex items-center justify-between gap-3 px-4 py-3 text-left hover:bg-slate-50"
-    >
-      {content}
-    </button>
-  ) : (
-    <div className="flex items-center justify-between gap-3 px-4 py-3">{content}</div>
+    </div>
   );
 }
 

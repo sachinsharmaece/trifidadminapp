@@ -92,7 +92,7 @@ function BuyerListTab({ tab }: { tab: BookQueueTab }) {
     <div className="flex flex-col gap-4">
       <Input
         label="Search"
-        placeholder="Firm, GSTIN, tehsil…"
+        placeholder="Firm, owner, mobile, GSTIN, tehsil…"
         value={q}
         onChange={(e) => setQ(e.target.value)}
       />
@@ -205,7 +205,7 @@ function BuyerTable({
     const needle = q.trim().toLowerCase();
     if (!needle) return items;
     return items.filter((b) =>
-      [b.firm, b.gstin, b.tehsil].some((field) => field?.toLowerCase().includes(needle)),
+      [b.firm, b.contactName, b.mobile, b.gstin, b.tehsil, b.ownerName].some((field) => field?.toLowerCase().includes(needle)),
     );
   }, [items, q]);
 

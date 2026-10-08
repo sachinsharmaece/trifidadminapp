@@ -296,7 +296,9 @@ export interface BuyerListRow {
   orderCount: number;
   lastOrderAt: string | null;
   rateViews: number;
-  ownerName: string | null;
+  ownerName: string | null; // Sales employee whose book he is in.
+  contactName: string | null; // The firm's own owner.
+  mobile: string | null;
 }
 
 export function listSalesBuyers(

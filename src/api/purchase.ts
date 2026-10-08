@@ -270,6 +270,8 @@ export interface SellerOpenDemandItem {
   qty: number;
   ageHours: number;
   hasQuoted: boolean;
+  brand: string;
+  technical: string;
 }
 
 export interface SellerFileDto {

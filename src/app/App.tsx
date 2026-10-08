@@ -50,6 +50,7 @@ import { PurchaseProductDetailPage } from '../desks/purchase/PurchaseProductDeta
 import { SalesLayout } from '../desks/sales/SalesLayout';
 import { SalesTodayPage } from '../desks/sales/SalesTodayPage';
 import { SalesFunnelPage } from '../desks/sales/SalesFunnelPage';
+import { SalesFunnelAskedPage, SalesFunnelRateHeldPage } from '../desks/sales/SalesFunnelListPage';
 import { SalesProductsPage } from '../desks/sales/SalesProductsPage';
 import { SalesProductDetailPage } from '../desks/sales/SalesProductDetailPage';
 import { SalesPoolsPage } from '../desks/sales/SalesPoolsPage';
@@ -274,6 +275,8 @@ export function App() {
         >
           <Route index element={<SalesTodayPage />} />
           <Route path="funnel" element={<SalesFunnelPage />} />
+          <Route path="funnel/asked" element={<SalesFunnelAskedPage />} />
+          <Route path="funnel/rate-held" element={<SalesFunnelRateHeldPage />} />
           <Route path="products" element={<SalesProductsPage />} />
           <Route path="products/:productId" element={<SalesProductDetailPage />} />
           <Route path="pools" element={<SalesPoolsPage />} />

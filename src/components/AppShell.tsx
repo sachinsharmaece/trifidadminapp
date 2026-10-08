@@ -25,6 +25,7 @@ import {
   FiPhoneCall,
 } from 'react-icons/fi';
 import { useAuth } from '../auth/AuthContext';
+import { listSalesBuyers, type BuyerListRow } from '../api/sales';
 import { PERMISSIONS } from '../lib/permissions';
 import { ToastProvider } from './ui/Toast';
 
@@ -212,37 +213,104 @@ function SidebarLinks({ onNavigate }: { onNavigate?: () => void }) {
 
 /**
  * A quick "log a call" jump — Sales-only, so it's scoped to `/sales/*`
- * rather than living in the sidebar. Typing a buyer's counterparty ID here
- * and submitting takes the rep straight to that buyer's call workspace
- * (`/sales/call/:buyerId`) without first opening his buyer file.
+ * rather than living in the sidebar. Type a firm, owner, mobile or GSTIN,
+ * pick the buyer, and it takes the rep straight to his call workspace
+ * (`/sales/call/:buyerId`) without first opening his buyer file. The route
+ * takes the buyer's own id, not the counterparty id the box used to ask for,
+ * so the rep picks a name and never has to know either.
  */
 function SalesQuickCallControl() {
   const location = useLocation();
   const navigate = useNavigate();
-  const [buyerId, setBuyerId] = useState('');
+  const { callApi } = useAuth();
+  const [text, setText] = useState('');
+  const [buyers, setBuyers] = useState<BuyerListRow[] | null>(null);
+  const [open, setOpen] = useState(false);
 
   if (!location.pathname.startsWith('/sales')) return null;
 
+  const needle = text.trim().toLowerCase();
+  const matches = needle
+    ? (buyers ?? [])
+        .filter((b) =>
+          [b.firm, b.contactName, b.mobile, b.gstin, b.tehsil].some((f) =>
+            f?.toLowerCase().includes(needle),
+          ),
+        )
+        .slice(0, 8)
+    : [];
+
+  function loadBuyers(): void {
+    if (buyers !== null) return;
+    void callApi((token) => listSalesBuyers(token))
+      .then(setBuyers)
+      .catch(() => setBuyers([]));
+  }
+
+  function go(buyerId: string): void {
+    setOpen(false);
+    setText('');
+    navigate(`/sales/call/${buyerId}`);
+  }
+
   return (
     <form
-      className="mb-4 flex items-center justify-end gap-2"
+      className="relative mb-4 flex items-center justify-end gap-2"
       onSubmit={(event) => {
         event.preventDefault();
-        const trimmed = buyerId.trim();
-        if (trimmed) navigate(`/sales/call/${trimmed}`);
+        if (matches.length === 1) go(matches[0].buyerId);
       }}
     >
-      <input
-        type="text"
-        value={buyerId}
-        onChange={(e) => setBuyerId(e.target.value)}
-        placeholder="Buyer counterparty ID"
-        aria-label="Buyer counterparty ID"
-        className="w-48 rounded-md border border-slate-300 bg-white px-2.5 py-1.5 text-sm text-slate-900 placeholder:text-slate-400 focus:border-brand-500 focus:outline focus:outline-2 focus:outline-brand-500/30"
-      />
+      <div className="relative">
+        <input
+          type="text"
+          value={text}
+          onChange={(e) => {
+            setText(e.target.value);
+            setOpen(true);
+          }}
+          onFocus={() => {
+            loadBuyers();
+            setOpen(true);
+          }}
+          onBlur={() => setOpen(false)}
+          placeholder="Firm, owner, mobile or GSTIN"
+          aria-label="Find a buyer to log a call"
+          className="w-64 rounded-md border border-slate-300 bg-white px-2.5 py-1.5 text-sm text-slate-900 placeholder:text-slate-400 focus:border-brand-500 focus:outline focus:outline-2 focus:outline-brand-500/30"
+        />
+        {open && needle && (
+          <ul className="absolute right-0 z-20 mt-1 max-h-72 w-80 overflow-auto rounded-md border border-slate-200 bg-white py-1 text-sm shadow-lg">
+            {buyers === null ? (
+              <li className="px-3 py-2 text-slate-500">Loading…</li>
+            ) : matches.length === 0 ? (
+              <li className="px-3 py-2 text-slate-500">No buyer matches &quot;{text.trim()}&quot;.</li>
+            ) : (
+              matches.map((b) => (
+                <li key={b.buyerId}>
+                  <button
+                    type="button"
+                    // onMouseDown, not onClick: the input's blur would close the list first.
+                    onMouseDown={(e) => {
+                      e.preventDefault();
+                      go(b.buyerId);
+                    }}
+                    className="block w-full px-3 py-2 text-left hover:bg-slate-50"
+                  >
+                    <span className="font-medium text-slate-900">{b.firm || '(no firm name)'}</span>
+                    <span className="block text-xs text-slate-500">
+                      {[b.contactName, b.mobile, b.tehsil].filter(Boolean).join(' · ')}
+                    </span>
+                  </button>
+                </li>
+              ))
+            )}
+          </ul>
+        )}
+      </div>
       <button
         type="submit"
-        disabled={!buyerId.trim()}
+        disabled={matches.length !== 1}
+        title={matches.length === 1 ? undefined : 'Pick a buyer from the list'}
         className="inline-flex items-center gap-1.5 rounded-md bg-brand-500 px-3 py-1.5 text-sm font-medium text-white hover:bg-brand-600 disabled:cursor-not-allowed disabled:bg-brand-500/50"
       >
         <FiPhoneCall aria-hidden />

@@ -8,14 +8,15 @@ import { Card } from '../../components/ui/Card';
 import { Badge } from '../../components/ui/Badge';
 
 // B-34 — the joints weren't clickable at all. Only wired where a screen
-// actually exists to show the records behind that count; `asked`,
-// `rate_held` and `ordered_again` have no dedicated Sales-desk list yet, so
-// they stay static rather than linking somewhere that wouldn't answer the
-// question a click implies.
+// actually exists to show the records behind that count; `ordered_again` has
+// no dedicated Sales-desk list yet, so it stays static rather than linking
+// somewhere that wouldn't answer the question a click implies.
 const FUNNEL_DESTINATIONS: Partial<Record<SalesFunnelMetric['key'], string>> = {
   registered: '/registrations',
   classified: '/sales/buyers',
   viewing: '/sales/buyers',
+  asked: '/sales/funnel/asked',
+  rate_held: '/sales/funnel/rate-held',
   took_it: '/sales/orders',
   paid: '/sales/orders',
   delivered: '/sales/orders',

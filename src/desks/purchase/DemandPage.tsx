@@ -1,5 +1,5 @@
 import { useCallback, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { FiFlag } from 'react-icons/fi';
 import {
   getActiveDemandList,
@@ -12,6 +12,7 @@ import {
 import { AsyncBoundary } from '../../components/AsyncBoundary';
 import { useAsyncData } from '../../lib/useAsyncData';
 import { useAuth } from '../../auth/AuthContext';
+import { PERMISSIONS } from '../../lib/permissions';
 import { Card } from '../../components/ui/Card';
 import { Table, Th, Td } from '../../components/ui/Table';
 import { Badge } from '../../components/ui/Badge';
@@ -29,6 +30,9 @@ const SUPPLY_GAP_CODES = [
   'quantity_short',
   'no_seller_in_scope',
 ] as const;
+
+// The reason picker + "Log reason" button are hidden for now; flip to true to bring them back.
+const SHOW_NON_ORDER_REASON = false;
 
 export function DemandPage() {
   const { callApi } = useAuth();
@@ -120,7 +124,7 @@ function DemandRow({ item, onRecorded }: { item: ActiveDemandItem; onRecorded: (
           )}
         </Td>
         <Td onClick={(e) => e.stopPropagation()}>
-          <NonOrderReasonForm askId={item.askId} onRecorded={onRecorded} />
+          {SHOW_NON_ORDER_REASON && <NonOrderReasonForm askId={item.askId} onRecorded={onRecorded} />}
         </Td>
         <Td />
       </tr>
@@ -178,19 +182,37 @@ function SellerStateRow({
   seller: AskSellerStateItem;
   onQuoted: () => void;
 }) {
-  const { callApi } = useAuth();
+  const { callApi, hasPermission } = useAuth();
   const [chased, setChased] = useState(false);
   const [quoting, setQuoting] = useState(false);
   const { label, tone } = SELLER_STATE_LABEL[s.state];
+  // The party ledger sits behind chain:read_full (Accounts, Controller, Founder, Admin) —
+  // Purchase doesn't hold it, so it gets the seller file link only, never a dead one.
+  const canSeeLedger = hasPermission(PERMISSIONS.CHAIN_READ_FULL);
   return (
     <li className="flex flex-wrap items-center gap-2">
-      <span className="font-medium text-slate-800">{s.firm}</span>
+      <Link
+        to={`/purchase/sellers/${s.sellerId}`}
+        className="font-medium text-slate-800 underline-offset-2 hover:underline"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {s.firm}
+      </Link>
       <Badge tone={tone}>{label}</Badge>
       {s.ratePaise !== null && (
         <span className="text-slate-500">₹{(s.ratePaise / 100).toFixed(2)}</span>
       )}
       {s.gapCodes.length > 0 && (
         <span className="text-danger-500">short: {s.gapCodes.join(', ').replaceAll('_', ' ')}</span>
+      )}
+      {canSeeLedger && (
+        <Link
+          to={`/accounts/party/${s.sellerId}`}
+          className="text-xs text-slate-500 underline-offset-2 hover:underline"
+          onClick={(e) => e.stopPropagation()}
+        >
+          Ledger →
+        </Link>
       )}
       {s.state !== 'quoted' && (
         <Button

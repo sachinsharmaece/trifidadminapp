@@ -1,9 +1,9 @@
 import { useCallback, useState } from 'react';
 import type { FormEvent } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { FiArrowLeft, FiCheck, FiX, FiPhoneCall } from 'react-icons/fi';
+import { FiArrowLeft, FiCheck, FiX, FiPhoneCall, FiPlus } from 'react-icons/fi';
 import {
-  proxyRaiseAsk,
+  proxyRaiseAsks,
   proxyAcceptAskFill,
   proxyDeclineAsk,
   proxyAcceptPromotion,
@@ -447,38 +447,88 @@ function UpdateRequestSection({ buyerId }: { buyerId: string }) {
  * Same validation as the buyer's own POST /asks: no price field exists on
  * this form at all (BR-121), exactly as the real endpoint refuses one sent.
  */
-function LogBuyerCallSection({ buyerCounterpartyId }: { buyerCounterpartyId: string }) {
+interface CallLine {
+  key: number; // Stable across removals, so each line's PackPicker keeps its own selection.
+  skuId: string;
+  qty: number;
+  expiryBand: 'over12' | 'under12';
+  error?: string; // Set when the server refused this line; the line stays so it can be fixed and retried.
+}
+
+function newCallLine(key: number): CallLine {
+  return { key, skuId: '', qty: 1, expiryBand: 'over12' };
+}
+
+export function LogBuyerCallSection({ buyerCounterpartyId }: { buyerCounterpartyId: string }) {
   const { callApi } = useAuth();
-  const [skuId, setSkuId] = useState('');
-  const [skuKey, setSkuKey] = useState(0);
-  const [qty, setQty] = useState(1);
-  const [expiryBand, setExpiryBand] = useState<'over12' | 'under12'>('over12');
+  const [lines, setLines] = useState<CallLine[]>(() => [newCallLine(0)]);
+  const [nextKey, setNextKey] = useState(1);
   const [callNote, setCallNote] = useState('');
-  const [result, setResult] = useState<{ askId: string } | null>(null);
+  const [raised, setRaised] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+
+  const updateLine = (key: number, patch: Partial<CallLine>): void =>
+    setLines((current) => {
+      const line = current.find((l) => l.key === key);
+      // PackPicker re-reports its pack on every render (its callback is a new function each
+      // time), so a no-op update must hand back the same array or this loops forever.
+      if (
+        !line ||
+        (Object.keys(patch) as Array<keyof CallLine>).every((k) => line[k] === patch[k])
+      ) {
+        return current;
+      }
+      return current.map((l) => (l.key === key ? { ...l, ...patch } : l));
+    });
+  const setLineSku = (key: number) => (skuId: string) => updateLine(key, { skuId });
 
   async function handleSubmit(event: FormEvent): Promise<void> {
     event.preventDefault();
     setError(null);
+    setRaised([]);
+    const missing = lines.findIndex((l) => !l.skuId);
+    if (missing !== -1) {
+      setError(`Product ${missing + 1} needs a technical, product and pack — or remove it.`);
+      return;
+    }
     setSubmitting(true);
     try {
-      setResult(
-        await callApi((token) =>
-          proxyRaiseAsk(token, {
-            buyerCounterpartyId,
-            skuId,
-            qty,
-            conditionRequirement: { expiryBand },
-            callNote,
-          }),
-        ),
+      const { results } = await callApi((token) =>
+        proxyRaiseAsks(token, {
+          buyerCounterpartyId,
+          callNote,
+          lines: lines.map((l) => ({
+            skuId: l.skuId,
+            qty: l.qty,
+            conditionRequirement: { expiryBand: l.expiryBand },
+          })),
+        }),
       );
-      setQty(1);
-      setCallNote('');
-      // PackPicker holds its own technical/product/pack state internally —
-      // remounting it is the simplest way to reset the selection after submit.
-      setSkuKey((k) => k + 1);
+      const failedByKey = new Map<number, string>();
+      const askIds: string[] = [];
+      for (const r of results) {
+        if ('askId' in r) askIds.push(r.askId);
+        else failedByKey.set(lines[r.index]!.key, r.error);
+      }
+      setRaised(askIds);
+      if (failedByKey.size === 0) {
+        // All saved — reset to one fresh line and clear the note for the next call.
+        setLines([newCallLine(nextKey)]);
+        setNextKey((k) => k + 1);
+        setCallNote('');
+      } else {
+        // Keep only the refused lines, each with its reason. The saved ones are already raised,
+        // so leaving them here would raise them twice on a retry.
+        setLines(
+          lines
+            .filter((l) => failedByKey.has(l.key))
+            .map((l) => ({ ...l, error: failedByKey.get(l.key) })),
+        );
+        setError(
+          `${askIds.length} of ${results.length} products logged. The rest are below with the reason — fix and log again.`,
+        );
+      }
     } catch (submitError) {
       setError(submitError instanceof ApiError ? submitError.message : 'Could not log this call.');
     } finally {
@@ -489,34 +539,77 @@ function LogBuyerCallSection({ buyerCounterpartyId }: { buyerCounterpartyId: str
   return (
     <Card title="Log a buyer call">
       <p className="mb-4 text-sm text-slate-500">
-        Raises an ask on the buyer&apos;s behalf — same as the buyer&apos;s own screen. He states no
+        Raises an ask on the buyer&apos;s behalf — same as the buyer&apos;s own screen. A call can
+        name several products: each becomes its own ask, all under the one call note. He states no
         price; TriFid never names one before a seller has (BR-121).
       </p>
       <form onSubmit={handleSubmit} className="flex max-w-md flex-col gap-4">
         <Input id="lbc-buyer" label="Buyer counterparty ID" value={buyerCounterpartyId} disabled />
-        <PackPicker key={skuKey} onChange={setSkuId} />
-        <Input
-          id="lbc-qty"
-          label="Quantity (boxes)"
-          type="number"
-          min={1}
-          value={qty}
-          onChange={(e) => setQty(Number(e.target.value))}
-          required
-        />
-        <Select
-          id="lbc-expiry"
-          label="Expiry requirement"
-          value={expiryBand}
-          onChange={(e) => setExpiryBand(e.target.value as typeof expiryBand)}
-        >
-          <option value="over12">Over 12 months</option>
-          <option value="under12">Under 12 months</option>
-        </Select>
+        {lines.map((line, i) => (
+          <fieldset
+            key={line.key}
+            className="flex flex-col gap-4 rounded-md border border-slate-200 p-4"
+          >
+            <legend className="flex items-center gap-2 px-1 text-sm font-semibold text-slate-700">
+              Product {i + 1}
+              {lines.length > 1 && (
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="ghost"
+                  icon={<FiX />}
+                  onClick={() => setLines((current) => current.filter((l) => l.key !== line.key))}
+                >
+                  Remove
+                </Button>
+              )}
+            </legend>
+            <PackPicker onChange={setLineSku(line.key)} />
+            <Input
+              id={`lbc-qty-${line.key}`}
+              label="Quantity (boxes)"
+              type="number"
+              min={1}
+              value={line.qty}
+              onChange={(e) => updateLine(line.key, { qty: Number(e.target.value) })}
+              required
+            />
+            <Select
+              id={`lbc-expiry-${line.key}`}
+              label="Expiry requirement"
+              value={line.expiryBand}
+              onChange={(e) =>
+                updateLine(line.key, { expiryBand: e.target.value as CallLine['expiryBand'] })
+              }
+            >
+              <option value="over12">Over 12 months</option>
+              <option value="under12">Under 12 months</option>
+            </Select>
+            {line.error && (
+              <p role="alert" className="text-sm text-danger-500">
+                Not logged: {line.error}
+              </p>
+            )}
+          </fieldset>
+        ))}
+        <div>
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            icon={<FiPlus />}
+            onClick={() => {
+              setLines((current) => [...current, newCallLine(nextKey)]);
+              setNextKey((k) => k + 1);
+            }}
+          >
+            Add another product
+          </Button>
+        </div>
         <Textarea
           id="lbc-note"
           label="Call note"
-          hint="Who called, what was agreed — mandatory on every staff-assisted action."
+          hint="Who called, what was agreed — mandatory on every staff-assisted action. One note covers every product above."
           value={callNote}
           onChange={(e) => setCallNote(e.target.value)}
           required
@@ -526,9 +619,13 @@ function LogBuyerCallSection({ buyerCounterpartyId }: { buyerCounterpartyId: str
             {error}
           </p>
         )}
-        {result && <p className="text-sm text-success-600">Logged as ask {result.askId}.</p>}
+        {raised.length > 0 && (
+          <p className="text-sm text-success-600">
+            Logged {raised.length === 1 ? 'as ask' : `${raised.length} asks`}: {raised.join(', ')}.
+          </p>
+        )}
         <Button type="submit" loading={submitting} icon={<FiPhoneCall />}>
-          Log call
+          {lines.length > 1 ? `Log call (${lines.length} products)` : 'Log call'}
         </Button>
       </form>
     </Card>

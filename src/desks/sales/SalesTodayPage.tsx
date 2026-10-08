@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { getSalesWorklist, getMarketPulse, type SalesWorkItem } from '../../api/sales';
 import { allocateUpcomingReceipt, getUpcomingReceipts } from '../../api/payment';
 import { ApiError } from '../../api/errors';
@@ -65,7 +65,6 @@ export function SalesTodayPage() {
 }
 
 function Worklist({ items, risingCount }: { items: SalesWorkItem[]; risingCount: number | null }) {
-  const navigate = useNavigate();
   const grouped = useMemo(() => {
     const map = new Map<SalesWorkItem['bucket'], SalesWorkItem[]>();
     for (const bucket of BUCKET_ORDER) map.set(bucket, []);
@@ -97,11 +96,7 @@ function Worklist({ items, risingCount }: { items: SalesWorkItem[]; risingCount:
           <p className="mb-3 text-sm text-slate-500">{BUCKET_NOTE[bucket]}</p>
           <div className="flex flex-col divide-y divide-slate-100 overflow-hidden rounded-md border border-slate-200">
             {grouped.get(bucket)!.map((item, index) => (
-              <WorkRow
-                key={`${item.refType}-${item.refId}-${index}`}
-                item={item}
-                onOpen={item.buyerId ? () => navigate(`/sales/buyers/${item.buyerId}`) : undefined}
-              />
+              <WorkRow key={`${item.refType}-${item.refId}-${index}`} item={item} />
             ))}
           </div>
         </Card>
@@ -110,35 +105,90 @@ function Worklist({ items, risingCount }: { items: SalesWorkItem[]; risingCount:
   );
 }
 
-function WorkRow({ item, onOpen }: { item: SalesWorkItem; onOpen?: () => void }) {
+const REF_LABEL: Record<SalesWorkItem['refType'], string> = {
+  so: 'Order',
+  po: 'Purchase order',
+  ask: 'Ask',
+  quote: 'Rate held',
+};
+
+const linkClass = 'underline-offset-2 hover:underline';
+
+function WorkRow({ item }: { item: SalesWorkItem }) {
+  const navigate = useNavigate();
   const isMarket = item.bucket === 'market';
-  const [tehsilId, productId] = isMarket ? item.refId.split(':') : [null, null];
-  const main = isMarket
-    ? `Tehsil …${(tehsilId ?? '').slice(-6)} × product …${(productId ?? '').slice(-6)}`
-    : `${item.refType.toUpperCase()} …${item.refId.slice(-6)}`;
   const due = item.dueAt ? new Date(item.dueAt) : null;
   const overdue = due ? due < new Date() : false;
+  const idLabel = `${REF_LABEL[item.refType]} …${item.refId.slice(-6)}`;
+
+  // The party leads, as it did before product names came in — and the whole row opens his
+  // file. A market row has no buyer (it's an area × product cell), so there the product leads.
+  const hasBuyer = !!item.buyerId;
+  const title = hasBuyer ? item.buyerFirm || idLabel : (item.productName ?? idLabel);
+
+  const productLink =
+    item.productId && item.productName ? (
+      <Link
+        to={`/sales/products/${item.productId}`}
+        onClick={(e) => e.stopPropagation()}
+        className={`text-slate-700 ${linkClass}`}
+      >
+        {item.productName}
+      </Link>
+    ) : null;
+  const details = [
+    isMarket
+      ? item.tehsilName
+        ? `Rising in ${item.tehsilName}`
+        : 'Rising'
+      : REF_LABEL[item.refType],
+    item.qty != null ? `${item.qty} boxes` : null,
+    due ? `due ${due.toLocaleString()}` : null,
+  ].filter(Boolean);
 
   const content = (
     <>
       <div className="flex flex-col text-left">
-        <span className="text-sm font-semibold text-slate-900">{main}</span>
-        {due && <span className="text-xs text-slate-500">due {due.toLocaleString()}</span>}
+        <span className="text-sm font-semibold text-slate-900">{title}</span>
+        <span className="text-xs text-slate-500">
+          {hasBuyer && productLink}
+          {hasBuyer && productLink && details.length > 0 && ' · '}
+          {details.join(' · ')}
+        </span>
       </div>
       {due && <Badge tone={overdue ? 'bad' : 'warn'}>{overdue ? 'overdue' : 'due'}</Badge>}
     </>
   );
 
-  return onOpen ? (
-    <button
-      type="button"
-      onClick={onOpen}
-      className="flex items-center justify-between gap-3 px-4 py-3 text-left hover:bg-slate-50"
+  return hasBuyer ? (
+    <div
+      role="link"
+      tabIndex={0}
+      onClick={() => navigate(`/sales/buyers/${item.buyerId}`)}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter') navigate(`/sales/buyers/${item.buyerId}`);
+      }}
+      className="flex cursor-pointer items-center justify-between gap-3 px-4 py-3 hover:bg-slate-50"
     >
       {content}
-    </button>
+    </div>
   ) : (
-    <div className="flex items-center justify-between gap-3 px-4 py-3">{content}</div>
+    <div className="flex items-center justify-between gap-3 px-4 py-3">
+      <div className="flex flex-col text-left">
+        {productLink ? (
+          <Link
+            to={`/sales/products/${item.productId}`}
+            className={`text-sm font-semibold text-slate-900 ${linkClass}`}
+          >
+            {title}
+          </Link>
+        ) : (
+          <span className="text-sm font-semibold text-slate-900">{title}</span>
+        )}
+        <span className="text-xs text-slate-500">{details.join(' · ')}</span>
+      </div>
+      {due && <Badge tone={overdue ? 'bad' : 'warn'}>{overdue ? 'overdue' : 'due'}</Badge>}
+    </div>
   );
 }
 

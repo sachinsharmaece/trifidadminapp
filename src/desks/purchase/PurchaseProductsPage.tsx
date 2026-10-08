@@ -24,7 +24,9 @@ import { Input, Select } from '../../components/ui/Input';
 import { DevNote } from '../../components/dev/DevNote';
 import { isExactNameMatch, isNearMatch } from '../../lib/fuzzyMatch';
 
-type MasterProductLite = Awaited<ReturnType<typeof getMastersProducts>>[number];
+const NEW_TECHNICAL = '__new_technical';
+
+type MasterProductLite =Awaited<ReturnType<typeof getMastersProducts>>[number];
 
 export function PurchaseProductsPage() {
   const [tab, setTab] = useState<'analysis' | 'master'>('analysis');
@@ -338,6 +340,9 @@ function NewMastersCard({
   const [companyAka, setCompanyAka] = useState('');
   const [brand, setBrand] = useState('');
   const [technical, setTechnical] = useState('');
+  // The dropdown lists the master's existing technicals; a technical only ever enters
+  // the master through its first product, so "not listed" falls back to typing one.
+  const [newTechnical, setNewTechnical] = useState(false);
   const [manufacturerId, setManufacturerId] = useState('');
   const [hsn, setHsn] = useState('3808');
   const [packProductId, setPackProductId] = useState('');
@@ -463,15 +468,37 @@ function NewMastersCard({
               Already have: {productDupes.map((d) => d.brand).join(', ')}
             </p>
           )}
-          <Input
+          <Select
             id="pm-technical"
             label="Technical"
             className="mt-2"
-            value={technical}
-            onChange={(e) => setTechnical(e.target.value)}
-            error={fieldErrors.technical}
-          />
-          {technicalDupes.length > 0 && (
+            value={newTechnical ? NEW_TECHNICAL : technical}
+            onChange={(e) => {
+              const isNew = e.target.value === NEW_TECHNICAL;
+              setNewTechnical(isNew);
+              setTechnical(isNew ? '' : e.target.value);
+            }}
+            error={newTechnical ? undefined : fieldErrors.technical}
+          >
+            <option value="">Select…</option>
+            {[...technicals].sort().map((t) => (
+              <option key={t} value={t}>
+                {t}
+              </option>
+            ))}
+            <option value={NEW_TECHNICAL}>+ Not listed — add a new technical</option>
+          </Select>
+          {newTechnical && (
+            <Input
+              id="pm-technical-new"
+              label="New technical"
+              className="mt-2"
+              value={technical}
+              onChange={(e) => setTechnical(e.target.value)}
+              error={fieldErrors.technical}
+            />
+          )}
+          {newTechnical && technicalDupes.length > 0 && (
             <p className="mt-1 text-xs text-warning-600">
               Already have: {technicalDupes.join(', ')}
             </p>
@@ -519,6 +546,7 @@ function NewMastersCard({
                   setMessage('Product added as a draft.');
                   setBrand('');
                   setTechnical('');
+                  setNewTechnical(false);
                   onCreated();
                 })
                 .catch(fail);

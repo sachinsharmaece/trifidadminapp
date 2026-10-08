@@ -121,6 +121,29 @@ export function SellerFilePage() {
                                       </span>
                                     )}
                                   </span>
+                                  {c.productState !== 'draft' &&
+                                  c.packs.some((p) => p.skuState !== 'draft') ? (
+                                    <Button
+                                      size="sm"
+                                      variant="secondary"
+                                      icon={<FiPlus />}
+                                      onClick={() =>
+                                        navigate(
+                                          `/purchase/sellers/${id}/listing/new?productId=${c.productId}`,
+                                        )
+                                      }
+                                    >
+                                      Add to listing
+                                    </Button>
+                                  ) : (
+                                    <span className="text-xs text-slate-400">
+                                      {c.productState === 'draft'
+                                        ? 'Draft product — can’t be listed yet'
+                                        : c.packs.length === 0
+                                          ? 'No pack on this product — can’t be listed'
+                                          : 'Packs are drafts — can’t be listed yet'}
+                                    </span>
+                                  )}
                                 </div>
                                 <p className="text-xs text-slate-500">{c.technical}</p>
                                 <div className="mt-2 flex flex-wrap gap-1">
@@ -222,7 +245,9 @@ export function SellerFilePage() {
                       <tbody>
                         {file.openDemand.map((d) => (
                           <tr key={d.askId}>
-                            <Td className="font-mono text-xs">{d.askId.slice(-6)}</Td>
+                            <Td>
+                              {d.brand} · {d.technical}
+                            </Td>
                             <Td numeric>{d.qty}</Td>
                             <Td numeric>
                               {d.ageHours >= 24

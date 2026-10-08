@@ -30,6 +30,20 @@ export function proxyRaiseAsk(
   return apiFetch('/staff/proxy/buyer/asks', { method: 'POST', body: input, accessToken });
 }
 
+export type ProxyRaiseAskLine = Omit<ProxyRaiseAskInput, 'buyerCounterpartyId' | 'callNote'>;
+
+/** One entry per submitted line, by position — an ask id if it was raised, an error if it wasn't. */
+export type ProxyRaiseAsksLineResult =
+  { index: number; askId: string } | { index: number; error: string; code: string | null };
+
+/** One call naming several products: one ask per line, all under the same call note. */
+export function proxyRaiseAsks(
+  accessToken: string,
+  input: { buyerCounterpartyId: string; callNote: string; lines: ProxyRaiseAskLine[] },
+): Promise<{ results: ProxyRaiseAsksLineResult[] }> {
+  return apiFetch('/staff/proxy/buyer/asks/batch', { method: 'POST', body: input, accessToken });
+}
+
 export interface ProxyAskQuote {
   quoteId: string;
   ratePaiseForIndore: number | undefined;

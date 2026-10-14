@@ -167,6 +167,15 @@ function DirectionToggle({
  * who has never ordered sees the same board as one who orders every week.
  */
 function BoardForHimSection({ buyerId }: { buyerId: string }) {
+  return (
+    <Card title="On the board for him">
+      <BoardForHimBody buyerId={buyerId} />
+    </Card>
+  );
+}
+
+/** The board's contents without a card around them, so a page can wrap it its own way. */
+export function BoardForHimBody({ buyerId }: { buyerId: string }) {
   const { callApi } = useAuth();
   const loader = useCallback(
     () => callApi((token) => getSalesBoardForBuyer(token, buyerId)),
@@ -175,21 +184,19 @@ function BoardForHimSection({ buyerId }: { buyerId: string }) {
   const { state, retry } = useAsyncData(loader, (items) => items.length === 0, [loader]);
 
   return (
-    <Card title="On the board for him">
-      <AsyncBoundary
-        state={state}
-        onRetry={retry}
-        emptyMessage="Nothing on the board reaches his tehsil right now."
-      >
-        {(details: BoardForBuyerProduct[]) => (
-          <div className="flex flex-col gap-5">
-            {details.map((detail) => (
-              <BoardProductBlock key={detail.productId} buyerId={buyerId} detail={detail} />
-            ))}
-          </div>
-        )}
-      </AsyncBoundary>
-    </Card>
+    <AsyncBoundary
+      state={state}
+      onRetry={retry}
+      emptyMessage="Nothing on the board reaches his tehsil right now."
+    >
+      {(details: BoardForBuyerProduct[]) => (
+        <div className="flex flex-col gap-5">
+          {details.map((detail) => (
+            <BoardProductBlock key={detail.productId} buyerId={buyerId} detail={detail} />
+          ))}
+        </div>
+      )}
+    </AsyncBoundary>
   );
 }
 

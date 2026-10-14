@@ -1,11 +1,17 @@
-import { useCallback } from 'react';
+import { useCallback, useState, type ReactNode } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { FiArrowLeft, FiPhoneIncoming, FiPhoneOutgoing } from 'react-icons/fi';
-import { getSalesBuyerFile, type BuyerFileDto } from '../../api/sales';
+import { FiArrowLeft, FiChevronDown,FiPhoneIncoming, FiPhoneOutgoing } from 'react-icons/fi';
+import {
+  getSalesBuyerFile,
+  type BuyerFileDto,
+  type BuyerFunnelStage,
+  type SalesOrderRow,
+} from '../../api/sales';
 import { AsyncBoundary } from '../../components/AsyncBoundary';
 import { useAsyncData } from '../../lib/useAsyncData';
 import { useAuth } from '../../auth/AuthContext';
 import { Card } from '../../components/ui/Card';
+import { BoardForHimBody } from './SalesCallWorkspacePage';
 import { Table, Th, Td } from '../../components/ui/Table';
 import { Badge } from '../../components/ui/Badge';
 import { Button } from '../../components/ui/Button';
@@ -25,6 +31,25 @@ export function SalesBuyerFilePage() {
     [callApi, buyerId],
   );
   const { state, retry } = useAsyncData(loader, () => false, [loader]);
+  const [openSections, setOpenSections] = useState<ReadonlySet<SectionId>>(new Set());
+
+  const toggleSection = (id: SectionId): void =>
+    setOpenSections((current) => {
+      const next = new Set(current);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  // From a funnel row: always open, never close, then bring the section into view.
+  const openSection = (id: SectionId): void => {
+    setOpenSections((current) => new Set(current).add(id));
+    document.getElementById(`buyer-section-${id}`)?.scrollIntoView({ behavior: 'smooth' });
+  };
+  const sectionProps = (id: SectionId) => ({
+    id,
+    open: openSections.has(id),
+    onToggle: toggleSection,
+  });
 
   return (
     <div className="flex flex-col gap-6">
@@ -79,40 +104,17 @@ export function SalesBuyerFilePage() {
 
             <div className="grid gap-6 md:grid-cols-[1fr_320px]">
               <div className="flex flex-col gap-6">
-                <Card title="What he buys">
-                  {file.productHistory.length === 0 ? (
-                    <p className="text-sm text-slate-500">He has never ordered.</p>
-                  ) : (
-                    <Table>
-                      <thead>
-                        <tr>
-                          <Th>Product</Th>
-                          <Th numeric>Orders</Th>
-                          <Th numeric>Last paid</Th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {file.productHistory.map((p) => (
-                          <tr
-                            key={p.productId}
-                            className="cursor-pointer hover:bg-slate-50"
-                            onClick={() => navigate(`/sales/products/${p.productId}`)}
-                          >
-                            <Td>{p.brand}</Td>
-                            <Td numeric>{p.orderCount}</Td>
-                            <Td numeric>
-                              {p.lastPaidRatePaise === null
-                                ? '—'
-                                : formatRupees(p.lastPaidRatePaise)}
-                            </Td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </Table>
-                  )}
-                </Card>
+                <BuyerFunnelCard stages={file.funnel} onOpenSection={openSection} />
 
-                <Card title="He asked">
+                <DropdownCard {...sectionProps('board')} title="On the board for him">
+                  <BoardForHimBody buyerId={buyerId} />
+                </DropdownCard>
+
+                <DropdownCard
+                  {...sectionProps('asked')}
+                  title="He asked"
+                  count={file.openAsks.length}
+                >
                   {file.openAsks.length === 0 ? (
                     <p className="text-sm text-slate-500">No open asks.</p>
                   ) : (
@@ -155,9 +157,106 @@ export function SalesBuyerFilePage() {
                       </tbody>
                     </Table>
                   )}
-                </Card>
+                </DropdownCard>
 
-                <Card title="Call history">
+                <DropdownCard
+                  {...sectionProps('rate')}
+                  title="Rate given"
+                  count={file.liveQuotes.length}
+                >
+                  {file.liveQuotes.length === 0 ? (
+                    <p className="text-sm text-slate-500">No live rate on any of his asks.</p>
+                  ) : (
+                    <Table>
+                      <thead>
+                        <tr>
+                          <Th>Product</Th>
+                          <Th numeric>Rate</Th>
+                          <Th numeric>Qty</Th>
+                          <Th numeric>Days to Indore</Th>
+                          <Th>Held until</Th>
+                          <Th />
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {file.liveQuotes.map((q) => (
+                          <tr key={q.quoteId}>
+                            <Td>
+                              {q.brand}
+                              {q.packLabel ? ` · ${q.packLabel}` : ''}
+                            </Td>
+                            <Td numeric>{formatRupees(q.ratePaiseForIndore)}</Td>
+                            <Td numeric>{q.qtyAvailable}</Td>
+                            <Td numeric>{q.daysToIndore}</Td>
+                            <Td>{new Date(q.bindingUntil).toLocaleString()}</Td>
+                            <Td>
+                              {q.productId && (
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  onClick={() => navigate(`/sales/products/${q.productId}`)}
+                                >
+                                  Product
+                                </Button>
+                              )}
+                            </Td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </Table>
+                  )}
+                </DropdownCard>
+
+                <DropdownCard
+                  {...sectionProps('pending')}
+                  title="Payment pending"
+                  count={file.ordersByStage.paymentPending.length}
+                >
+                  <OrdersTable
+                    orders={file.ordersByStage.paymentPending}
+                    empty="No order of his is waiting on payment."
+                    showDeadline
+                  />
+                </DropdownCard>
+
+                <DropdownCard
+                  {...sectionProps('paid')}
+                  title="Paid"
+                  count={file.ordersByStage.paid.length}
+                >
+                  <OrdersTable
+                    orders={file.ordersByStage.paid}
+                    empty="No paid order is in the chain right now."
+                  />
+                </DropdownCard>
+
+                <DropdownCard
+                  {...sectionProps('delivered')}
+                  title="Delivered"
+                  count={file.ordersByStage.delivered.length}
+                >
+                  <OrdersTable
+                    orders={file.ordersByStage.delivered}
+                    empty="Nothing delivered to him yet."
+                  />
+                </DropdownCard>
+
+                <DropdownCard
+                  {...sectionProps('other')}
+                  title="Other orders"
+                  count={file.ordersByStage.other.length}
+                >
+                  <OrdersTable
+                    orders={file.ordersByStage.other}
+                    empty="No orders outside the steps above."
+                  />
+                </DropdownCard>
+
+                <DropdownCard
+                  {...sectionProps('calls')}
+                  title="Call history"
+                  count={file.callLogs.filter((c) => c.kind === 'call').length}
+                >
                   {(() => {
                     const calls = file.callLogs.filter((c) => c.kind === 'call');
                     return calls.length === 0 ? (
@@ -198,39 +297,7 @@ export function SalesBuyerFilePage() {
                       </Table>
                     );
                   })()}
-                </Card>
-
-                <Card title="Orders">
-                  {file.orders.length === 0 ? (
-                    <p className="text-sm text-slate-500">No orders yet.</p>
-                  ) : (
-                    <Table>
-                      <thead>
-                        <tr>
-                          <Th>SO</Th>
-                          <Th>Product</Th>
-                          <Th numeric>Total</Th>
-                          <Th>State</Th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {file.orders.map((o) => (
-                          <tr key={o.soId}>
-                            <Td>{o.soNo}</Td>
-                            <Td>{o.productDisplay}</Td>
-                            <Td numeric>₹{(o.totalPaise / 100).toFixed(2)}</Td>
-                            <Td>
-                              <div className="flex flex-wrap items-center gap-1">
-                                <Badge tone="neutral">{o.state}</Badge>
-                                {o.claimNeedsApplying && <Badge tone="warn">he says he paid</Badge>}
-                              </div>
-                            </Td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </Table>
-                  )}
-                </Card>
+                </DropdownCard>
               </div>
 
               <div className="flex flex-col gap-6">
@@ -269,7 +336,11 @@ export function SalesBuyerFilePage() {
                   })()}
                 </Card>
 
-                <Card title="Notes">
+                <DropdownCard
+                  {...sectionProps('notes')}
+                  title="Notes"
+                  count={file.callLogs.filter((c) => c.kind === 'note' && !c.promiseDueAt).length}
+                >
                   {(() => {
                     const notes = file.callLogs.filter((c) => c.kind === 'note' && !c.promiseDueAt);
                     return notes.length === 0 ? (
@@ -287,7 +358,7 @@ export function SalesBuyerFilePage() {
                       </ul>
                     );
                   })()}
-                </Card>
+                </DropdownCard>
 
                 <Card title="Update requests">
                   {(() => {
@@ -323,6 +394,187 @@ export function SalesBuyerFilePage() {
         )}
       </AsyncBoundary>
     </div>
+  );
+}
+
+type SectionId =
+  | 'board'
+  | 'asked'
+  | 'rate'
+  | 'pending'
+  | 'paid'
+  | 'delivered'
+  | 'other'
+  | 'calls'
+  | 'notes';
+
+// Where a funnel stage's records live on this page. Registered, classified, viewing and
+// ordered again have no section of their own, so those rows stay static.
+const STAGE_SECTION: Partial<Record<BuyerFunnelStage['key'], SectionId>> = {
+  asked: 'asked',
+  rate_held: 'rate',
+  took_it: 'pending',
+  paid: 'paid',
+  delivered: 'delivered',
+};
+
+/** One group of his orders; `showDeadline` adds the pay-by column for the unpaid ones. */
+function OrdersTable({
+  orders,
+  empty,
+  showDeadline = false,
+}: {
+  orders: SalesOrderRow[];
+  empty: string;
+  showDeadline?: boolean;
+}) {
+  if (orders.length === 0) return <p className="text-sm text-slate-500">{empty}</p>;
+  return (
+    <Table>
+      <thead>
+        <tr>
+          <Th>SO</Th>
+          <Th>Product</Th>
+          <Th numeric>Total</Th>
+          {showDeadline && <Th>Pay by</Th>}
+          <Th>State</Th>
+        </tr>
+      </thead>
+      <tbody>
+        {orders.map((o) => (
+          <tr key={o.soId}>
+            <Td>{o.soNo}</Td>
+            <Td>{o.productDisplay}</Td>
+            <Td numeric>₹{(o.totalPaise / 100).toFixed(2)}</Td>
+            {showDeadline && <Td>{new Date(o.payDeadline).toLocaleString()}</Td>}
+            <Td>
+              <div className="flex flex-wrap items-center gap-1">
+                <Badge tone="neutral">{humanize(o.state)}</Badge>
+                {o.claimNeedsApplying && <Badge tone="warn">he says he paid</Badge>}
+              </div>
+            </Td>
+          </tr>
+        ))}
+      </tbody>
+    </Table>
+  );
+}
+
+const STAGE_HINT: Record<BuyerFunnelStage['key'], string> = {
+  registered: 'He is an approved buyer.',
+  classified: 'A desk has set his tier and trader status (BR-044).',
+  viewing: 'Times he has looked at a rate.',
+  asked: 'His asks not yet lapsed or withdrawn.',
+  rate_held: 'Live quotes on his asks — a rate he is holding right now.',
+  took_it: 'His orders awaiting payment or with payment being verified.',
+  paid: 'His orders paid in full and in the chain between PO release and leg 2 dispatch.',
+  delivered: 'His orders delivered or closed.',
+  ordered_again: 'He has placed more than one order.',
+};
+
+/** A card whose body folds away under its title; closed until opened. */
+function DropdownCard({
+  id,
+  open,
+  onToggle,
+  title,
+  count,
+  children,
+}: {
+  id: SectionId;
+  open: boolean;
+  onToggle: (id: SectionId) => void;
+  title: string;
+  count?: number;
+  children: ReactNode;
+}) {
+  return (
+    <section id={`buyer-section-${id}`} className="rounded-lg border border-slate-200 bg-white shadow-sm">
+      <button
+        type="button"
+        aria-expanded={open}
+        onClick={() => onToggle(id)}
+        className="flex w-full items-center justify-between gap-3 p-5 text-left"
+      >
+        <h2 className="text-base font-semibold text-slate-900">
+          {title}
+          {count !== undefined && (
+            <span className="ml-2 text-sm font-normal text-slate-500">({count})</span>
+          )}
+        </h2>
+        <FiChevronDown
+          className={`text-slate-500 transition-transform ${open ? 'rotate-180' : ''}`}
+        />
+      </button>
+      {open && <div className="px-5 pb-5">{children}</div>}
+    </section>
+  );
+}
+
+/** This buyer's own run through the Funnel tab's nine joints. */
+function BuyerFunnelCard({
+  stages,
+  onOpenSection,
+}: {
+  stages: BuyerFunnelStage[];
+  onOpenSection: (id: SectionId) => void;
+}) {
+  const nextIndex = stages.findIndex((s) => !s.reached);
+  return (
+    <Card title="Funnel">
+      <ol className="flex flex-col">
+        {stages.map((stage, index) => {
+          const section = STAGE_SECTION[stage.key];
+          const showLeak = !!stage.leakCount && stage.leakCount > 0;
+          const value = stage.count ?? (stage.reached ? 'Yes' : 'No');
+          const row = (
+            <div className="flex items-start gap-4">
+              <span
+                className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full border text-xs font-semibold ${
+                  stage.reached
+                    ? 'border-slate-700 bg-slate-800 text-white'
+                    : 'border-slate-300 text-slate-500'
+                }`}
+              >
+                {index + 1}
+              </span>
+              <div className="flex-1">
+                <div className="flex flex-wrap items-center gap-2">
+                  <h3
+                    className={`text-sm font-semibold ${stage.reached ? 'text-slate-900' : 'text-slate-500'}`}
+                  >
+                    {stage.label}
+                  </h3>
+                  {showLeak && <Badge tone="bad">{stage.leakCount} past SLA</Badge>}
+                  {index === nextIndex && <Badge tone="warn">Next</Badge>}
+                </div>
+                <p className="mt-0.5 text-sm text-slate-500">{STAGE_HINT[stage.key]}</p>
+              </div>
+              <div
+                className={`shrink-0 text-right text-xl font-semibold ${stage.reached ? 'text-slate-900' : 'text-slate-400'}`}
+              >
+                {value}
+              </div>
+            </div>
+          );
+          return (
+            <li key={stage.key} className="border-t border-slate-100 first:border-t-0">
+              {section ? (
+                <button
+                  type="button"
+                  onClick={() => onOpenSection(section)}
+                  className="w-full py-3 text-left transition hover:bg-slate-50"
+                >
+                  {row}
+                </button>
+              ) : (
+                <div className="py-3">{row}</div>
+              )}
+            </li>
+          );
+        })}
+      </ol>
+    </Card>
   );
 }
 

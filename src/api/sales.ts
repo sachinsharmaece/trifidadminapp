@@ -360,6 +360,33 @@ export interface SalesOrderRow {
   claimedAmountPaise: number | null;
 }
 
+export interface BuyerFileLiveQuote {
+  quoteId: string;
+  askId: string;
+  productId: string | null;
+  brand: string;
+  packLabel: string | null;
+  ratePaiseForIndore: number;
+  qtyAvailable: number;
+  daysToIndore: number;
+  bindingUntil: string;
+}
+
+export interface BuyerFileOrdersByStage {
+  paymentPending: SalesOrderRow[];
+  paid: SalesOrderRow[];
+  delivered: SalesOrderRow[];
+  other: SalesOrderRow[];
+}
+
+export interface BuyerFunnelStage {
+  key: SalesFunnelMetric['key'];
+  label: string;
+  reached: boolean;
+  count: number | null;
+  leakCount?: number;
+}
+
 export interface BuyerFileDto {
   buyerId: string;
   counterpartyId: string;
@@ -371,10 +398,13 @@ export interface BuyerFileDto {
   classified: boolean;
   rateViews: number;
   ownerName: string | null;
+  funnel: BuyerFunnelStage[];
   productHistory: BuyerProductHistoryRow[];
   openAsks: BuyerFileOpenAsk[];
+  liveQuotes: BuyerFileLiveQuote[];
   callLogs: CallLogDto[];
   orders: SalesOrderRow[];
+  ordersByStage: BuyerFileOrdersByStage;
 }
 
 export function getSalesBuyerFile(accessToken: string, buyerId: string): Promise<BuyerFileDto> {

@@ -131,7 +131,7 @@ export function SalesFunnelRateHeldPage() {
   const { state, retry } = useAsyncData(loader, (items) => items.length === 0, [loader]);
   return (
     <ListShell
-      title="Rate held"
+      title="Rate given"
       note="Quotes currently live — a buyer holding a rate right now, soonest to lapse first."
     >
       <AsyncBoundary state={state} onRetry={retry} emptyMessage="No rates held right now.">

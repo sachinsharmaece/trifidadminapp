@@ -13,6 +13,7 @@ import {
   type ProxyAskQuote,
 } from '../../api/proxy';
 import { PackPicker } from '../enquiries/enquiryPickers';
+import { HeWantsItButton } from './BuyerStageActions';
 import {
   getSalesBuyerFile,
   getSalesBoardForBuyer,
@@ -175,7 +176,19 @@ function BoardForHimSection({ buyerId }: { buyerId: string }) {
 }
 
 /** The board's contents without a card around them, so a page can wrap it its own way. */
-export function BoardForHimBody({ buyerId }: { buyerId: string }) {
+/**
+ * With `counterpartyId`, "He wants it" raises a real ask (it then shows under He asked, and
+ * `onChanged` refetches the page); without it, it only logs his interest as a note.
+ */
+export function BoardForHimBody({
+  buyerId,
+  counterpartyId,
+  onChanged,
+}: {
+  buyerId: string;
+  counterpartyId?: string;
+  onChanged?: () => void;
+}) {
   const { callApi } = useAuth();
   const loader = useCallback(
     () => callApi((token) => getSalesBoardForBuyer(token, buyerId)),
@@ -192,7 +205,13 @@ export function BoardForHimBody({ buyerId }: { buyerId: string }) {
       {(details: BoardForBuyerProduct[]) => (
         <div className="flex flex-col gap-5">
           {details.map((detail) => (
-            <BoardProductBlock key={detail.productId} buyerId={buyerId} detail={detail} />
+            <BoardProductBlock
+              key={detail.productId}
+              buyerId={buyerId}
+              counterpartyId={counterpartyId}
+              onChanged={onChanged}
+              detail={detail}
+            />
           ))}
         </div>
       )}
@@ -200,7 +219,17 @@ export function BoardForHimBody({ buyerId }: { buyerId: string }) {
   );
 }
 
-function BoardProductBlock({ buyerId, detail }: { buyerId: string; detail: BoardForBuyerProduct }) {
+function BoardProductBlock({
+  buyerId,
+  counterpartyId,
+  onChanged,
+  detail,
+}: {
+  buyerId: string;
+  counterpartyId?: string;
+  onChanged?: () => void;
+  detail: BoardForBuyerProduct;
+}) {
   const { callApi } = useAuth();
   const { show } = useToast();
   const [submittingLine, setSubmittingLine] = useState<string | null>(null);
@@ -253,14 +282,22 @@ function BoardProductBlock({ buyerId, detail }: { buyerId: string; detail: Board
                 </Badge>
                 <span className="text-xs text-slate-500">qty {line.qty}</span>
               </div>
-              <Button
-                size="sm"
-                variant="secondary"
-                loading={submittingLine === line.listingLineId}
-                onClick={() => void handleWantsIt(line.listingLineId)}
-              >
-                He wants it
-              </Button>
+              {counterpartyId ? (
+                <HeWantsItButton
+                  line={line}
+                  counterpartyId={counterpartyId}
+                  onDone={() => onChanged?.()}
+                />
+              ) : (
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  loading={submittingLine === line.listingLineId}
+                  onClick={() => void handleWantsIt(line.listingLineId)}
+                >
+                  He wants it
+                </Button>
+              )}
             </li>
           ))}
         </ul>

@@ -12,10 +12,22 @@ import { useAsyncData } from '../../lib/useAsyncData';
 import { useAuth } from '../../auth/AuthContext';
 import { Card } from '../../components/ui/Card';
 import { BoardForHimBody } from './SalesCallWorkspacePage';
+import {
+  CancelAskButton,
+  CancelOrderButton,
+  ConfirmRateButton,
+  DispatchButton,
+  GiveRateButton,
+  MarkBilledButton,
+  MarkDeliveredButton,
+  MarkPaidButton,
+  paidWaitingOn,
+} from './BuyerStageActions';
 import { Table, Th, Td } from '../../components/ui/Table';
 import { Badge } from '../../components/ui/Badge';
 import { Button } from '../../components/ui/Button';
 import { formatRupees } from '../../lib/labels';
+import { timeAgo, useMinuteClock } from '../../lib/timeAgo';
 
 function humanize(value: string): string {
   return value.replace(/_/g, ' ');
@@ -31,7 +43,9 @@ export function SalesBuyerFilePage() {
     [callApi, buyerId],
   );
   const { state, retry } = useAsyncData(loader, () => false, [loader]);
-  const [openSections, setOpenSections] = useState<ReadonlySet<SectionId>>(new Set());
+  // The funnel starts open (it is the summary); every other section starts closed.
+  const [openSections, setOpenSections] = useState<ReadonlySet<SectionId>>(new Set(['funnel']));
+  const now = useMinuteClock();
 
   const toggleSection = (id: SectionId): void =>
     setOpenSections((current) => {
@@ -104,10 +118,16 @@ export function SalesBuyerFilePage() {
 
             <div className="grid gap-6 md:grid-cols-[1fr_320px]">
               <div className="flex flex-col gap-6">
-                <BuyerFunnelCard stages={file.funnel} onOpenSection={openSection} />
+                <DropdownCard {...sectionProps('funnel')} title="Funnel">
+                  <BuyerFunnelCard stages={file.funnel} onOpenSection={openSection} />
+                </DropdownCard>
 
                 <DropdownCard {...sectionProps('board')} title="On the board for him">
-                  <BoardForHimBody buyerId={buyerId} />
+                  <BoardForHimBody
+                    buyerId={buyerId}
+                    counterpartyId={file.counterpartyId}
+                    onChanged={retry}
+                  />
                 </DropdownCard>
 
                 <DropdownCard
@@ -116,7 +136,7 @@ export function SalesBuyerFilePage() {
                   count={file.openAsks.length}
                 >
                   {file.openAsks.length === 0 ? (
-                    <p className="text-sm text-slate-500">No open asks.</p>
+                    <p className="text-sm text-slate-500">No ask is waiting on a rate.</p>
                   ) : (
                     <Table>
                       <thead>
@@ -140,17 +160,36 @@ export function SalesBuyerFilePage() {
                             <Td numeric>{a.qty}</Td>
                             <Td>
                               <Badge tone="neutral">{a.state}</Badge>
+                              <div
+                                className="mt-1 text-xs text-slate-500"
+                                title={new Date(a.askedAt).toLocaleString()}
+                              >
+                                Asked {timeAgo(a.askedAt, now)}
+                              </div>
                             </Td>
                             <Td>
-                              {a.productId && (
-                                <Button
-                                  size="sm"
-                                  variant="ghost"
-                                  onClick={() => navigate(`/sales/products/${a.productId}`)}
-                                >
-                                  Product
-                                </Button>
-                              )}
+                              <div className="flex flex-wrap justify-end gap-1">
+                                {a.state === 'open' && (
+                                  <GiveRateButton ask={a} buyerId={buyerId} onDone={retry} />
+                                )}
+                                {(a.state === 'open' || a.state === 'quoted') && (
+                                  <CancelAskButton
+                                    askId={a.askId}
+                                    counterpartyId={file.counterpartyId}
+                                    label="Cancel"
+                                    onDone={retry}
+                                  />
+                                )}
+                                {a.productId && (
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    onClick={() => navigate(`/sales/products/${a.productId}`)}
+                                  >
+                                    Product
+                                  </Button>
+                                )}
+                              </div>
                             </Td>
                           </tr>
                         ))}
@@ -188,17 +227,38 @@ export function SalesBuyerFilePage() {
                             <Td numeric>{formatRupees(q.ratePaiseForIndore)}</Td>
                             <Td numeric>{q.qtyAvailable}</Td>
                             <Td numeric>{q.daysToIndore}</Td>
-                            <Td>{new Date(q.bindingUntil).toLocaleString()}</Td>
                             <Td>
-                              {q.productId && (
-                                <Button
-                                  size="sm"
-                                  variant="ghost"
-                                  onClick={() => navigate(`/sales/products/${q.productId}`)}
-                                >
-                                  Product
-                                </Button>
-                              )}
+                              <div>{new Date(q.bindingUntil).toLocaleString()}</div>
+                              <div
+                                className="text-xs text-slate-500"
+                                title={`Given ${new Date(q.givenAt).toLocaleString()}`}
+                              >
+                                Given {timeAgo(q.givenAt, now)}
+                              </div>
+                            </Td>
+                            <Td>
+                              <div className="flex flex-wrap justify-end gap-1">
+                                <ConfirmRateButton
+                                  quote={q}
+                                  counterpartyId={file.counterpartyId}
+                                  onDone={retry}
+                                />
+                                <CancelAskButton
+                                  askId={q.askId}
+                                  counterpartyId={file.counterpartyId}
+                                  label="Walk away"
+                                  onDone={retry}
+                                />
+                                {q.productId && (
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    onClick={() => navigate(`/sales/products/${q.productId}`)}
+                                  >
+                                    Product
+                                  </Button>
+                                )}
+                              </div>
                             </Td>
                           </tr>
                         ))}
@@ -216,6 +276,13 @@ export function SalesBuyerFilePage() {
                     orders={file.ordersByStage.paymentPending}
                     empty="No order of his is waiting on payment."
                     showDeadline
+                    since={(o) => ({ verb: 'Raised', at: o.placedAt })}
+                    renderActions={(o) => (
+                      <>
+                        <MarkPaidButton order={o} onDone={retry} />
+                        <CancelOrderButton order={o} onDone={retry} />
+                      </>
+                    )}
                   />
                 </DropdownCard>
 
@@ -227,6 +294,47 @@ export function SalesBuyerFilePage() {
                   <OrdersTable
                     orders={file.ordersByStage.paid}
                     empty="No paid order is in the chain right now."
+                    since={(o) => ({
+                      verb: o.state === 'po_released' ? 'Paid' : 'Updated',
+                      at: o.updatedAt,
+                    })}
+                    renderActions={(o) =>
+                      o.state === 'inspected' ? (
+                        <MarkBilledButton order={o} onDone={retry} />
+                      ) : (
+                        <>
+                          <span className="text-xs text-slate-500">{paidWaitingOn(o.state)}</span>
+                          {/* INTERIM — remove with sales:skip_to_billed once the dock records these. */}
+                          <MarkBilledButton order={o} onDone={retry} skipSteps />
+                        </>
+                      )
+                    }
+                  />
+                </DropdownCard>
+
+                <DropdownCard
+                  {...sectionProps('billed')}
+                  title="Billed"
+                  count={file.ordersByStage.billed.length}
+                >
+                  <OrdersTable
+                    orders={file.ordersByStage.billed}
+                    empty="No order of his is billed and waiting to leave Indore."
+                    since={(o) => ({ verb: 'Billed', at: o.updatedAt })}
+                    renderActions={(o) => <DispatchButton order={o} onDone={retry} />}
+                  />
+                </DropdownCard>
+
+                <DropdownCard
+                  {...sectionProps('dispatched')}
+                  title="Dispatch"
+                  count={file.ordersByStage.dispatched.length}
+                >
+                  <OrdersTable
+                    orders={file.ordersByStage.dispatched}
+                    empty="Nothing of his is on the road from Indore."
+                    since={(o) => ({ verb: 'Dispatched', at: o.updatedAt })}
+                    renderActions={(o) => <MarkDeliveredButton order={o} onDone={retry} />}
                   />
                 </DropdownCard>
 
@@ -238,6 +346,7 @@ export function SalesBuyerFilePage() {
                   <OrdersTable
                     orders={file.ordersByStage.delivered}
                     empty="Nothing delivered to him yet."
+                    since={(o) => ({ verb: 'Delivered', at: o.updatedAt })}
                   />
                 </DropdownCard>
 
@@ -249,6 +358,7 @@ export function SalesBuyerFilePage() {
                   <OrdersTable
                     orders={file.ordersByStage.other}
                     empty="No orders outside the steps above."
+                    since={(o) => ({ verb: 'Updated', at: o.updatedAt })}
                   />
                 </DropdownCard>
 
@@ -398,11 +508,14 @@ export function SalesBuyerFilePage() {
 }
 
 type SectionId =
+  | 'funnel'
   | 'board'
   | 'asked'
   | 'rate'
   | 'pending'
   | 'paid'
+  | 'billed'
+  | 'dispatched'
   | 'delivered'
   | 'other'
   | 'calls'
@@ -415,6 +528,8 @@ const STAGE_SECTION: Partial<Record<BuyerFunnelStage['key'], SectionId>> = {
   rate_held: 'rate',
   took_it: 'pending',
   paid: 'paid',
+  billed: 'billed',
+  dispatched: 'dispatched',
   delivered: 'delivered',
 };
 
@@ -423,11 +538,19 @@ function OrdersTable({
   orders,
   empty,
   showDeadline = false,
+  since,
+  renderActions,
 }: {
   orders: SalesOrderRow[];
   empty: string;
   showDeadline?: boolean;
+  /** The small "Paid 15 minutes ago" line under the state — which verb and which time. */
+  since?: (order: SalesOrderRow) => { verb: string; at: string };
+
+  /** Stage buttons for one order; the column only exists when this is given. */
+  renderActions?: (order: SalesOrderRow) => ReactNode;
 }) {
+  const now = useMinuteClock();
   if (orders.length === 0) return <p className="text-sm text-slate-500">{empty}</p>;
   return (
     <Table>
@@ -438,6 +561,7 @@ function OrdersTable({
           <Th numeric>Total</Th>
           {showDeadline && <Th>Pay by</Th>}
           <Th>State</Th>
+          {renderActions && <Th />}
         </tr>
       </thead>
       <tbody>
@@ -452,7 +576,20 @@ function OrdersTable({
                 <Badge tone="neutral">{humanize(o.state)}</Badge>
                 {o.claimNeedsApplying && <Badge tone="warn">he says he paid</Badge>}
               </div>
+              {since && (
+                <div
+                  className="mt-1 text-xs text-slate-500"
+                  title={new Date(since(o).at).toLocaleString()}
+                >
+                  {since(o).verb} {timeAgo(since(o).at, now)}
+                </div>
+              )}
             </Td>
+            {renderActions && (
+              <Td>
+                <div className="flex flex-wrap justify-end gap-1">{renderActions(o)}</div>
+              </Td>
+            )}
           </tr>
         ))}
       </tbody>
@@ -464,10 +601,12 @@ const STAGE_HINT: Record<BuyerFunnelStage['key'], string> = {
   registered: 'He is an approved buyer.',
   classified: 'A desk has set his tier and trader status (BR-044).',
   viewing: 'Times he has looked at a rate.',
-  asked: 'His asks not yet lapsed or withdrawn.',
+  asked: 'His asks still waiting on a rate.',
   rate_held: 'Live quotes on his asks — a rate he is holding right now.',
   took_it: 'His orders awaiting payment or with payment being verified.',
-  paid: 'His orders paid in full and in the chain between PO release and leg 2 dispatch.',
+  paid: 'His orders paid in full, between PO release and the Marg bill (leg 1, dock, inspection).',
+  billed: 'His orders billed in Marg and waiting to leave Indore on leg 2.',
+  dispatched: 'His orders that have left Indore on leg 2 — inside his 7-day window.',
   delivered: 'His orders delivered or closed.',
   ordered_again: 'He has placed more than one order.',
 };
@@ -511,7 +650,7 @@ function DropdownCard({
   );
 }
 
-/** This buyer's own run through the Funnel tab's nine joints. */
+/** This buyer's own run through the Funnel tab's eleven joints. */
 function BuyerFunnelCard({
   stages,
   onOpenSection,
@@ -521,7 +660,7 @@ function BuyerFunnelCard({
 }) {
   const nextIndex = stages.findIndex((s) => !s.reached);
   return (
-    <Card title="Funnel">
+    <>
       <ol className="flex flex-col">
         {stages.map((stage, index) => {
           const section = STAGE_SECTION[stage.key];
@@ -574,7 +713,7 @@ function BuyerFunnelCard({
           );
         })}
       </ol>
-    </Card>
+    </>
   );
 }
 

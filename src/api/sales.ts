@@ -333,6 +333,7 @@ export interface BuyerFileOpenAsk {
   brand: string;
   technical: string;
   packLabel: string | null;
+  askedAt: string;
 }
 
 // BR-030/031 — the coarse 7-step chain-strip position; `state` above is the
@@ -358,6 +359,8 @@ export interface SalesOrderRow {
   upcomingReceiptId: string | null;
   claimedAt: string | null;
   claimedAmountPaise: number | null;
+  placedAt: string;
+  updatedAt: string;
 }
 
 export interface BuyerFileLiveQuote {
@@ -368,13 +371,19 @@ export interface BuyerFileLiveQuote {
   packLabel: string | null;
   ratePaiseForIndore: number;
   qtyAvailable: number;
+  /** How many boxes he asked for. */
+  askQty: number;
   daysToIndore: number;
+  /** When the rate was given to him. */
+  givenAt: string;
   bindingUntil: string;
 }
 
 export interface BuyerFileOrdersByStage {
   paymentPending: SalesOrderRow[];
   paid: SalesOrderRow[];
+  billed: SalesOrderRow[];
+  dispatched: SalesOrderRow[];
   delivered: SalesOrderRow[];
   other: SalesOrderRow[];
 }
@@ -440,6 +449,8 @@ export interface SalesFunnelMetric {
     | 'rate_held'
     | 'took_it'
     | 'paid'
+    | 'billed'
+    | 'dispatched'
     | 'delivered'
     | 'ordered_again';
   label: string;
@@ -494,3 +505,134 @@ export function getFunnelAsks(accessToken: string): Promise<FunnelAskRow[]> {
 export function getFunnelHeldRates(accessToken: string): Promise<FunnelHeldRateRow[]> {
   return apiFetch('/staff/sales/funnel/rate-held', { accessToken });
 }
+
+// ---------------------------------------------------------------------------
+// Buyer file stage buttons — moving one enquiry to its next section by hand.
+// Raise an ask / confirm a rate / walk away reuse api/proxy.ts; these three are Sales-only.
+// ---------------------------------------------------------------------------
+
+/** He asked → Rate given: give him one of the lines on his board as the rate. */
+export function giveRateOnAsk(
+  accessToken: string,
+  askId: string,
+  input: { listingLineId: string; callNote: string },
+): Promise<{ quoteId: string }> {
+  return apiFetch(`/staff/sales/asks/${askId}/give-rate`, {
+    method: 'POST',
+    body: input,
+    accessToken,
+  });
+}
+
+/** Payment pending → Paid: record his UTR as the money in and release the PO. */
+export function markOrderPaid(
+  accessToken: string,
+  soId: string,
+  input: { utr: string; callNote: string },
+): Promise<{ poId: string; poNo: string }> {
+  return apiFetch(`/staff/sales/orders/${soId}/mark-paid`, {
+    method: 'POST',
+    body: input,
+    accessToken,
+    idempotencyKey: `admin-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+  });
+}
+
+function stageKey(): string {
+  return `admin-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+}
+
+/** Paid → Billed: key the Marg invoice. A `query` result means it did not match and nothing moved. */
+export function markOrderBilled(
+  accessToken: string,
+  soId: string,
+  input: {
+    margInvoiceNo: string;
+    date: string;
+    valuePaise: number;
+    ewayNo: string;
+    callNote: string;
+  },
+): Promise<{ margBillId: string; state: 'matched' | 'query' }> {
+  return apiFetch(`/staff/sales/orders/${soId}/mark-billed`, {
+    method: 'POST',
+    body: input,
+    accessToken,
+    idempotencyKey: stageKey(),
+  });
+}
+
+/** INTERIM — Paid → Billed straight from PO released, recording leg 1 and the inspection for Logistics. */
+export function skipOrderToBilled(
+  accessToken: string,
+  soId: string,
+  input: {
+    margInvoiceNo: string;
+    date: string;
+    valuePaise: number;
+    ewayNo: string;
+    legOneRef?: string;
+    callNote: string;
+  },
+): Promise<{ margBillId: string; state: 'matched' | 'query' }> {
+  return apiFetch(`/staff/sales/orders/${soId}/skip-to-billed`, {
+    method: 'POST',
+    body: input,
+    accessToken,
+    idempotencyKey: stageKey(),
+  });
+}
+
+export interface DispatchOrderInput {
+  mode: 'transport' | 'bus';
+  transporter?: string;
+  lr?: string;
+  busNo?: string;
+  driver?: string;
+  driverMobile?: string;
+  freightTerms: 'prepaid' | 'to_pay';
+  freightAmountPaise: number;
+  callNote: string;
+}
+
+/** Billed → Dispatch: leg 2 leaves Indore. */
+export function dispatchOrder(
+  accessToken: string,
+  soId: string,
+  input: DispatchOrderInput,
+): Promise<{ movementId: string }> {
+  return apiFetch(`/staff/sales/orders/${soId}/dispatch`, {
+    method: 'POST',
+    body: input,
+    accessToken,
+    idempotencyKey: stageKey(),
+  });
+}
+
+/** Dispatch → Delivered: the buyer's confirmation of receipt, recorded on a call. */
+export function markOrderDelivered(
+  accessToken: string,
+  soId: string,
+  input: { callNote: string },
+): Promise<{ closed: true }> {
+  return apiFetch(`/staff/sales/orders/${soId}/mark-delivered`, {
+    method: 'POST',
+    body: input,
+    accessToken,
+    idempotencyKey: stageKey(),
+  });
+}
+
+/** Payment pending → cancelled, before any money is posted. */
+export function cancelUnpaidOrder(
+  accessToken: string,
+  soId: string,
+  input: { callNote: string },
+): Promise<{ cancelled: true }> {
+  return apiFetch(`/staff/sales/orders/${soId}/cancel`, {
+    method: 'POST',
+    body: input,
+    accessToken,
+  });
+}
+

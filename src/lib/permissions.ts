@@ -72,6 +72,10 @@ export const PERMISSIONS = {
   PROXY_BUYER_CALL: 'proxy:buyer_call',
   PROXY_SELLER_CALL: 'proxy:seller_call',
   ACCOUNTS_CONFIRM_RECEIPT: 'accounts:confirm_receipt',
+  SALES_MARK_PAID: 'sales:mark_paid',
+  SALES_MARK_BILLED: 'sales:mark_billed',
+  SALES_DISPATCH: 'sales:dispatch',
+  SALES_SKIP_TO_BILLED: 'sales:skip_to_billed',
   // Enquiry journey — owner, follow-up and notes on an enquiry (DEC-051).
   ENQUIRY_MANAGE: 'enquiry:manage',
 } as const;

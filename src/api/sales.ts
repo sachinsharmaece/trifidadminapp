@@ -334,6 +334,8 @@ export interface BuyerFileOpenAsk {
   technical: string;
   packLabel: string | null;
   askedAt: string;
+  /** What he said he hopes to pay, noted on the call — Sales-internal. */
+  expectedRatePaise: number | null;
 }
 
 // BR-030/031 — the coarse 7-step chain-strip position; `state` above is the

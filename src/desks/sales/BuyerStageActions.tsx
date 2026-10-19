@@ -290,6 +290,12 @@ export function GiveRateButton({
           {ask.brand}
           {ask.packLabel ? ` · ${ask.packLabel}` : ''} — he asked for {ask.qty}. Pick the rate from
           his board; he holds it for 24 hours.
+          {ask.expectedRatePaise != null && (
+            <>
+              {' '}
+              <strong>He said he hopes to pay {formatRupees(ask.expectedRatePaise)}.</strong>
+            </>
+          )}
         </p>
         {loadError && (
           <p role="alert" className="text-sm text-danger-600">

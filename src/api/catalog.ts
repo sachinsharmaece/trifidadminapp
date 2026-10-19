@@ -26,6 +26,14 @@ export function getProductsByTechnical(
   return apiFetch(`/catalog/products?technical=${encodeURIComponent(technical)}`, { accessToken });
 }
 
+/** The searchable product dropdown on staff call forms — brand or technical, no technical needed first. */
+export function searchProducts(
+  accessToken: string,
+  query: string,
+): Promise<Array<{ productId: string; brand: string; technical: string }>> {
+  return apiFetch(`/catalog/product-search?q=${encodeURIComponent(query)}`, { accessToken });
+}
+
 // API-023
 export function getSkusForProduct(accessToken: string, productId: string): Promise<SkuDto[]> {
   return apiFetch(`/catalog/products/${productId}/skus`, { accessToken });

@@ -143,6 +143,7 @@ export function SalesBuyerFilePage() {
                         <tr>
                           <Th>Product</Th>
                           <Th numeric>Qty</Th>
+                          <Th numeric>He hopes to pay</Th>
                           <Th>State</Th>
                           <Th />
                         </tr>
@@ -158,6 +159,9 @@ export function SalesBuyerFilePage() {
                               <div className="text-xs text-slate-500">{a.technical}</div>
                             </Td>
                             <Td numeric>{a.qty}</Td>
+                            <Td numeric>
+                              {a.expectedRatePaise != null ? formatRupees(a.expectedRatePaise) : '—'}
+                            </Td>
                             <Td>
                               <Badge tone="neutral">{a.state}</Badge>
                               <div

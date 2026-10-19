@@ -12,8 +12,8 @@ import {
   type ProxyAskItem,
   type ProxyAskQuote,
 } from '../../api/proxy';
-import { PackPicker } from '../enquiries/enquiryPickers';
 import { HeWantsItButton } from './BuyerStageActions';
+import { CallLineFields } from './CallLineFields';
 import {
   getSalesBuyerFile,
   getSalesBoardForBuyer,
@@ -488,19 +488,24 @@ function UpdateRequestSection({ buyerId }: { buyerId: string }) {
 
 /**
  * Staff-assisted enquiries — "log a buyer call" (API-040, raise-an-ask).
- * Same validation as the buyer's own POST /asks: no price field exists on
- * this form at all (BR-121), exactly as the real endpoint refuses one sent.
+ * The buyer's own POST /asks takes no price (BR-121). Here Sales may note what he said he
+ * hopes to pay; it is kept on the ask for Sales only and never shown to a seller or to him.
  */
 interface CallLine {
-  key: number; // Stable across removals, so each line's PackPicker keeps its own selection.
+  key: number; // Stable across removals, so each line's product picker keeps its own selection.
   skuId: string;
   qty: number;
-  expiryBand: 'over12' | 'under12';
+  /** Rupees as typed; '' when he named no rate. */
+  expectedRate: string;
   error?: string; // Set when the server refused this line; the line stays so it can be fixed and retried.
 }
 
+// The server needs an expiry requirement on every ask; the call form does not ask for one, so
+// every line goes in with the standard "over 12 months".
+const CALL_EXPIRY_BAND = 'over12' as const;
+
 function newCallLine(key: number): CallLine {
-  return { key, skuId: '', qty: 1, expiryBand: 'over12' };
+  return { key, skuId: '', qty: 1, expectedRate: '' };
 }
 
 export function LogBuyerCallSection({ buyerCounterpartyId }: { buyerCounterpartyId: string }) {
@@ -525,7 +530,6 @@ export function LogBuyerCallSection({ buyerCounterpartyId }: { buyerCounterparty
       }
       return current.map((l) => (l.key === key ? { ...l, ...patch } : l));
     });
-  const setLineSku = (key: number) => (skuId: string) => updateLine(key, { skuId });
 
   async function handleSubmit(event: FormEvent): Promise<void> {
     event.preventDefault();
@@ -533,7 +537,14 @@ export function LogBuyerCallSection({ buyerCounterpartyId }: { buyerCounterparty
     setRaised([]);
     const missing = lines.findIndex((l) => !l.skuId);
     if (missing !== -1) {
-      setError(`Product ${missing + 1} needs a technical, product and pack — or remove it.`);
+      setError(`Product ${missing + 1} needs a product and a pack — or remove it.`);
+      return;
+    }
+    const badRate = lines.findIndex(
+      (l) => l.expectedRate.trim() !== '' && !(Number(l.expectedRate) > 0),
+    );
+    if (badRate !== -1) {
+      setError(`Product ${badRate + 1}: the expected rate must be more than zero, or left empty.`);
       return;
     }
     setSubmitting(true);
@@ -545,7 +556,10 @@ export function LogBuyerCallSection({ buyerCounterpartyId }: { buyerCounterparty
           lines: lines.map((l) => ({
             skuId: l.skuId,
             qty: l.qty,
-            conditionRequirement: { expiryBand: l.expiryBand },
+            conditionRequirement: { expiryBand: CALL_EXPIRY_BAND },
+            ...(l.expectedRate.trim() !== ''
+              ? { expectedRatePaise: Math.round(Number(l.expectedRate) * 100) }
+              : {}),
           })),
         }),
       );
@@ -583,58 +597,30 @@ export function LogBuyerCallSection({ buyerCounterpartyId }: { buyerCounterparty
   return (
     <Card title="Log a buyer call">
       <p className="mb-4 text-sm text-slate-500">
-        Raises an ask on the buyer&apos;s behalf — same as the buyer&apos;s own screen. A call can
-        name several products: each becomes its own ask, all under the one call note. He states no
-        price; TriFid never names one before a seller has (BR-121).
+        Raises an ask on the buyer&apos;s behalf. A call can name several products: each becomes its
+        own ask, all under the one call note. The expected rate is only what he said he hopes to
+        pay — it stays with Sales and is never shown to a seller or to him (BR-121).
       </p>
-      <form onSubmit={handleSubmit} className="flex max-w-md flex-col gap-4">
-        <Input id="lbc-buyer" label="Buyer counterparty ID" value={buyerCounterpartyId} disabled />
+      <form onSubmit={handleSubmit} className="flex w-full flex-col gap-4">
+        <div className="max-w-md">
+          <Input id="lbc-buyer" label="Buyer counterparty ID" value={buyerCounterpartyId} disabled />
+        </div>
         {lines.map((line, i) => (
-          <fieldset
+          <CallLineFields
             key={line.key}
-            className="flex flex-col gap-4 rounded-md border border-slate-200 p-4"
-          >
-            <legend className="flex items-center gap-2 px-1 text-sm font-semibold text-slate-700">
-              Product {i + 1}
-              {lines.length > 1 && (
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="ghost"
-                  icon={<FiX />}
-                  onClick={() => setLines((current) => current.filter((l) => l.key !== line.key))}
-                >
-                  Remove
-                </Button>
-              )}
-            </legend>
-            <PackPicker onChange={setLineSku(line.key)} />
-            <Input
-              id={`lbc-qty-${line.key}`}
-              label="Quantity (boxes)"
-              type="number"
-              min={1}
-              value={line.qty}
-              onChange={(e) => updateLine(line.key, { qty: Number(e.target.value) })}
-              required
-            />
-            <Select
-              id={`lbc-expiry-${line.key}`}
-              label="Expiry requirement"
-              value={line.expiryBand}
-              onChange={(e) =>
-                updateLine(line.key, { expiryBand: e.target.value as CallLine['expiryBand'] })
-              }
-            >
-              <option value="over12">Over 12 months</option>
-              <option value="under12">Under 12 months</option>
-            </Select>
-            {line.error && (
-              <p role="alert" className="text-sm text-danger-500">
-                Not logged: {line.error}
-              </p>
-            )}
-          </fieldset>
+            index={i}
+            qty={line.qty}
+            expectedRate={line.expectedRate}
+            error={line.error}
+            onSkuChange={(skuId) => updateLine(line.key, { skuId })}
+            onQtyChange={(qty) => updateLine(line.key, { qty })}
+            onExpectedRateChange={(expectedRate) => updateLine(line.key, { expectedRate })}
+            onRemove={
+              lines.length > 1
+                ? () => setLines((current) => current.filter((l) => l.key !== line.key))
+                : undefined
+            }
+          />
         ))}
         <div>
           <Button
@@ -653,6 +639,7 @@ export function LogBuyerCallSection({ buyerCounterpartyId }: { buyerCounterparty
         <Textarea
           id="lbc-note"
           label="Call note"
+          className="max-w-3xl"
           hint="Who called, what was agreed — mandatory on every staff-assisted action. One note covers every product above."
           value={callNote}
           onChange={(e) => setCallNote(e.target.value)}

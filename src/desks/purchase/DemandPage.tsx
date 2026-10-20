@@ -123,14 +123,16 @@ function DemandRow({ item, onRecorded }: { item: ActiveDemandItem; onRecorded: (
           )}
         </Td>
         <Td onClick={(e) => e.stopPropagation()}>
-          {SHOW_NON_ORDER_REASON && <NonOrderReasonForm askId={item.askId} onRecorded={onRecorded} />}
+          {SHOW_NON_ORDER_REASON && (
+            <NonOrderReasonForm askId={item.askId} onRecorded={onRecorded} />
+          )}
         </Td>
         <Td />
       </tr>
       {open && (
         <tr>
           <Td colSpan={8}>
-            <QuoteGapsDetail askId={item.askId} />
+            <QuoteGapsDetail askId={item.askId} skuId={item.skuId} productId={item.productId} />
           </Td>
         </tr>
       )}
@@ -147,7 +149,15 @@ const SELLER_STATE_LABEL: Record<
   carries: { label: 'Carries it, not listed', tone: 'warn' },
 };
 
-function QuoteGapsDetail({ askId }: { askId: string }) {
+function QuoteGapsDetail({
+  askId,
+  skuId,
+  productId,
+}: {
+  askId: string;
+  skuId: string | null;
+  productId: string | null;
+}) {
   const { callApi } = useAuth();
   const loader = useCallback(
     () => callApi((token) => getAskSellerStates(token, askId)),
@@ -164,7 +174,14 @@ function QuoteGapsDetail({ askId }: { askId: string }) {
       {(sellers: AskSellerStateItem[]) => (
         <ul className="flex flex-col gap-1 py-2 pl-6 text-sm">
           {sellers.map((s) => (
-            <SellerStateRow key={s.sellerId} askId={askId} seller={s} onQuoted={retry} />
+            <SellerStateRow
+              key={s.sellerId}
+              askId={askId}
+              skuId={skuId}
+              productId={productId}
+              seller={s}
+              onQuoted={retry}
+            />
           ))}
         </ul>
       )}
@@ -174,10 +191,14 @@ function QuoteGapsDetail({ askId }: { askId: string }) {
 
 function SellerStateRow({
   askId,
+  skuId,
+  productId,
   seller: s,
   onQuoted,
 }: {
   askId: string;
+  skuId: string | null;
+  productId: string | null;
   seller: AskSellerStateItem;
   onQuoted: () => void;
 }) {
@@ -234,6 +255,8 @@ function SellerStateRow({
       {quoting && (
         <RaiseQuoteForm
           askId={askId}
+          skuId={skuId}
+          productId={productId}
           sellerId={s.sellerId}
           sellerCounterpartyId={s.sellerCounterpartyId}
           sellerFirm={s.firm}

@@ -159,10 +159,33 @@ export function SalesBuyerFilePage() {
                                 {a.packLabel ? ` · ${a.packLabel}` : ''}
                               </div>
                               <div className="text-xs text-slate-500">{a.technical}</div>
+                              {a.pendingQuotes.length > 0 && (
+                                <ul className="mt-2 flex flex-col gap-1 border-l-2 border-brand-200 pl-2">
+                                  {a.pendingQuotes.map((q) => (
+                                    <li
+                                      key={q.quoteId}
+                                      className="flex flex-wrap items-center gap-2 text-xs"
+                                    >
+                                      <span className="font-semibold text-slate-900">
+                                        {q.ratePaise !== null
+                                          ? formatRupees(q.ratePaise)
+                                          : 'No margin set for his tier'}
+                                      </span>
+                                      <span className="text-slate-500">
+                                        {q.packLabel ? `${q.packLabel} · ` : ''}
+                                        {q.qtyAvailable} boxes · {q.daysToIndore} days ·{' '}
+                                        {q.expiryExact} · quoted {timeAgo(q.raisedAt, now)}
+                                      </span>
+                                    </li>
+                                  ))}
+                                </ul>
+                              )}
                             </Td>
                             <Td numeric>{a.qty}</Td>
                             <Td numeric>
-                              {a.expectedRatePaise != null ? formatRupees(a.expectedRatePaise) : '—'}
+                              {a.expectedRatePaise != null
+                                ? formatRupees(a.expectedRatePaise)
+                                : '—'}
                             </Td>
                             <Td>
                               <Badge tone="neutral">{a.state}</Badge>
@@ -230,7 +253,9 @@ export function SalesBuyerFilePage() {
                               {q.brand}
                               {q.packLabel ? ` · ${q.packLabel}` : ''}
                             </Td>
-                            <Td numeric>{formatRupees(q.ratePaiseForIndore)}</Td>
+                            <Td numeric>
+                              {q.ratePaise !== null ? formatRupees(q.ratePaise) : '—'}
+                            </Td>
                             <Td numeric>{q.qtyAvailable}</Td>
                             <Td numeric>{q.daysToIndore}</Td>
                             <Td>

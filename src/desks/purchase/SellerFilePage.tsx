@@ -409,6 +409,8 @@ function OpenDemandRow({
           <Td colSpan={4}>
             <RaiseQuoteForm
               askId={demand.askId}
+              skuId={demand.skuId}
+              productId={demand.productId}
               sellerId={sellerId}
               sellerCounterpartyId={sellerCounterpartyId}
               sellerFirm={sellerFirm}

@@ -1,10 +1,6 @@
 import { useEffect, useState } from 'react';
 import { ActionModal, ActionRefused, errorText, useAction } from '../../components/ActionModal';
-import {
-  proxyAcceptAskFill,
-  proxyDeclineAsk,
-  proxyRaiseAsk,
-} from '../../api/proxy';
+import { proxyAcceptAskFill, proxyDeclineAsk, proxyRaiseAsk } from '../../api/proxy';
 import {
   cancelUnpaidOrder,
   dispatchOrder,
@@ -32,7 +28,6 @@ import { deliveryBandLabel, expiryBandLabel, formatRupees, moqBandLabel } from '
  * Every button opens a small form with the mandatory call note, then calls the same
  * endpoint the normal flow uses; the page refetches and the row appears in its new section.
  */
-
 
 /** On the board → He asked. */
 export function HeWantsItButton({
@@ -129,7 +124,11 @@ export function CancelAskButton({
   );
 }
 
-/** He asked → Rate given: pick which line on his board is the rate we give him. */
+/**
+ * He asked → Rate given: pick the line(s) on his board to give him — one or several. A line a
+ * seller has already quoted on this ask is marked, and giving it gives that quote. The ask
+ * leaves "He asked" as soon as any rate is given.
+ */
 export function GiveRateButton({
   ask,
   buyerId,
@@ -143,11 +142,12 @@ export function GiveRateButton({
   const [open, setOpen] = useState(false);
   const [lines, setLines] = useState<BoardForBuyerLine[] | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
-  const [pickedId, setPickedId] = useState<string | null>(null);
+  const [pickedIds, setPickedIds] = useState<string[]>([]);
+  const quotedLineIds = new Set(ask.pendingQuotes.map((q) => q.listingLineId));
 
   useEffect(() => {
     if (!open) return;
-    setPickedId(null);
+    setPickedIds([]);
     setLoadError(null);
     setLines(null);
     callApi((token) => getSalesBoardForBuyer(token, buyerId))
@@ -156,15 +156,28 @@ export function GiveRateButton({
           .filter((p) => (ask.productId ? p.productId === ask.productId : true))
           .flatMap((p) => p.ladder)
           .filter((l) => (ask.skuId ? l.skuId === ask.skuId : true));
-        setLines(matching);
+        // The offers already quoted on this ask come first.
+        const quotedFirst = (l: BoardForBuyerLine) => (quotedLineIds.has(l.listingLineId) ? 0 : 1);
+        setLines([...matching].sort((a, b) => quotedFirst(a) - quotedFirst(b)));
       })
       .catch((caught: unknown) => setLoadError(errorText(caught)));
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- `quotedLineIds` is rebuilt each render.
   }, [open, callApi, buyerId, ask.productId, ask.skuId]);
 
   const submit = useAction(async (token, callNote) => {
-    await giveRateOnAsk(token, ask.askId, { listingLineId: pickedId!, callNote });
-    return 'Rate given — moved to Rate given.';
+    // One at a time: a refusal stops the run, and the page refetches to show what did go.
+    for (const listingLineId of pickedIds) {
+      await giveRateOnAsk(token, ask.askId, { listingLineId, callNote });
+    }
+    return pickedIds.length === 1
+      ? 'Rate given — moved to Rate given.'
+      : `${pickedIds.length} rates given.`;
   }, onDone);
+
+  const toggle = (id: string) =>
+    setPickedIds((current) =>
+      current.includes(id) ? current.filter((x) => x !== id) : [...current, id],
+    );
 
   return (
     <>
@@ -174,15 +187,17 @@ export function GiveRateButton({
       <ActionModal
         open={open}
         title="Give him a rate"
-        submitLabel="Give this rate"
-        canSubmit={pickedId !== null}
+        submitLabel={
+          pickedIds.length > 1 ? `Give these ${pickedIds.length} rates` : 'Give this rate'
+        }
+        canSubmit={pickedIds.length > 0}
         onClose={() => setOpen(false)}
         onSubmit={submit}
       >
         <p className="text-sm text-slate-600">
           {ask.brand}
-          {ask.packLabel ? ` · ${ask.packLabel}` : ''} — he asked for {ask.qty}. Pick the rate from
-          his board; he holds it for 24 hours.
+          {ask.packLabel ? ` · ${ask.packLabel}` : ''} — he asked for {ask.qty}. Tick one or more
+          rates from his board; he holds each for 24 hours.
           {ask.expectedRatePaise != null && (
             <>
               {' '}
@@ -195,7 +210,9 @@ export function GiveRateButton({
             {loadError}
           </p>
         )}
-        {lines === null && !loadError && <p className="text-sm text-slate-500">Loading his board…</p>}
+        {lines === null && !loadError && (
+          <p className="text-sm text-slate-500">Loading his board…</p>
+        )}
         {lines?.length === 0 && (
           <p className="text-sm text-slate-500">Nothing on his board matches this ask right now.</p>
         )}
@@ -205,19 +222,27 @@ export function GiveRateButton({
               <li key={line.listingLineId}>
                 <label
                   className={`flex cursor-pointer flex-wrap items-center gap-2 rounded-md border p-2 text-sm ${
-                    pickedId === line.listingLineId
+                    pickedIds.includes(line.listingLineId)
                       ? 'border-brand-500 bg-brand-50'
                       : 'border-slate-200'
                   }`}
                 >
                   <input
-                    type="radio"
-                    name="give-rate-line"
-                    checked={pickedId === line.listingLineId}
-                    onChange={() => setPickedId(line.listingLineId)}
+                    type="checkbox"
+                    checked={pickedIds.includes(line.listingLineId)}
+                    onChange={() => toggle(line.listingLineId)}
                   />
-                  <span className="font-semibold text-slate-900">{formatRupees(line.ratePaise)}</span>
-                  {line.packLabel && <span className="text-xs text-slate-500">{line.packLabel}</span>}
+                  <span className="font-semibold text-slate-900">
+                    {formatRupees(line.ratePaise)}
+                  </span>
+                  {line.packLabel && (
+                    <span className="text-xs text-slate-500">{line.packLabel}</span>
+                  )}
+                  {quotedLineIds.has(line.listingLineId) && (
+                    <Badge tone="good" variant="chip">
+                      Quoted for him
+                    </Badge>
+                  )}
                   <Badge tone="neutral" variant="chip">
                     {expiryBandLabel(line.expiryBand)}
                   </Badge>
@@ -365,7 +390,9 @@ export function MarkBilledButton({
     }
     return `${order.soNo} billed — now in Billed.`;
   }, onDone);
-  if (!hasPermission(skipSteps ? PERMISSIONS.SALES_SKIP_TO_BILLED : PERMISSIONS.SALES_MARK_BILLED)) {
+  if (
+    !hasPermission(skipSteps ? PERMISSIONS.SALES_SKIP_TO_BILLED : PERMISSIONS.SALES_MARK_BILLED)
+  ) {
     return null;
   }
   return (
@@ -378,7 +405,10 @@ export function MarkBilledButton({
         title={`Bill ${order.soNo} in Marg`}
         submitLabel={skipSteps ? 'Skip ahead and bill' : 'Mark billed'}
         canSubmit={
-          invoiceNo.trim().length > 0 && ewayNo.trim().length > 0 && Number.isFinite(valuePaise) && valuePaise > 0
+          invoiceNo.trim().length > 0 &&
+          ewayNo.trim().length > 0 &&
+          Number.isFinite(valuePaise) &&
+          valuePaise > 0
         }
         onClose={() => setOpen(false)}
         onSubmit={submit}
@@ -387,9 +417,9 @@ export function MarkBilledButton({
           <div className="rounded-md border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">
             <p className="font-medium">This skips Logistics and the dock.</p>
             <p>
-              It records leg 1 and an all-accepted inspection as “recorded by Sales, not
-              physically verified”, which also books the seller’s bill. Only use it when the goods
-              really did reach Indore in full.
+              It records leg 1 and an all-accepted inspection as “recorded by Sales, not physically
+              verified”, which also books the seller’s bill. Only use it when the goods really did
+              reach Indore in full.
             </p>
           </div>
         )}
@@ -607,8 +637,8 @@ export function CancelOrderButton({ order, onDone }: { order: SalesOrderRow; onD
         onSubmit={submit}
       >
         <p className="text-sm text-slate-600">
-          Only possible while no money is posted or claimed against it. Nothing is counted
-          against him.
+          Only possible while no money is posted or claimed against it. Nothing is counted against
+          him.
         </p>
       </ActionModal>
     </>

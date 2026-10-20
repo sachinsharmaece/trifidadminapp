@@ -1,5 +1,7 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { proxyPostQuote } from '../../api/proxy';
+import { getSkusForProduct } from '../../api/catalog';
+import type { SkuDto } from '../../api/dto';
 import { ApiError } from '../../api/errors';
 import { useAuth } from '../../auth/AuthContext';
 import { Input, Select, Textarea } from '../../components/ui/Input';
@@ -12,18 +14,32 @@ import { Button } from '../../components/ui/Button';
  */
 export function RaiseQuoteForm({
   askId,
+  skuId,
+  productId,
   sellerId,
   sellerCounterpartyId,
   sellerFirm,
   onDone,
 }: {
   askId: string;
+  /** The pack the ask names, or `null` for a product-level ask (the pack is then picked here). */
+  skuId: string | null;
+  productId: string | null;
   sellerId: string;
   sellerCounterpartyId: string;
   sellerFirm: string;
   onDone: () => void;
 }) {
   const { callApi } = useAuth();
+  const needsPack = skuId === null;
+  const [packs, setPacks] = useState<SkuDto[]>([]);
+  const [packId, setPackId] = useState('');
+  useEffect(() => {
+    if (!needsPack || !productId) return;
+    callApi((token) => getSkusForProduct(token, productId))
+      .then((skus) => setPacks(skus.filter((s) => s.state !== 'draft')))
+      .catch(() => setPacks([]));
+  }, [needsPack, productId, callApi]);
   const [rupees, setRupees] = useState('');
   const [qty, setQty] = useState('');
   const [expiryBand, setExpiryBand] = useState<'over12' | 'under12'>('over12');
@@ -37,6 +53,7 @@ export function RaiseQuoteForm({
   const [submitting, setSubmitting] = useState(false);
 
   const ready =
+    (!needsPack || packId !== '') &&
     Number(rupees) > 0 &&
     Number(qty) >= 1 &&
     /^(0[1-9]|1[0-2])\/\d{4}$/.test(expiryExact) &&
@@ -51,6 +68,7 @@ export function RaiseQuoteForm({
       await callApi((token) =>
         proxyPostQuote(token, askId, {
           sellerCounterpartyId,
+          ...(needsPack ? { skuId: packId } : {}),
           ratePaiseForIndore: Math.round(Number(rupees) * 100),
           qtyAvailable: Number(qty),
           expiryBand,
@@ -76,9 +94,27 @@ export function RaiseQuoteForm({
   return (
     <div className="mt-2 flex w-full flex-col gap-3 rounded border border-slate-200 p-3">
       <p className="text-slate-500">
-        Raised on {sellerFirm}&apos;s behalf, on a call. Same checks as his own quote.
+        Raised on {sellerFirm}&apos;s behalf, on a call. Same checks as his own quote. It goes on
+        every buyer&apos;s board now; Sales gives it to the buyer who asked.
       </p>
       <div className="grid max-w-3xl grid-cols-2 gap-3 md:grid-cols-4">
+        {needsPack && (
+          <Select
+            id={id('pack')}
+            label="Pack quoted"
+            value={packId}
+            onChange={(e) => setPackId(e.target.value)}
+          >
+            <option value="" disabled>
+              Pick the pack…
+            </option>
+            {packs.map((p) => (
+              <option key={p.skuId} value={p.skuId}>
+                {p.packLabel}
+              </option>
+            ))}
+          </Select>
+        )}
         <Input
           id={id('rate')}
           label="Rate for Indore (₹)"

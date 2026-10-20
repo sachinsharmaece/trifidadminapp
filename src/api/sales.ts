@@ -336,6 +336,25 @@ export interface BuyerFileOpenAsk {
   askedAt: string;
   /** What he said he hopes to pay, noted on the call — Sales-internal. */
   expectedRatePaise: number | null;
+  /** Quotes already raised on this ask that Sales has not yet given him. */
+  pendingQuotes: BuyerFileParkedQuote[];
+}
+
+/** A quote raised on his ask and waiting for Sales to give it to him; already on every buyer's board. */
+export interface BuyerFileParkedQuote {
+  quoteId: string;
+  askId: string;
+  /** The listing line this quote was published as — the same offer shows on his board. */
+  listingLineId: string | null;
+  packLabel: string | null;
+  /** His own rate — seller net plus the margin for his tier. `null`: no margin set for him yet. */
+  ratePaise: number | null;
+  qtyAvailable: number;
+  daysToIndore: number;
+  expiryBand: string;
+  expiryExact: string;
+  deliveryBand: string;
+  raisedAt: string;
 }
 
 // BR-030/031 — the coarse 7-step chain-strip position; `state` above is the
@@ -371,7 +390,8 @@ export interface BuyerFileLiveQuote {
   productId: string | null;
   brand: string;
   packLabel: string | null;
-  ratePaiseForIndore: number;
+  /** His own rate — seller net plus the margin for his tier; what he is shown. */
+  ratePaise: number | null;
   qtyAvailable: number;
   /** How many boxes he asked for. */
   askQty: number;
@@ -639,4 +659,3 @@ export function cancelUnpaidOrder(
     accessToken,
   });
 }
-

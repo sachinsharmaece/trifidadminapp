@@ -169,6 +169,8 @@ export interface ProxyPostQuoteInput {
   provenance: 'company' | 'auth';
   batch?: string;
   daysToIndore: number;
+  /** Needed only when the ask names a product, not one pack. */
+  skuId?: string;
   callNote: string;
 }
 

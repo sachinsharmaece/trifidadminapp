@@ -32,6 +32,8 @@ import { ToastProvider } from './ui/Toast';
 interface NavChild {
   to: string;
   label: string;
+  // Hidden unless the user holds this; a child with none shows with its group.
+  permission?: string;
 }
 
 interface NavItem {
@@ -55,6 +57,7 @@ const NAV_ITEMS: NavItem[] = [
       { to: '/manage/products', label: 'Products' },
       { to: '/manage/manufacturers', label: 'Manufacturers' },
       { to: '/manage/tehsils', label: 'Tehsils' },
+      { to: '/manage/margin-matrix', label: 'Margin matrix', permission: PERMISSIONS.MARGIN_MATRIX_READ },
     ],
   },
   {
@@ -146,7 +149,9 @@ function NavGroup({
   onNavigate?: () => void;
 }) {
   const location = useLocation();
-  const containsActiveChild = item.children.some((child) => location.pathname.startsWith(child.to));
+  const { hasPermission } = useAuth();
+  const children = item.children.filter((child) => !child.permission || hasPermission(child.permission));
+  const containsActiveChild = children.some((child) => location.pathname.startsWith(child.to));
   const [open, setOpen] = useState(containsActiveChild);
 
   return (
@@ -169,7 +174,7 @@ function NavGroup({
       </button>
       {open && (
         <div className="ml-4 mt-1 flex flex-col gap-1 border-l border-slate-200 pl-3">
-          {item.children.map((child) => (
+          {children.map((child) => (
             <NavLink key={child.to} to={child.to} onClick={onNavigate} className={navLinkClasses}>
               {child.label}
             </NavLink>

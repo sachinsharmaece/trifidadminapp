@@ -44,6 +44,12 @@ export const devNotes = {
     purpose:
       'The list of manufacturers products can be filed under, with a button to add a new one.',
   },
+  admin_margin_matrix: {
+    purpose:
+      'The twelve margin numbers — how much TriFid adds on top of landed cost for each product class (High, Medium, Low) and each type of client (Retailer, Dealer, Distributor, Trader). Change any of them, pick the date they start applying, and save.',
+    tradeContext:
+      'Orders already placed never change when a margin is edited; only orders from the chosen date onward use the new numbers. Until all twelve are entered, the system will not price an order for a missing combination.',
+  },
   admin_tehsils: {
     purpose:
       "The tehsil map that decides which buyers can see which sellers' stock, with a button to add a new one.",

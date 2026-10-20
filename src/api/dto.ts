@@ -101,6 +101,10 @@ export interface MarginMatrixCellDto {
   effectiveFrom: string;
 }
 
+export interface MarginMatrixHistoryRowDto extends MarginMatrixCellDto {
+  createdAt: string;
+}
+
 export interface CreateSoResult {
   soId: string;
   soNo: string;

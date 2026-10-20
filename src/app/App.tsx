@@ -9,6 +9,7 @@ import { ProductCreatePage } from '../desks/admin/ProductCreatePage';
 import { ProductDetailPage } from '../desks/admin/ProductDetailPage';
 import { ManufacturersPage } from '../desks/admin/ManufacturersPage';
 import { TehsilsPage } from '../desks/admin/TehsilsPage';
+import { MarginMatrixPage } from '../desks/admin/MarginMatrixPage';
 import { RegistrationsPage } from '../desks/admin/RegistrationsPage';
 // ChainDeskPage — only used by the commented-out /chain route below; restore
 // this import alongside it.
@@ -127,6 +128,16 @@ export function App() {
             <RequireAuth permission={PERMISSIONS.CATALOG_WRITE}>
               <AppShell>
                 <ManufacturersPage />
+              </AppShell>
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/manage/margin-matrix"
+          element={
+            <RequireAuth permission={PERMISSIONS.MARGIN_MATRIX_READ}>
+              <AppShell>
+                <MarginMatrixPage />
               </AppShell>
             </RequireAuth>
           }

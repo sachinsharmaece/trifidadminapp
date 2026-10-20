@@ -27,14 +27,15 @@ export const devNotes = {
   },
   admin_products: {
     purpose:
-      'Every product in the catalogue, in one list — brand, technical, manufacturer, HSN, class and whether it is active — with a button to open any one for its full detail and pack sizes, and a button to add a new one.',
+      'Every product in the catalogue, in one list — product, category, technical, manufacturer, HSN, tax %, class and whether it is active — with a button to open any one for its full detail and pack sizes, and a button to add a new one.',
     tradeContext:
       'Background setup work — it happens before any listing or order exists, and buyers and sellers never see this screen. They only ever see one product at a time, picked by its technical first.',
     notBuiltYet:
       "the actual margin numbers — how much TriFid adds on top of a seller's rate for each class of buyer — are not final and have no screen to enter them yet. Twelve numbers are still needed from you before real pricing can go live; until they're supplied, the system will not price a real order.",
   },
   admin_products_create: {
-    purpose: 'Add a new product to the catalogue — brand, technical, manufacturer, HSN and class.',
+    purpose:
+      'Add a new product to the catalogue — name, category, technical, manufacturer, HSN with its tax %, class and its packs (size, unit and units in a box). Technical, manufacturer and HSN are picked from masters, and a missing one can be added on the spot.',
   },
   admin_product_detail: {
     purpose:

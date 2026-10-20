@@ -1,5 +1,22 @@
 import { apiFetch } from './client';
-import type { ManufacturerDto, ProductDto, SkuDto, SkuImportRowResult } from './dto';
+import type {
+  HsnDto,
+  ManufacturerDto,
+  ProductCategory,
+  ProductDto,
+  SkuDto,
+  SkuImportRowResult,
+  TechnicalDto,
+} from './dto';
+
+export type PackUnit = 'LTR' | 'ML' | 'KG' | 'GM' | 'PC';
+
+/** A pack as typed on the product form; the server derives the label and base unit. */
+export interface ProductPackInput {
+  packSize: number;
+  unit: PackUnit;
+  unitsPerBox: number;
+}
 
 // API-020
 export function getTechnicals(accessToken: string): Promise<string[]> {
@@ -83,10 +100,36 @@ export function createProduct(
     technical: string;
     manufacturerId: string;
     hsn: string;
+    category: ProductCategory;
+    taxPercent: number;
     class?: 'High' | 'Medium' | 'Low';
+    packs?: ProductPackInput[];
   },
-): Promise<{ productId: string }> {
+): Promise<{ productId: string; skuIds: string[] }> {
   return apiFetch('/admin/products', { method: 'POST', body: input, accessToken });
+}
+
+// Technical and HSN masters — the product form's pickers.
+export function getTechnicalMasters(accessToken: string): Promise<TechnicalDto[]> {
+  return apiFetch('/admin/technicals', { accessToken });
+}
+
+export function createTechnical(
+  accessToken: string,
+  name: string,
+): Promise<{ technicalId: string }> {
+  return apiFetch('/admin/technicals', { method: 'POST', body: { name }, accessToken });
+}
+
+export function getHsnMasters(accessToken: string): Promise<HsnDto[]> {
+  return apiFetch('/admin/hsn', { accessToken });
+}
+
+export function createHsn(
+  accessToken: string,
+  input: { code: string; description?: string; taxPercent: number },
+): Promise<{ hsnId: string }> {
+  return apiFetch('/admin/hsn', { method: 'POST', body: input, accessToken });
 }
 
 // API-024 PATCH — was built server-side but had no client function yet.
@@ -98,6 +141,8 @@ export function updateProduct(
     technical: string;
     manufacturerId: string;
     hsn: string;
+    category: ProductCategory;
+    taxPercent: number;
     class: 'High' | 'Medium' | 'Low';
     active: boolean;
     state: 'live';

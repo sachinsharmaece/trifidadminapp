@@ -1,9 +1,8 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import type { FormEvent } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { FiArrowLeft, FiEdit2, FiUpload, FiX } from 'react-icons/fi';
 import {
-  getAllManufacturers,
   getProductById,
   getSkusForProduct,
   importSkus,
@@ -20,7 +19,16 @@ import { Table, Th, Td } from '../../components/ui/Table';
 import { Input, Select } from '../../components/ui/Input';
 import { Button } from '../../components/ui/Button';
 import { Badge } from '../../components/ui/Badge';
-import type { ProductDto, SkuDto, SkuImportRowResult } from '../../api/dto';
+import type { ProductCategory, ProductDto, SkuDto, SkuImportRowResult } from '../../api/dto';
+import {
+  AddHsnModal,
+  AddManufacturerModal,
+  AddTechnicalModal,
+  CATEGORY_LABEL,
+  CATEGORY_OPTIONS,
+  MasterPicker,
+  useProductMasters,
+} from './productMasters';
 
 /** Manage → Products → Product details. View, with an edit option, plus its SKUs. */
 export function ProductDetailPage() {
@@ -100,6 +108,12 @@ function ProductDetailCard({
     >
       <dl className="grid grid-cols-2 gap-x-6 gap-y-3 text-sm">
         <div>
+          <dt className="text-slate-500">Category</dt>
+          <dd className="font-medium text-slate-900">
+            {product.category ? CATEGORY_LABEL[product.category] : '—'}
+          </dd>
+        </div>
+        <div>
           <dt className="text-slate-500">Technical</dt>
           <dd className="font-medium text-slate-900">{product.technical}</dd>
         </div>
@@ -110,6 +124,12 @@ function ProductDetailCard({
         <div>
           <dt className="text-slate-500">HSN</dt>
           <dd className="font-medium text-slate-900">{product.hsn}</dd>
+        </div>
+        <div>
+          <dt className="text-slate-500">Tax %</dt>
+          <dd className="font-medium text-slate-900">
+            {product.taxPercent !== undefined ? `${product.taxPercent}%` : '—'}
+          </dd>
         </div>
         <div>
           <dt className="text-slate-500">Class</dt>
@@ -139,18 +159,37 @@ function EditProductForm({
   onCancel: () => void;
 }) {
   const { callApi } = useAuth();
-  const manufacturersLoader = useCallback(
-    () => callApi((token) => getAllManufacturers(token)),
-    [callApi],
-  );
-  const manufacturers = useAsyncData(manufacturersLoader, (items) => items.length === 0, [
-    manufacturersLoader,
-  ]);
+  const masters = useProductMasters();
 
   const [brand, setBrand] = useState(product.brand);
+  const [category, setCategory] = useState<ProductCategory>(product.category ?? 'pesticide');
   const [technical, setTechnical] = useState(product.technical ?? '');
   const [manufacturerId, setManufacturerId] = useState(product.manufacturerId ?? '');
+  const [manufacturerName, setManufacturerName] = useState(product.manufacturerName ?? '');
   const [hsn, setHsn] = useState(product.hsn);
+  const [taxPercent, setTaxPercent] = useState(String(product.taxPercent ?? 18));
+  const [adding, setAdding] = useState<{
+    kind: 'technical' | 'manufacturer' | 'hsn';
+    typed: string;
+  } | null>(null);
+
+  const technicalOptions = useMemo(
+    () => masters.technicals.map((t) => ({ value: t.name, label: t.name })),
+    [masters.technicals],
+  );
+  const manufacturerOptions = useMemo(
+    () => masters.manufacturers.map((m) => ({ value: m.manufacturerId, label: m.name })),
+    [masters.manufacturers],
+  );
+  const hsnOptions = useMemo(
+    () =>
+      masters.hsns.map((h) => ({
+        value: h.code,
+        label: h.code,
+        detail: [h.description, `${h.taxPercent}%`].filter(Boolean).join(' · '),
+      })),
+    [masters.hsns],
+  );
   const [productClass, setProductClass] = useState<'High' | 'Medium' | 'Low'>(product.class);
   const [active, setActive] = useState(product.active ?? true);
   const [error, setError] = useState<string | null>(null);
@@ -164,9 +203,11 @@ function EditProductForm({
       await callApi((token) =>
         updateProduct(token, product.productId, {
           brand,
+          category,
           technical,
           manufacturerId,
           hsn,
+          taxPercent: Number(taxPercent),
           class: productClass,
           active,
         }),
@@ -186,41 +227,74 @@ function EditProductForm({
       <form onSubmit={handleSubmit} className="flex max-w-md flex-col gap-4">
         <Input
           id="ep-brand"
-          label="Brand"
+          label="Product"
           value={brand}
           onChange={(e) => setBrand(e.target.value)}
           required
         />
-        <Input
-          id="ep-technical"
-          label="Technical"
-          value={technical}
-          onChange={(e) => setTechnical(e.target.value)}
-          required
-        />
         <Select
-          id="ep-manufacturer"
-          label="Manufacturer"
-          value={manufacturerId}
-          onChange={(e) => setManufacturerId(e.target.value)}
-          required
+          id="ep-category"
+          label="Category"
+          value={category}
+          onChange={(e) => setCategory(e.target.value as ProductCategory)}
         >
-          <option value="">Select…</option>
-          {manufacturers.state.status === 'success' &&
-            manufacturers.state.data.map((manufacturer) => (
-              <option key={manufacturer.manufacturerId} value={manufacturer.manufacturerId}>
-                {manufacturer.name}
-              </option>
-            ))}
+          {CATEGORY_OPTIONS.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
         </Select>
-        <Input
-          id="ep-hsn"
-          label="HSN"
-          hint="Chapter 3808, 6 or 8 digits (e.g. 380891 or 38089110)."
-          value={hsn}
-          onChange={(e) => setHsn(e.target.value)}
+        <MasterPicker
+          label="Technical"
           required
+          options={technicalOptions}
+          value={technical}
+          selectedLabel={technical}
+          addLabel="Add new technical"
+          onPick={(value) => setTechnical(value)}
+          onAddNew={(typed) => setAdding({ kind: 'technical', typed })}
         />
+        <MasterPicker
+          label="Manufacturer"
+          required
+          options={manufacturerOptions}
+          value={manufacturerId}
+          selectedLabel={manufacturerName}
+          addLabel="Add new manufacturer"
+          onPick={(value, option) => {
+            setManufacturerId(value);
+            setManufacturerName(option.label);
+          }}
+          onAddNew={(typed) => setAdding({ kind: 'manufacturer', typed })}
+        />
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-[2fr_1fr]">
+          <MasterPicker
+            label="HSN"
+            required
+            options={hsnOptions}
+            value={hsn}
+            selectedLabel={hsn}
+            addLabel="Add new HSN"
+            onPick={(value) => {
+              setHsn(value);
+              // The HSN master carries the default rate; it stays editable here.
+              const rate = masters.hsns.find((h) => h.code === value)?.taxPercent;
+              if (rate !== undefined) setTaxPercent(String(rate));
+            }}
+            onAddNew={(typed) => setAdding({ kind: 'hsn', typed })}
+          />
+          <Input
+            id="ep-tax"
+            label="Tax %"
+            type="number"
+            min={0}
+            max={100}
+            step="any"
+            value={taxPercent}
+            onChange={(e) => setTaxPercent(e.target.value)}
+            required
+          />
+        </div>
         <Select
           id="ep-class"
           label="Class"
@@ -256,6 +330,45 @@ function EditProductForm({
           </Button>
         </div>
       </form>
+
+      {adding?.kind === 'technical' && (
+        <AddTechnicalModal
+          open
+          initial={adding.typed}
+          onClose={() => setAdding(null)}
+          onSaved={(name) => {
+            masters.reloadTechnicals();
+            setTechnical(name);
+            setAdding(null);
+          }}
+        />
+      )}
+      {adding?.kind === 'manufacturer' && (
+        <AddManufacturerModal
+          open
+          initial={adding.typed}
+          onClose={() => setAdding(null)}
+          onSaved={(id, name) => {
+            masters.reloadManufacturers();
+            setManufacturerId(id);
+            setManufacturerName(name);
+            setAdding(null);
+          }}
+        />
+      )}
+      {adding?.kind === 'hsn' && (
+        <AddHsnModal
+          open
+          initial={adding.typed}
+          onClose={() => setAdding(null)}
+          onSaved={(saved) => {
+            masters.reloadHsns();
+            setHsn(saved.code);
+            setTaxPercent(String(saved.taxPercent));
+            setAdding(null);
+          }}
+        />
+      )}
     </Card>
   );
 }

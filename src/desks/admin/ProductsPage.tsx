@@ -2,6 +2,7 @@ import { useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FiPlus, FiEye } from 'react-icons/fi';
 import { getAllProducts, updateProduct } from '../../api/catalog';
+import { CATEGORY_LABEL } from './productMasters';
 import { AsyncBoundary } from '../../components/AsyncBoundary';
 import { DevNote } from '../../components/dev/DevNote';
 import { useAsyncData } from '../../lib/useAsyncData';
@@ -40,10 +41,12 @@ export function ProductsPage() {
             <Table>
               <thead>
                 <tr>
-                  <Th>Brand</Th>
+                  <Th>Product</Th>
+                  <Th>Category</Th>
                   <Th>Technical</Th>
                   <Th>Manufacturer</Th>
                   <Th>HSN</Th>
+                  <Th>Tax %</Th>
                   <Th>Class</Th>
                   <Th>Status</Th>
                   <Th />
@@ -53,9 +56,11 @@ export function ProductsPage() {
                 {items.map((product) => (
                   <tr key={product.productId}>
                     <Td>{product.brand}</Td>
+                    <Td>{product.category ? CATEGORY_LABEL[product.category] : '—'}</Td>
                     <Td>{product.technical}</Td>
                     <Td>{product.manufacturerName ?? '—'}</Td>
                     <Td>{product.hsn}</Td>
+                    <Td>{product.taxPercent !== undefined ? `${product.taxPercent}%` : '—'}</Td>
                     <Td>{product.class}</Td>
                     <Td>
                       <Badge tone={product.active ? 'good' : 'neutral'}>

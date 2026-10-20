@@ -1,7 +1,12 @@
-import { useCallback } from 'react';
+import { useCallback, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { FiArrowLeft, FiPlus } from 'react-icons/fi';
-import { getSellerFile, type SellerCatalogueItem, type SellerFileDto } from '../../api/purchase';
+import {
+  getSellerFile,
+  type SellerCatalogueItem,
+  type SellerFileDto,
+  type SellerOpenDemandItem,
+} from '../../api/purchase';
 import { AsyncBoundary } from '../../components/AsyncBoundary';
 import { useAsyncData } from '../../lib/useAsyncData';
 import { useAuth } from '../../auth/AuthContext';
@@ -10,6 +15,8 @@ import { Table, Th, Td } from '../../components/ui/Table';
 import { Badge } from '../../components/ui/Badge';
 import { Button } from '../../components/ui/Button';
 import { DevNote } from '../../components/dev/DevNote';
+import { SellerFunnel } from './SellerFunnel';
+import { RaiseQuoteForm } from './RaiseQuoteForm';
 
 export function SellerFilePage() {
   const { id } = useParams<{ id: string }>();
@@ -17,6 +24,8 @@ export function SellerFilePage() {
   const navigate = useNavigate();
   const loader = useCallback(() => callApi((token) => getSellerFile(token, id!)), [callApi, id]);
   const { state, retry } = useAsyncData(loader, () => false, [loader]);
+  // Bumped when something on this page changes the seller's funnel (a quote raised for him).
+  const [funnelRefresh, setFunnelRefresh] = useState(0);
 
   return (
     <div className="flex flex-col gap-6">
@@ -80,6 +89,8 @@ export function SellerFilePage() {
 
             <div className="grid gap-6 md:grid-cols-[1fr_320px]">
               <div className="flex flex-col gap-6">
+                <SellerFunnel sellerId={id!} refreshKey={funnelRefresh} />
+
                 <Card
                   title="What he sells"
                   actions={
@@ -240,21 +251,22 @@ export function SellerFilePage() {
                           <Th>Ask</Th>
                           <Th numeric>Boxes</Th>
                           <Th numeric>Open</Th>
+                          <Th />
                         </tr>
                       </thead>
                       <tbody>
                         {file.openDemand.map((d) => (
-                          <tr key={d.askId}>
-                            <Td>
-                              {d.brand} · {d.technical}
-                            </Td>
-                            <Td numeric>{d.qty}</Td>
-                            <Td numeric>
-                              {d.ageHours >= 24
-                                ? `${Math.floor(d.ageHours / 24)}d`
-                                : `${d.ageHours}h`}
-                            </Td>
-                          </tr>
+                          <OpenDemandRow
+                            key={d.askId}
+                            demand={d}
+                            sellerId={file.sellerId}
+                            sellerCounterpartyId={file.counterpartyId}
+                            sellerFirm={file.firm}
+                            onQuoted={() => {
+                              retry();
+                              setFunnelRefresh((n) => n + 1);
+                            }}
+                          />
                         ))}
                       </tbody>
                     </Table>
@@ -356,6 +368,59 @@ export function SellerFilePage() {
         )}
       </AsyncBoundary>
     </div>
+  );
+}
+
+/** An ask he could serve, with the quote form opening under it — raised on his behalf, on a call. */
+function OpenDemandRow({
+  demand,
+  sellerId,
+  sellerCounterpartyId,
+  sellerFirm,
+  onQuoted,
+}: {
+  demand: SellerOpenDemandItem;
+  sellerId: string;
+  sellerCounterpartyId: string;
+  sellerFirm: string;
+  onQuoted: () => void;
+}) {
+  const [quoting, setQuoting] = useState(false);
+  return (
+    <>
+      <tr>
+        <Td>
+          {demand.brand} · {demand.technical}
+        </Td>
+        <Td numeric>{demand.qty}</Td>
+        <Td numeric>
+          {demand.ageHours >= 24 ? `${Math.floor(demand.ageHours / 24)}d` : `${demand.ageHours}h`}
+        </Td>
+        <Td>
+          <div className="flex justify-end">
+            <Button size="sm" variant="secondary" onClick={() => setQuoting((v) => !v)}>
+              {quoting ? 'Cancel' : 'Quote for him'}
+            </Button>
+          </div>
+        </Td>
+      </tr>
+      {quoting && (
+        <tr>
+          <Td colSpan={4}>
+            <RaiseQuoteForm
+              askId={demand.askId}
+              sellerId={sellerId}
+              sellerCounterpartyId={sellerCounterpartyId}
+              sellerFirm={sellerFirm}
+              onDone={() => {
+                setQuoting(false);
+                onQuoted();
+              }}
+            />
+          </Td>
+        </tr>
+      )}
+    </>
   );
 }
 

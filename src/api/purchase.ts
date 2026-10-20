@@ -484,6 +484,32 @@ export function recordSellerInvoice(
   });
 }
 
+export interface SellerDispatchedInput {
+  mode: 'transport' | 'bus';
+  transporter?: string;
+  lr?: string;
+  busNo?: string;
+  driver?: string;
+  driverMobile?: string;
+  freightTerms: 'prepaid' | 'to_pay';
+  freightAmountPaise: number;
+  callNote: string;
+}
+
+/** Dispatch → At Indore: the seller has sent it (leg 1), reported on a call. */
+export function recordSellerDispatched(
+  accessToken: string,
+  poId: string,
+  input: SellerDispatchedInput,
+): Promise<{ movementId: string }> {
+  return apiFetch(`/staff/purchase/pos/${poId}/seller-dispatched`, {
+    method: 'POST',
+    body: input,
+    accessToken,
+    idempotencyKey: idempotencyKey(),
+  });
+}
+
 export function handToDispatch(
   accessToken: string,
   poId: string,
@@ -494,6 +520,89 @@ export function handToDispatch(
     body: input,
     accessToken,
   });
+}
+
+// ---------------------------------------------------------------------------
+// The seller file's funnel — one seller's orders, stage by stage.
+// ---------------------------------------------------------------------------
+
+export type SellerFunnelKey =
+  | 'approved'
+  | 'carries'
+  | 'on_board'
+  | 'quoted'
+  | 'confirmations'
+  | 'stock'
+  | 'po'
+  | 'billed'
+  | 'dispatch'
+  | 'received'
+  | 'paid';
+
+export interface SellerFunnelStage {
+  key: SellerFunnelKey;
+  label: string;
+  reached: boolean;
+  /** `null` for the yes/no joint (approved). */
+  count: number | null;
+  /** Items stuck at this joint. */
+  leakCount?: number;
+}
+
+export interface SellerQuotedRow {
+  quoteId: string;
+  brand: string;
+  technical: string;
+  packLabel: string | null;
+  boxesAsked: number;
+  boxesOffered: number;
+  givenAt: string;
+  heldUntil: string;
+}
+
+export interface SellerPileRow {
+  pileId: string;
+  sellerCounterpartyId: string;
+  brand: string;
+  packLabel: string;
+  boxes: number;
+  buyers: number;
+  openedAt: string;
+  chaseLeftHours: number;
+}
+
+export interface SellerAfterDispatchRow {
+  poId: string;
+  poNo: string;
+  brand: string;
+  packLabel: string;
+  boxes: number;
+  state: string;
+  receivedAt: string | null;
+  updatedAt: string;
+  /** `none`: the dock has not inspected yet · `recorded`: waiting for Purchase to apply it · `applied`. */
+  inspection: 'none' | 'recorded' | 'applied';
+}
+
+export interface SellerFunnelDto {
+  funnel: SellerFunnelStage[];
+  stages: {
+    quoted: SellerQuotedRow[];
+    confirmations: SellerPileRow[];
+    stock: StockQueueItem[];
+    po: PoStageItem[];
+    billed: PoStageItem[];
+    dispatch: DispatchQueueItem[];
+    received: SellerAfterDispatchRow[];
+    paid: SellerAfterDispatchRow[];
+  };
+}
+
+export function getSellerStageFunnel(
+  accessToken: string,
+  sellerId: string,
+): Promise<SellerFunnelDto> {
+  return apiFetch(`/staff/purchase/sellers/${sellerId}/funnel`, { accessToken });
 }
 
 export function getDispatchChaseQueue(accessToken: string): Promise<DispatchQueueItem[]> {

@@ -1,6 +1,6 @@
 import { useCallback, useState, type ReactNode } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { FiArrowLeft, FiChevronDown,FiPhoneIncoming, FiPhoneOutgoing } from 'react-icons/fi';
+import { FiArrowLeft, FiPhoneIncoming, FiPhoneOutgoing } from 'react-icons/fi';
 import {
   getSalesBuyerFile,
   type BuyerFileDto,
@@ -10,6 +10,7 @@ import {
 import { AsyncBoundary } from '../../components/AsyncBoundary';
 import { useAsyncData } from '../../lib/useAsyncData';
 import { useAuth } from '../../auth/AuthContext';
+import { DropdownCard } from '../../components/DropdownCard';
 import { Card } from '../../components/ui/Card';
 import { BoardForHimBody } from './SalesCallWorkspacePage';
 import {
@@ -61,6 +62,7 @@ export function SalesBuyerFilePage() {
   };
   const sectionProps = (id: SectionId) => ({
     id,
+    anchorPrefix: 'buyer-section',
     open: openSections.has(id),
     onToggle: toggleSection,
   });
@@ -614,45 +616,6 @@ const STAGE_HINT: Record<BuyerFunnelStage['key'], string> = {
   delivered: 'His orders delivered or closed.',
   ordered_again: 'He has placed more than one order.',
 };
-
-/** A card whose body folds away under its title; closed until opened. */
-function DropdownCard({
-  id,
-  open,
-  onToggle,
-  title,
-  count,
-  children,
-}: {
-  id: SectionId;
-  open: boolean;
-  onToggle: (id: SectionId) => void;
-  title: string;
-  count?: number;
-  children: ReactNode;
-}) {
-  return (
-    <section id={`buyer-section-${id}`} className="rounded-lg border border-slate-200 bg-white shadow-sm">
-      <button
-        type="button"
-        aria-expanded={open}
-        onClick={() => onToggle(id)}
-        className="flex w-full items-center justify-between gap-3 p-5 text-left"
-      >
-        <h2 className="text-base font-semibold text-slate-900">
-          {title}
-          {count !== undefined && (
-            <span className="ml-2 text-sm font-normal text-slate-500">({count})</span>
-          )}
-        </h2>
-        <FiChevronDown
-          className={`text-slate-500 transition-transform ${open ? 'rotate-180' : ''}`}
-        />
-      </button>
-      {open && <div className="px-5 pb-5">{children}</div>}
-    </section>
-  );
-}
 
 /** This buyer's own run through the Funnel tab's eleven joints. */
 function BuyerFunnelCard({

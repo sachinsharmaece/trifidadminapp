@@ -15,6 +15,7 @@ import { Card } from '../../components/ui/Card';
 import { Table, Th, Td } from '../../components/ui/Table';
 import { Badge } from '../../components/ui/Badge';
 import { Button } from '../../components/ui/Button';
+import { formatRupees } from '../../lib/labels';
 
 const linkClass = 'underline-offset-2 hover:underline';
 
@@ -141,7 +142,9 @@ export function SalesFunnelRateHeldPage() {
               <tr>
                 <Th>Product</Th>
                 <Th>Buyer</Th>
+                <Th numeric>Rate</Th>
                 <Th numeric>Boxes</Th>
+                <Th numeric>Days to Indore</Th>
                 <Th>Held until</Th>
               </tr>
             </thead>
@@ -154,7 +157,9 @@ export function SalesFunnelRateHeldPage() {
                   <Td>
                     <BuyerCell row={q} />
                   </Td>
+                  <Td numeric>{formatRupees(q.ratePaise)}</Td>
                   <Td numeric>{q.qty}</Td>
+                  <Td numeric>{q.daysToIndore}</Td>
                   <Td>{new Date(q.heldUntil).toLocaleString()}</Td>
                 </tr>
               ))}

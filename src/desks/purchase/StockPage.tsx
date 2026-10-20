@@ -7,7 +7,8 @@ import { Card } from '../../components/ui/Card';
 import { Table, Th, Td } from '../../components/ui/Table';
 import { Badge } from '../../components/ui/Badge';
 import { timeAgo, useMinuteClock } from '../../lib/timeAgo';
-import { AskHoldButton, ConfirmHoldButton } from './StageActions';
+import { formatRupees } from '../../lib/labels';
+import { AdjustHoldButton } from './StageActions';
 
 function hoursLabel(hours: number | null): string {
   if (hours === null) return '';
@@ -24,11 +25,12 @@ export function StockPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <Card title="Stock to hold until the buyer pays">
+      <Card title="Stock on hold until the buyer pays">
         <p className="mb-4 text-sm text-slate-500">
-          Once a seller has confirmed, the buyer has his payment window to pay. Ask the seller to
-          hold the stock for that long (24 hours unless he says otherwise). The PO is created only
-          when the money lands; if it does not, the order cancels and he is released with no strike.
+          Once a seller has confirmed, the buyer has his payment window to pay, and the stock goes
+          on hold for that long (24 hours) on its own. Change the hours only if the seller agreed to
+          something different. The PO is created only when the money lands; if it does not, the
+          order cancels and he is released with no strike.
         </p>
         <AsyncBoundary
           state={state}
@@ -42,6 +44,7 @@ export function StockPage() {
                   <Th>Order</Th>
                   <Th>Seller</Th>
                   <Th>Goods</Th>
+                  <Th numeric>Rate</Th>
                   <Th>Buyer pays by</Th>
                   <Th>Hold</Th>
                   <Th />
@@ -55,26 +58,25 @@ export function StockPage() {
                     <Td>
                       {item.brand} {item.packLabel} · {item.boxes} boxes
                     </Td>
+                    <Td numeric>
+                      {item.sellerRatePaise == null ? '—' : formatRupees(item.sellerRatePaise)}
+                    </Td>
                     <Td>{new Date(item.payDeadline).toLocaleString()}</Td>
                     <Td>
-                      {item.hold === 'not_asked' && <Badge tone="warn">not asked</Badge>}
-                      {item.hold === 'asked' && <Badge tone="neutral">asked — waiting on him</Badge>}
-                      {item.hold === 'confirmed' && <Badge tone="good">he is holding it</Badge>}
+                      {item.hold === 'holding' && <Badge tone="good">seller is holding it</Badge>}
                       {item.hold === 'lapsed' && <Badge tone="bad">hold ran out</Badge>}
-                      {item.holdUntil && (
-                        <div
-                          className="mt-1 text-xs text-slate-500"
-                          title={new Date(item.holdUntil).toLocaleString()}
-                        >
-                          {item.holdHours}h hold · {hoursLabel(item.hoursLeft)}
-                          {item.holdConfirmedAt && ` · confirmed ${timeAgo(item.holdConfirmedAt, now)}`}
-                        </div>
-                      )}
+                      <div
+                        className="mt-1 text-xs text-slate-500"
+                        title={new Date(item.holdUntil).toLocaleString()}
+                      >
+                        {item.holdHours !== null && `${item.holdHours}h hold · `}
+                        {hoursLabel(item.hoursLeft)}
+                        {item.holdConfirmedAt && ` · from ${timeAgo(item.holdConfirmedAt, now)}`}
+                      </div>
                     </Td>
                     <Td>
                       <div className="flex flex-wrap justify-end gap-1">
-                        {item.hold === 'asked' && <ConfirmHoldButton item={item} onDone={retry} />}
-                        <AskHoldButton item={item} onDone={retry} />
+                        <AdjustHoldButton item={item} onDone={retry} />
                       </div>
                     </Td>
                   </tr>

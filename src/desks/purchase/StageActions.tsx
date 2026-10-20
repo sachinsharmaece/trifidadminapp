@@ -1,11 +1,10 @@
 import { useState } from 'react';
 import {
-  confirmStockHold,
+  adjustStockHold,
   handToDispatch,
   postApplyInspection,
   recordSellerDispatched,
   recordSellerInvoice,
-  requestStockHold,
   type DispatchQueueItem,
   type PoStageItem,
   type SellerAfterDispatchRow,
@@ -24,39 +23,46 @@ import { PERMISSIONS } from '../../lib/permissions';
  * said on a call, so each opens the same small form with the mandatory call note.
  */
 
-/** Stock: ask the seller to hold the confirmed stock until the buyer pays (24 hours unless told). */
-export function AskHoldButton({ item, onDone }: { item: StockQueueItem; onDone: () => void }) {
+/** Stock: the hold opens with the order (24 hours); Purchase can change how long the seller holds it. */
+export function AdjustHoldButton({ item, onDone }: { item: StockQueueItem; onDone: () => void }) {
   const { hasPermission } = useAuth();
   const [open, setOpen] = useState(false);
-  const [hours, setHours] = useState('24');
+  const [hours, setHours] = useState(String(item.holdHours ?? 24));
   const holdHours = Number(hours);
   const hoursOk = Number.isInteger(holdHours) && holdHours >= 1 && holdHours <= 72;
   const submit = useAction(async (token, callNote) => {
-    await requestStockHold(token, item.soId, { holdHours, callNote });
-    return `Asked ${item.sellerFirm} to hold it for ${holdHours} hours.`;
+    await adjustStockHold(token, item.soId, { holdHours, callNote });
+    return `${item.sellerFirm} will hold it for ${holdHours} hours from now.`;
   }, onDone);
   if (!hasPermission(PERMISSIONS.PROXY_SELLER_CALL)) return null;
-  const again = item.hold !== 'not_asked';
   return (
     <>
-      <Button size="sm" variant="secondary" onClick={() => setOpen(true)}>
-        {again ? 'Ask again' : 'Ask to hold'}
+      <Button
+        size="sm"
+        variant="secondary"
+        onClick={() => {
+          setHours(String(item.holdHours ?? 24));
+          setOpen(true);
+        }}
+      >
+        Adjust hours
       </Button>
       <ActionModal
         open={open}
         title={`Hold stock for ${item.soNo}`}
-        submitLabel="Ask to hold"
+        submitLabel="Change the hold"
         canSubmit={hoursOk}
         onClose={() => setOpen(false)}
         onSubmit={submit}
       >
         <p className="text-sm text-slate-600">
-          {item.brand} · {item.packLabel} · {item.boxes} boxes at {item.sellerFirm}. He holds it
-          until the buyer pays; if the buyer does not pay in his window the order cancels and the
-          seller is released with no strike.
+          {item.brand} · {item.packLabel} · {item.boxes} boxes at {item.sellerFirm}. The stock is
+          already on hold until the buyer pays; if he does not pay in his window the order cancels
+          and the seller is released with no strike. Set a different number of hours only if the
+          seller agreed to it.
         </p>
         <Input
-          label="Hold for (hours)"
+          label="Hold for (hours, from now)"
           type="number"
           min={1}
           max={72}
@@ -65,42 +71,6 @@ export function AskHoldButton({ item, onDone }: { item: StockQueueItem; onDone: 
           onChange={(event) => setHours(event.target.value)}
           hint="24 hours matches the buyer’s payment window."
         />
-      </ActionModal>
-    </>
-  );
-}
-
-/** Stock: the seller has said yes, he is holding it. */
-export function ConfirmHoldButton({
-  item,
-  onDone,
-}: {
-  item: StockQueueItem;
-  onDone: () => void;
-}) {
-  const { hasPermission } = useAuth();
-  const [open, setOpen] = useState(false);
-  const submit = useAction(async (token, callNote) => {
-    await confirmStockHold(token, item.soId, { callNote });
-    return `${item.sellerFirm} is holding the stock.`;
-  }, onDone);
-  if (!hasPermission(PERMISSIONS.PROXY_SELLER_CALL)) return null;
-  return (
-    <>
-      <Button size="sm" onClick={() => setOpen(true)}>
-        Seller is holding
-      </Button>
-      <ActionModal
-        open={open}
-        title={`${item.sellerFirm} is holding ${item.soNo}`}
-        submitLabel="Record that he is holding it"
-        onClose={() => setOpen(false)}
-        onSubmit={submit}
-      >
-        <p className="text-sm text-slate-600">
-          Records his yes for the hold that runs until{' '}
-          {item.holdUntil ? new Date(item.holdUntil).toLocaleString() : '—'}.
-        </p>
       </ActionModal>
     </>
   );

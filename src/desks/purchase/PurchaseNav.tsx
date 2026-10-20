@@ -46,10 +46,10 @@ function useNavCounts(): Partial<NavCounts> {
       setCounts({
         demand: demand.status === 'fulfilled' ? demand.value.length : undefined,
         confirmations: piles.status === 'fulfilled' ? piles.value.length : undefined,
-        // Stock: orders the seller has not yet said he is holding.
+        // Stock: orders whose hold has run out while the buyer has still not paid.
         stock:
           stock.status === 'fulfilled'
-            ? stock.value.filter((s) => s.hold !== 'confirmed').length
+            ? stock.value.filter((s) => s.hold === 'lapsed').length
             : undefined,
         po: pos.status === 'fulfilled' ? pos.value.length : undefined,
         billed: billed.status === 'fulfilled' ? billed.value.length : undefined,
@@ -79,7 +79,7 @@ const ITEMS: Array<{ to: string; label: string; end?: boolean; countKey?: keyof 
   { to: '/purchase', label: 'Today', end: true },
   { to: '/purchase/demand', label: 'Demand', countKey: 'demand' },
   { to: '/purchase/confirmations', label: 'Confirmations', countKey: 'confirmations' },
-  { to: '/purchase/stock', label: 'Stock', countKey: 'stock' },
+  { to: '/purchase/stock', label: 'Hold', countKey: 'stock' },
   { to: '/purchase/po', label: 'PO', countKey: 'po' },
   { to: '/purchase/billed', label: 'Billed', countKey: 'billed' },
   { to: '/purchase/dispatch', label: 'Dispatch', countKey: 'dispatch' },

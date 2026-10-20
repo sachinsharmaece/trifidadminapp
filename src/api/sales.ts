@@ -497,6 +497,8 @@ export interface FunnelAskRow extends FunnelDrillRowBase {
 export interface FunnelHeldRateRow extends FunnelDrillRowBase {
   quoteId: string;
   askId: string;
+  ratePaise: number;
+  daysToIndore: number;
   heldUntil: string;
 }
 

@@ -19,8 +19,7 @@ import { Button } from '../../components/ui/Button';
 import { timeAgo, useMinuteClock } from '../../lib/timeAgo';
 import {
   ApplyInspectionButton,
-  AskHoldButton,
-  ConfirmHoldButton,
+  AdjustHoldButton,
   HandToDispatchButton,
   RecordInvoiceButton,
   SellerDispatchedButton,
@@ -276,7 +275,7 @@ function Sections({
         )}
       </DropdownCard>
 
-      <DropdownCard {...props('stock')} title="Stock" count={countOf('stock')}>
+      <DropdownCard {...props('stock')} title="Hold" count={countOf('stock')}>
         {stages.stock.length === 0 ? (
           empty('No order of his is waiting on a buyer’s payment.')
         ) : (
@@ -299,20 +298,17 @@ function Sections({
                   </Td>
                   <Td>{new Date(item.payDeadline).toLocaleString()}</Td>
                   <Td>
-                    {item.hold === 'not_asked' && <Badge tone="warn">not asked</Badge>}
-                    {item.hold === 'asked' && <Badge tone="neutral">asked — waiting on him</Badge>}
-                    {item.hold === 'confirmed' && <Badge tone="good">he is holding it</Badge>}
+                    {item.hold === 'holding' && <Badge tone="good">he is holding it</Badge>}
                     {item.hold === 'lapsed' && <Badge tone="bad">hold ran out</Badge>}
                     {item.holdConfirmedAt && (
                       <div className="mt-1 text-xs text-slate-500">
-                        Confirmed {timeAgo(item.holdConfirmedAt, now)}
+                        From {timeAgo(item.holdConfirmedAt, now)}
                       </div>
                     )}
                   </Td>
                   <Td>
                     <div className="flex flex-wrap justify-end gap-1">
-                      {item.hold === 'asked' && <ConfirmHoldButton item={item} onDone={reload} />}
-                      <AskHoldButton item={item} onDone={reload} />
+                      <AdjustHoldButton item={item} onDone={reload} />
                     </div>
                   </Td>
                 </tr>

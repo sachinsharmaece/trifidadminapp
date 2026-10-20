@@ -401,7 +401,7 @@ export interface DispatchQueueItem {
 // Stock → PO → Billed → Dispatch.
 // ---------------------------------------------------------------------------
 
-export type StockHoldStatus = 'not_asked' | 'asked' | 'confirmed' | 'lapsed';
+export type StockHoldStatus = 'holding' | 'lapsed';
 
 export interface StockQueueItem {
   soId: string;
@@ -411,12 +411,14 @@ export interface StockQueueItem {
   brand: string;
   packLabel: string;
   boxes: number;
+  /** Absent in the per-seller funnel, which carries no rupee figure. */
+  sellerRatePaise?: number | null;
   payDeadline: string;
   hold: StockHoldStatus;
   holdHours: number | null;
-  holdUntil: string | null;
+  holdUntil: string;
   holdConfirmedAt: string | null;
-  hoursLeft: number | null;
+  hoursLeft: number;
 }
 
 export interface PoStageItem {
@@ -446,6 +448,19 @@ export function requestStockHold(
   input: { holdHours?: number; callNote: string },
 ): Promise<{ holdUntil: string }> {
   return apiFetch(`/staff/purchase/stock/${soId}/hold`, {
+    method: 'POST',
+    body: input,
+    accessToken,
+  });
+}
+
+/** Change how long the seller holds the stock; the hold itself opens with the order. */
+export function adjustStockHold(
+  accessToken: string,
+  soId: string,
+  input: { holdHours: number; callNote: string },
+): Promise<{ holdUntil: string }> {
+  return apiFetch(`/staff/purchase/stock/${soId}/hold/adjust`, {
     method: 'POST',
     body: input,
     accessToken,

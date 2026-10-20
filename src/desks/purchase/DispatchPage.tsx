@@ -25,8 +25,10 @@ export function DispatchPage() {
     <div className="flex flex-col gap-6">
       <DevNote screen="purchase_dispatch" />
       <p className="text-sm text-slate-500">
-        The seller dispatches on the day his PO releases, against his own cut-off. Extending the
-        clock in bulk is a Controller action, kept separate from this queue.
+        The seller dispatches on the day his PO releases, against his own cut-off. This list holds
+        the POs handed over from Billed — plus any whose dispatch the clock has already marked
+        missed, wherever they sit. A PO sent without his invoice on record is flagged, not blocked.
+        Extending the clock in bulk is a Controller action, kept separate from this queue.
       </p>
       <AsyncBoundary state={state} onRetry={retry} emptyMessage="Nothing pending dispatch.">
         {(items: DispatchQueueItem[]) => (
@@ -65,7 +67,14 @@ export function DispatchPage() {
                 <tbody>
                   {inTransit(items).map((d) => (
                     <tr key={d.poId}>
-                      <Td className="font-mono">{d.poNo}</Td>
+                      <Td className="font-mono">
+                        {d.poNo}
+                        {!d.invoiceRecorded && (
+                          <span className="ml-2 font-sans">
+                            <Badge tone="warn">no invoice on record</Badge>
+                          </span>
+                        )}
+                      </Td>
                       <Td>{d.sellerFirm}</Td>
                       <Td>
                         {d.brand} {d.packLabel} · {d.boxes} boxes
@@ -91,7 +100,14 @@ function DispatchRow({ item, onChased }: { item: DispatchQueueItem; onChased: ()
   const [chased, setChased] = useState(false);
   return (
     <tr>
-      <Td className="font-mono">{item.poNo}</Td>
+      <Td className="font-mono">
+        {item.poNo}
+        {!item.invoiceRecorded && (
+          <span className="ml-2 font-sans">
+            <Badge tone="warn">no invoice on record</Badge>
+          </span>
+        )}
+      </Td>
       <Td>{item.sellerFirm}</Td>
       <Td>
         {item.brand} {item.packLabel} · {item.boxes} boxes

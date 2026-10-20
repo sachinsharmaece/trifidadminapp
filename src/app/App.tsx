@@ -38,6 +38,9 @@ import { TodayPage } from '../desks/purchase/TodayPage';
 import { DemandPage } from '../desks/purchase/DemandPage';
 import { ConfirmationsPage } from '../desks/purchase/ConfirmationsPage';
 import { DispatchPage } from '../desks/purchase/DispatchPage';
+import { StockPage } from '../desks/purchase/StockPage';
+import { PoPage } from '../desks/purchase/PoPage';
+import { BilledPage } from '../desks/purchase/BilledPage';
 import { SellersPage } from '../desks/purchase/SellersPage';
 import { SellerFilePage } from '../desks/purchase/SellerFilePage';
 import { AddSellerPage } from '../desks/purchase/AddSellerPage';
@@ -252,6 +255,9 @@ export function App() {
           <Route index element={<TodayPage />} />
           <Route path="demand" element={<DemandPage />} />
           <Route path="confirmations" element={<ConfirmationsPage />} />
+          <Route path="stock" element={<StockPage />} />
+          <Route path="po" element={<PoPage />} />
+          <Route path="billed" element={<BilledPage />} />
           <Route path="dispatch" element={<DispatchPage />} />
           <Route path="sellers" element={<SellersPage />} />
           <Route path="add-seller" element={<AddSellerPage />} />

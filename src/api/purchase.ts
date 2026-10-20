@@ -393,6 +393,107 @@ export interface DispatchQueueItem {
   noDispatch48h: boolean;
   dispatchedAt: string | null;
   daysInTransit: number | null;
+  /** The seller's invoice and e-way bill are on record — a flag only, never a block. */
+  invoiceRecorded: boolean;
+}
+
+// ---------------------------------------------------------------------------
+// Stock → PO → Billed → Dispatch.
+// ---------------------------------------------------------------------------
+
+export type StockHoldStatus = 'not_asked' | 'asked' | 'confirmed' | 'lapsed';
+
+export interface StockQueueItem {
+  soId: string;
+  soNo: string;
+  sellerId: string;
+  sellerFirm: string;
+  brand: string;
+  packLabel: string;
+  boxes: number;
+  payDeadline: string;
+  hold: StockHoldStatus;
+  holdHours: number | null;
+  holdUntil: string | null;
+  holdConfirmedAt: string | null;
+  hoursLeft: number | null;
+}
+
+export interface PoStageItem {
+  poId: string;
+  poNo: string;
+  sellerId: string;
+  sellerFirm: string;
+  brand: string;
+  packLabel: string;
+  boxes: number;
+  releasedAt: string;
+  dispatchDueDate: string;
+  hoursLeft: number;
+  invoiceNo: string | null;
+  invoiceDate: string | null;
+  ewayNo: string | null;
+}
+
+export function getStockQueue(accessToken: string): Promise<StockQueueItem[]> {
+  return apiFetch('/staff/purchase/stock', { accessToken });
+}
+
+/** Ask the seller to hold the stock until the buyer pays — 24 hours unless told otherwise. */
+export function requestStockHold(
+  accessToken: string,
+  soId: string,
+  input: { holdHours?: number; callNote: string },
+): Promise<{ holdUntil: string }> {
+  return apiFetch(`/staff/purchase/stock/${soId}/hold`, {
+    method: 'POST',
+    body: input,
+    accessToken,
+  });
+}
+
+export function confirmStockHold(
+  accessToken: string,
+  soId: string,
+  input: { callNote: string },
+): Promise<{ confirmed: true }> {
+  return apiFetch(`/staff/purchase/stock/${soId}/hold/confirm`, {
+    method: 'POST',
+    body: input,
+    accessToken,
+  });
+}
+
+export function getPoQueue(accessToken: string): Promise<PoStageItem[]> {
+  return apiFetch('/staff/purchase/pos', { accessToken });
+}
+
+export function getBilledQueue(accessToken: string): Promise<PoStageItem[]> {
+  return apiFetch('/staff/purchase/billed', { accessToken });
+}
+
+export function recordSellerInvoice(
+  accessToken: string,
+  poId: string,
+  input: { invoiceNo: string; date: string; ewayNo: string; callNote: string },
+): Promise<{ recorded: true }> {
+  return apiFetch(`/staff/purchase/pos/${poId}/invoice`, {
+    method: 'POST',
+    body: input,
+    accessToken,
+  });
+}
+
+export function handToDispatch(
+  accessToken: string,
+  poId: string,
+  input: { callNote: string },
+): Promise<{ handedOver: true }> {
+  return apiFetch(`/staff/purchase/pos/${poId}/hand-to-dispatch`, {
+    method: 'POST',
+    body: input,
+    accessToken,
+  });
 }
 
 export function getDispatchChaseQueue(accessToken: string): Promise<DispatchQueueItem[]> {

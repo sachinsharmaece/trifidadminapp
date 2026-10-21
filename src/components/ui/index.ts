@@ -7,6 +7,7 @@ export {
   type SelectProps,
   type TextareaProps,
 } from './Input';
+export { SearchSelect, type SearchSelectOption } from './SearchSelect';
 export { Card } from './Card';
 export { Table, Th, Td } from './Table';
 export { Badge, type BadgeTone } from './Badge';

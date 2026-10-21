@@ -88,9 +88,9 @@ export function SalesRegisterBuyerPage() {
       </Button>
       <Card title="Staff-assisted buyer registration">
         <p className="mb-4 text-sm text-slate-500">
-          GSTIN stays mandatory, exactly as self-service registration.
+          Only the mobile number is validated — every other field is saved as entered.
         </p>
-        <form onSubmit={handleSubmit} className="grid max-w-2xl grid-cols-2 gap-4">
+        <form onSubmit={handleSubmit} noValidate className="grid max-w-2xl grid-cols-2 gap-4">
           <Input
             id="sr-mobile"
             label="Mobile"
@@ -105,7 +105,6 @@ export function SalesRegisterBuyerPage() {
             value={firm}
             onChange={(e) => setFirm(e.target.value)}
             error={fieldErrors.firm}
-            required
           />
           <Input
             id="sr-gstin"
@@ -113,7 +112,6 @@ export function SalesRegisterBuyerPage() {
             value={gstin}
             onChange={(e) => setGstin(e.target.value)}
             error={fieldErrors.gstin}
-            required
           />
           <Input
             id="sr-owner"
@@ -121,7 +119,6 @@ export function SalesRegisterBuyerPage() {
             value={ownerName}
             onChange={(e) => setOwnerName(e.target.value)}
             error={fieldErrors.ownerName}
-            required
           />
           <Input
             id="sr-licence"
@@ -129,7 +126,6 @@ export function SalesRegisterBuyerPage() {
             value={licenceNo}
             onChange={(e) => setLicenceNo(e.target.value)}
             error={fieldErrors.licenceNo}
-            required
           />
           <Input
             id="sr-address"
@@ -137,7 +133,6 @@ export function SalesRegisterBuyerPage() {
             value={gstPpobAddress}
             onChange={(e) => setGstPpobAddress(e.target.value)}
             error={fieldErrors.gstPpobAddress}
-            required
           />
           <Input
             id="sr-account"
@@ -153,7 +148,6 @@ export function SalesRegisterBuyerPage() {
             value={ifsc}
             onChange={(e) => setIfsc(e.target.value)}
             error={fieldErrors['bankDetail.ifsc']}
-            required={Boolean(accountNumber)}
           />
           <Input
             id="sr-account-name"
@@ -161,7 +155,6 @@ export function SalesRegisterBuyerPage() {
             value={accountName}
             onChange={(e) => setAccountName(e.target.value)}
             error={fieldErrors['bankDetail.accountName']}
-            required={Boolean(accountNumber)}
           />
           <div className="col-span-2">
             <Textarea
@@ -170,7 +163,6 @@ export function SalesRegisterBuyerPage() {
               hint="Who called, what was agreed."
               value={callNote}
               onChange={(e) => setCallNote(e.target.value)}
-              required
             />
           </div>
           {duplicate && (

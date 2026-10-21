@@ -203,7 +203,9 @@ export interface SellerCataloguePackItem {
 }
 
 export interface SellerCatalogueItem {
-  entryId: string;
+  /** Null when he carries this product only through a company he deals in. */
+  entryId: string | null;
+  source: 'manual' | 'dealership';
   productId: string;
   brand: string;
   technical: string;
@@ -212,7 +214,27 @@ export interface SellerCatalogueItem {
   packsDetailed: boolean;
   packs: SellerCataloguePackItem[];
   setAt: string;
-  setBy: string;
+  setBy: string | null;
+}
+
+/** A company he deals in; every live product of it counts as carried. */
+export interface SellerDealershipItem {
+  manufacturerId: string;
+  name: string;
+  state: string;
+  productCount: number;
+}
+
+export function putSellerDealerships(
+  accessToken: string,
+  sellerId: string,
+  manufacturerIds: string[],
+): Promise<SellerDealershipItem[]> {
+  return apiFetch(`/staff/purchase/sellers/${sellerId}/dealerships`, {
+    method: 'PUT',
+    body: { manufacturerIds },
+    accessToken,
+  });
 }
 
 export function getSellerCatalogue(
@@ -300,6 +322,7 @@ export interface SellerFileDto {
     overdue: boolean;
   }>;
   catalogue: SellerCatalogueItem[];
+  dealerships: SellerDealershipItem[];
   listings: SellerFileListingItem[];
   openDemand: SellerOpenDemandItem[];
 }
@@ -393,6 +416,231 @@ export interface DispatchQueueItem {
   noDispatch48h: boolean;
   dispatchedAt: string | null;
   daysInTransit: number | null;
+  /** The seller's invoice and e-way bill are on record — a flag only, never a block. */
+  invoiceRecorded: boolean;
+}
+
+// ---------------------------------------------------------------------------
+// Stock → PO → Billed → Dispatch.
+// ---------------------------------------------------------------------------
+
+export type StockHoldStatus = 'holding' | 'lapsed';
+
+export interface StockQueueItem {
+  soId: string;
+  soNo: string;
+  sellerId: string;
+  sellerFirm: string;
+  brand: string;
+  packLabel: string;
+  boxes: number;
+  /** Absent in the per-seller funnel, which carries no rupee figure. */
+  sellerRatePaise?: number | null;
+  payDeadline: string;
+  hold: StockHoldStatus;
+  holdHours: number | null;
+  holdUntil: string;
+  holdConfirmedAt: string | null;
+  hoursLeft: number;
+}
+
+export interface PoStageItem {
+  poId: string;
+  poNo: string;
+  sellerId: string;
+  sellerFirm: string;
+  brand: string;
+  packLabel: string;
+  boxes: number;
+  releasedAt: string;
+  dispatchDueDate: string;
+  hoursLeft: number;
+  invoiceNo: string | null;
+  invoiceDate: string | null;
+  ewayNo: string | null;
+}
+
+export function getStockQueue(accessToken: string): Promise<StockQueueItem[]> {
+  return apiFetch('/staff/purchase/stock', { accessToken });
+}
+
+/** Ask the seller to hold the stock until the buyer pays — 24 hours unless told otherwise. */
+export function requestStockHold(
+  accessToken: string,
+  soId: string,
+  input: { holdHours?: number; callNote: string },
+): Promise<{ holdUntil: string }> {
+  return apiFetch(`/staff/purchase/stock/${soId}/hold`, {
+    method: 'POST',
+    body: input,
+    accessToken,
+  });
+}
+
+/** Change how long the seller holds the stock; the hold itself opens with the order. */
+export function adjustStockHold(
+  accessToken: string,
+  soId: string,
+  input: { holdHours: number; callNote: string },
+): Promise<{ holdUntil: string }> {
+  return apiFetch(`/staff/purchase/stock/${soId}/hold/adjust`, {
+    method: 'POST',
+    body: input,
+    accessToken,
+  });
+}
+
+export function confirmStockHold(
+  accessToken: string,
+  soId: string,
+  input: { callNote: string },
+): Promise<{ confirmed: true }> {
+  return apiFetch(`/staff/purchase/stock/${soId}/hold/confirm`, {
+    method: 'POST',
+    body: input,
+    accessToken,
+  });
+}
+
+export function getPoQueue(accessToken: string): Promise<PoStageItem[]> {
+  return apiFetch('/staff/purchase/pos', { accessToken });
+}
+
+export function getBilledQueue(accessToken: string): Promise<PoStageItem[]> {
+  return apiFetch('/staff/purchase/billed', { accessToken });
+}
+
+export function recordSellerInvoice(
+  accessToken: string,
+  poId: string,
+  input: { invoiceNo: string; date: string; ewayNo: string; callNote: string },
+): Promise<{ recorded: true }> {
+  return apiFetch(`/staff/purchase/pos/${poId}/invoice`, {
+    method: 'POST',
+    body: input,
+    accessToken,
+  });
+}
+
+export interface SellerDispatchedInput {
+  mode: 'transport' | 'bus';
+  transporter?: string;
+  lr?: string;
+  busNo?: string;
+  driver?: string;
+  driverMobile?: string;
+  freightTerms: 'prepaid' | 'to_pay';
+  freightAmountPaise: number;
+  callNote: string;
+}
+
+/** Dispatch → At Indore: the seller has sent it (leg 1), reported on a call. */
+export function recordSellerDispatched(
+  accessToken: string,
+  poId: string,
+  input: SellerDispatchedInput,
+): Promise<{ movementId: string }> {
+  return apiFetch(`/staff/purchase/pos/${poId}/seller-dispatched`, {
+    method: 'POST',
+    body: input,
+    accessToken,
+    idempotencyKey: idempotencyKey(),
+  });
+}
+
+export function handToDispatch(
+  accessToken: string,
+  poId: string,
+  input: { callNote: string },
+): Promise<{ handedOver: true }> {
+  return apiFetch(`/staff/purchase/pos/${poId}/hand-to-dispatch`, {
+    method: 'POST',
+    body: input,
+    accessToken,
+  });
+}
+
+// ---------------------------------------------------------------------------
+// The seller file's funnel — one seller's orders, stage by stage.
+// ---------------------------------------------------------------------------
+
+export type SellerFunnelKey =
+  | 'approved'
+  | 'carries'
+  | 'on_board'
+  | 'quoted'
+  | 'confirmations'
+  | 'stock'
+  | 'po'
+  | 'billed'
+  | 'dispatch'
+  | 'received'
+  | 'paid';
+
+export interface SellerFunnelStage {
+  key: SellerFunnelKey;
+  label: string;
+  reached: boolean;
+  /** `null` for the yes/no joint (approved). */
+  count: number | null;
+  /** Items stuck at this joint. */
+  leakCount?: number;
+}
+
+export interface SellerQuotedRow {
+  quoteId: string;
+  brand: string;
+  technical: string;
+  packLabel: string | null;
+  boxesAsked: number;
+  boxesOffered: number;
+  givenAt: string;
+  heldUntil: string;
+}
+
+export interface SellerPileRow {
+  pileId: string;
+  sellerCounterpartyId: string;
+  brand: string;
+  packLabel: string;
+  boxes: number;
+  buyers: number;
+  openedAt: string;
+  chaseLeftHours: number;
+}
+
+export interface SellerAfterDispatchRow {
+  poId: string;
+  poNo: string;
+  brand: string;
+  packLabel: string;
+  boxes: number;
+  state: string;
+  receivedAt: string | null;
+  updatedAt: string;
+  /** `none`: the dock has not inspected yet · `recorded`: waiting for Purchase to apply it · `applied`. */
+  inspection: 'none' | 'recorded' | 'applied';
+}
+
+export interface SellerFunnelDto {
+  funnel: SellerFunnelStage[];
+  stages: {
+    quoted: SellerQuotedRow[];
+    confirmations: SellerPileRow[];
+    stock: StockQueueItem[];
+    po: PoStageItem[];
+    billed: PoStageItem[];
+    dispatch: DispatchQueueItem[];
+    received: SellerAfterDispatchRow[];
+    paid: SellerAfterDispatchRow[];
+  };
+}
+
+export function getSellerStageFunnel(
+  accessToken: string,
+  sellerId: string,
+): Promise<SellerFunnelDto> {
+  return apiFetch(`/staff/purchase/sellers/${sellerId}/funnel`, { accessToken });
 }
 
 export function getDispatchChaseQueue(accessToken: string): Promise<DispatchQueueItem[]> {

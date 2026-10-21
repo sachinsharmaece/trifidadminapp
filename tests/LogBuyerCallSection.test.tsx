@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { LogBuyerCallSection } from '../src/desks/sales/SalesCallWorkspacePage';
@@ -10,13 +10,51 @@ vi.mock('../src/api/proxy', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../src/api/proxy')>()),
   proxyRaiseAsks: vi.fn(),
 }));
-// The real picker loads the catalogue. This stand-in keeps the one behaviour that matters here:
-// like the real one it reports its pack to `onChange` on every render, starting with ''.
-vi.mock('../src/desks/enquiries/enquiryPickers', () => ({
-  PackPicker: ({ onChange }: { onChange: (skuId: string) => void }) => {
+// The real row searches and loads the catalogue (see CallLineFields.test.tsx). This stand-in
+// keeps what the form depends on: it reports its pack, quantity and rate, and can be removed.
+vi.mock('../src/desks/sales/CallLineFields', () => ({
+  CallLineFields: ({
+    qty,
+    expectedRate,
+    error,
+    onSkuChange,
+    onQtyChange,
+    onExpectedRateChange,
+    onRemove,
+  }: {
+    qty: number;
+    expectedRate: string;
+    error?: string;
+    onSkuChange: (skuId: string) => void;
+    onQtyChange: (qty: number) => void;
+    onExpectedRateChange: (rupees: string) => void;
+    onRemove?: () => void;
+  }) => {
     const [skuId, setSkuId] = useState('');
-    useEffect(() => onChange(skuId), [skuId, onChange]);
-    return <input aria-label="pack" value={skuId} onChange={(e) => setSkuId(e.target.value)} />;
+    return (
+      <div>
+        <input
+          aria-label="pack"
+          value={skuId}
+          onChange={(e) => {
+            setSkuId(e.target.value);
+            onSkuChange(e.target.value);
+          }}
+        />
+        <input
+          aria-label="quantity"
+          value={qty}
+          onChange={(e) => onQtyChange(Number(e.target.value))}
+        />
+        <input
+          aria-label="expected rate"
+          value={expectedRate}
+          onChange={(e) => onExpectedRateChange(e.target.value)}
+        />
+        {onRemove && <button onClick={onRemove}>Remove</button>}
+        {error && <p>Not logged: {error}</p>}
+      </div>
+    );
   },
 }));
 
@@ -24,6 +62,10 @@ function pickPacks(...skuIds: string[]) {
   skuIds.forEach((skuId, i) =>
     fireEvent.change(screen.getAllByLabelText('pack')[i]!, { target: { value: skuId } }),
   );
+}
+
+function setNote(note: string) {
+  fireEvent.change(screen.getByLabelText(/call note/i), { target: { value: note } });
 }
 
 beforeEach(() => {
@@ -47,7 +89,7 @@ describe('Log a buyer call — several products in one call', () => {
     expect(screen.getAllByLabelText('pack')).toHaveLength(2);
   });
 
-  it('sends every product under the one call note', async () => {
+  it('sends every product under the one call note, with the expected rate only where one was typed', async () => {
     vi.mocked(proxyRaiseAsks).mockResolvedValue({
       results: [
         { index: 0, askId: 'ask-a' },
@@ -58,7 +100,10 @@ describe('Log a buyer call — several products in one call', () => {
     fireEvent.click(screen.getByRole('button', { name: /add another product/i }));
     pickPacks('sku-1', 'sku-2');
     fireEvent.change(screen.getAllByLabelText(/quantity/i)[1]!, { target: { value: '4' } });
-    fireEvent.change(screen.getByLabelText(/call note/i), { target: { value: 'Two products.' } });
+    fireEvent.change(screen.getAllByLabelText(/expected rate/i)[0]!, {
+      target: { value: '1250.50' },
+    });
+    setNote('Two products.');
     fireEvent.click(screen.getByRole('button', { name: /log call \(2 products\)/i }));
 
     await waitFor(() => expect(proxyRaiseAsks).toHaveBeenCalledTimes(1));
@@ -66,7 +111,12 @@ describe('Log a buyer call — several products in one call', () => {
       buyerCounterpartyId: 'cp-1',
       callNote: 'Two products.',
       lines: [
-        { skuId: 'sku-1', qty: 1, conditionRequirement: { expiryBand: 'over12' } },
+        {
+          skuId: 'sku-1',
+          qty: 1,
+          conditionRequirement: { expiryBand: 'over12' },
+          expectedRatePaise: 125050, // Rupees typed, paise sent.
+        },
         { skuId: 'sku-2', qty: 4, conditionRequirement: { expiryBand: 'over12' } },
       ],
     });
@@ -76,9 +126,24 @@ describe('Log a buyer call — several products in one call', () => {
     expect(screen.getByLabelText(/call note/i)).toHaveValue('');
   });
 
+  it('refuses a zero or negative expected rate without calling the server', () => {
+    render(<LogBuyerCallSection buyerCounterpartyId="cp-1" />);
+    pickPacks('sku-1');
+    fireEvent.change(screen.getByLabelText(/expected rate/i), { target: { value: '0' } });
+    setNote('note');
+    fireEvent.click(screen.getByRole('button', { name: /^log call$/i }));
+    expect(screen.getByRole('alert')).toHaveTextContent(/Product 1: the expected rate/);
+    expect(proxyRaiseAsks).not.toHaveBeenCalled();
+
+    fireEvent.change(screen.getByLabelText(/expected rate/i), { target: { value: '-5' } });
+    fireEvent.click(screen.getByRole('button', { name: /^log call$/i }));
+    expect(screen.getByRole('alert')).toHaveTextContent(/expected rate/);
+    expect(proxyRaiseAsks).not.toHaveBeenCalled();
+  });
+
   it('refuses to send a product that has no pack picked, without calling the server', () => {
     render(<LogBuyerCallSection buyerCounterpartyId="cp-1" />);
-    fireEvent.change(screen.getByLabelText(/call note/i), { target: { value: 'note' } });
+    setNote('note');
     fireEvent.click(screen.getByRole('button', { name: /^log call$/i }));
     expect(screen.getByRole('alert')).toHaveTextContent(/Product 1 needs/);
     expect(proxyRaiseAsks).not.toHaveBeenCalled();
@@ -94,7 +159,7 @@ describe('Log a buyer call — several products in one call', () => {
     render(<LogBuyerCallSection buyerCounterpartyId="cp-1" />);
     fireEvent.click(screen.getByRole('button', { name: /add another product/i }));
     pickPacks('sku-1', 'sku-2');
-    fireEvent.change(screen.getByLabelText(/call note/i), { target: { value: 'note' } });
+    setNote('note');
     fireEvent.click(screen.getByRole('button', { name: /log call \(2 products\)/i }));
 
     expect(await screen.findByText(/Not logged: Buyers only\./)).toBeInTheDocument();

@@ -1,7 +1,12 @@
-import { useCallback } from 'react';
+import { useCallback, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { FiArrowLeft, FiPlus } from 'react-icons/fi';
-import { getSellerFile, type SellerCatalogueItem, type SellerFileDto } from '../../api/purchase';
+import {
+  getSellerFile,
+  type SellerCatalogueItem,
+  type SellerFileDto,
+  type SellerOpenDemandItem,
+} from '../../api/purchase';
 import { AsyncBoundary } from '../../components/AsyncBoundary';
 import { useAsyncData } from '../../lib/useAsyncData';
 import { useAuth } from '../../auth/AuthContext';
@@ -10,6 +15,10 @@ import { Table, Th, Td } from '../../components/ui/Table';
 import { Badge } from '../../components/ui/Badge';
 import { Button } from '../../components/ui/Button';
 import { DevNote } from '../../components/dev/DevNote';
+import { SellerFunnel } from './SellerFunnel';
+import { RaiseQuoteForm } from './RaiseQuoteForm';
+import { SellerDealershipsCard } from './SellerDealershipsCard';
+import { CatalogueCompanyGroup } from './CatalogueProductRow';
 
 export function SellerFilePage() {
   const { id } = useParams<{ id: string }>();
@@ -17,6 +26,8 @@ export function SellerFilePage() {
   const navigate = useNavigate();
   const loader = useCallback(() => callApi((token) => getSellerFile(token, id!)), [callApi, id]);
   const { state, retry } = useAsyncData(loader, () => false, [loader]);
+  // Bumped when something on this page changes the seller's funnel (a quote raised for him).
+  const [funnelRefresh, setFunnelRefresh] = useState(0);
 
   return (
     <div className="flex flex-col gap-6">
@@ -80,6 +91,8 @@ export function SellerFilePage() {
 
             <div className="grid gap-6 md:grid-cols-[1fr_320px]">
               <div className="flex flex-col gap-6">
+                <SellerFunnel sellerId={id!} refreshKey={funnelRefresh} />
+
                 <Card
                   title="What he sells"
                   actions={
@@ -93,87 +106,30 @@ export function SellerFilePage() {
                   }
                 >
                   <p className="mb-3 text-sm text-slate-500">
-                    His catalogue — no rate, no territory, never on the buyer board on its own.
+                    Every product of the companies he deals in, plus anything added by hand — no
+                    rate, no territory, never on the buyer board on its own.
                   </p>
                   {file.catalogue.length === 0 ? (
                     <p className="text-sm text-slate-500">
-                      Nothing recorded. Nobody has asked him what he sells.
+                      Nothing recorded. Tick the companies he deals in, or add a product he carries.
                     </p>
                   ) : (
-                    <div className="flex flex-col gap-5">
-                      {groupByCompany(file.catalogue).map(([manufacturerName, entries]) => (
-                        <div key={manufacturerName}>
-                          <h3 className="mb-2 text-xs font-medium uppercase tracking-wide text-slate-500">
-                            {manufacturerName}
-                          </h3>
-                          <ul className="flex flex-col gap-3">
-                            {entries.map((c) => (
-                              <li
-                                key={c.entryId}
-                                className="rounded-md border border-slate-200 p-3"
-                              >
-                                <div className="flex items-center justify-between">
-                                  <span className="font-medium">
-                                    {c.brand}
-                                    {c.productState === 'draft' && (
-                                      <span className="ml-2">
-                                        <Badge tone="warn">draft</Badge>
-                                      </span>
-                                    )}
-                                  </span>
-                                  {c.productState !== 'draft' &&
-                                  c.packs.some((p) => p.skuState !== 'draft') ? (
-                                    <Button
-                                      size="sm"
-                                      variant="secondary"
-                                      icon={<FiPlus />}
-                                      onClick={() =>
-                                        navigate(
-                                          `/purchase/sellers/${id}/listing/new?productId=${c.productId}`,
-                                        )
-                                      }
-                                    >
-                                      Add to listing
-                                    </Button>
-                                  ) : (
-                                    <span className="text-xs text-slate-400">
-                                      {c.productState === 'draft'
-                                        ? 'Draft product — can’t be listed yet'
-                                        : c.packs.length === 0
-                                          ? 'No pack on this product — can’t be listed'
-                                          : 'Packs are drafts — can’t be listed yet'}
-                                    </span>
-                                  )}
-                                </div>
-                                <p className="text-xs text-slate-500">{c.technical}</p>
-                                <div className="mt-2 flex flex-wrap gap-1">
-                                  {c.packsDetailed ? (
-                                    c.packs.map((p) => (
-                                      <span
-                                        key={p.skuId}
-                                        className={`rounded border px-2 py-0.5 text-xs ${
-                                          p.listed
-                                            ? 'border-success-500 text-success-600'
-                                            : 'border-slate-300 text-slate-600'
-                                        }`}
-                                      >
-                                        {p.packLabel}
-                                        {p.listed
-                                          ? ` · ${(p.listingRatePaise! / 100).toFixed(2)}`
-                                          : ''}
-                                      </span>
-                                    ))
-                                  ) : (
-                                    <span className="text-xs italic text-slate-400">
-                                      packs not detailed
-                                    </span>
-                                  )}
-                                </div>
-                              </li>
-                            ))}
-                          </ul>
-                        </div>
-                      ))}
+                    <div className="flex flex-col gap-3">
+                      {(() => {
+                        const groups = groupByCompany(file.catalogue);
+                        return groups.map(([manufacturerName, entries]) => (
+                          <CatalogueCompanyGroup
+                            key={manufacturerName}
+                            name={manufacturerName}
+                            items={entries}
+                            // One company: nothing to fold away, so show its products at once.
+                            defaultOpen={groups.length === 1}
+                            onAddToListing={(productId) =>
+                              navigate(`/purchase/sellers/${id}/listing/new?productId=${productId}`)
+                            }
+                          />
+                        ));
+                      })()}
                     </div>
                   )}
                 </Card>
@@ -240,21 +196,22 @@ export function SellerFilePage() {
                           <Th>Ask</Th>
                           <Th numeric>Boxes</Th>
                           <Th numeric>Open</Th>
+                          <Th />
                         </tr>
                       </thead>
                       <tbody>
                         {file.openDemand.map((d) => (
-                          <tr key={d.askId}>
-                            <Td>
-                              {d.brand} · {d.technical}
-                            </Td>
-                            <Td numeric>{d.qty}</Td>
-                            <Td numeric>
-                              {d.ageHours >= 24
-                                ? `${Math.floor(d.ageHours / 24)}d`
-                                : `${d.ageHours}h`}
-                            </Td>
-                          </tr>
+                          <OpenDemandRow
+                            key={d.askId}
+                            demand={d}
+                            sellerId={file.sellerId}
+                            sellerCounterpartyId={file.counterpartyId}
+                            sellerFirm={file.firm}
+                            onQuoted={() => {
+                              retry();
+                              setFunnelRefresh((n) => n + 1);
+                            }}
+                          />
                         ))}
                       </tbody>
                     </Table>
@@ -350,12 +307,75 @@ export function SellerFilePage() {
                     </ul>
                   </Card>
                 )}
+                <SellerDealershipsCard
+                  sellerId={id!}
+                  dealerships={file.dealerships}
+                  onSaved={() => {
+                    retry();
+                    setFunnelRefresh((n) => n + 1);
+                  }}
+                />
               </div>
             </div>
           </div>
         )}
       </AsyncBoundary>
     </div>
+  );
+}
+
+/** An ask he could serve, with the quote form opening under it — raised on his behalf, on a call. */
+function OpenDemandRow({
+  demand,
+  sellerId,
+  sellerCounterpartyId,
+  sellerFirm,
+  onQuoted,
+}: {
+  demand: SellerOpenDemandItem;
+  sellerId: string;
+  sellerCounterpartyId: string;
+  sellerFirm: string;
+  onQuoted: () => void;
+}) {
+  const [quoting, setQuoting] = useState(false);
+  return (
+    <>
+      <tr>
+        <Td>
+          {demand.brand} · {demand.technical}
+        </Td>
+        <Td numeric>{demand.qty}</Td>
+        <Td numeric>
+          {demand.ageHours >= 24 ? `${Math.floor(demand.ageHours / 24)}d` : `${demand.ageHours}h`}
+        </Td>
+        <Td>
+          <div className="flex justify-end">
+            <Button size="sm" variant="secondary" onClick={() => setQuoting((v) => !v)}>
+              {quoting ? 'Cancel' : 'Quote for him'}
+            </Button>
+          </div>
+        </Td>
+      </tr>
+      {quoting && (
+        <tr>
+          <Td colSpan={4}>
+            <RaiseQuoteForm
+              askId={demand.askId}
+              skuId={demand.skuId}
+              productId={demand.productId}
+              sellerId={sellerId}
+              sellerCounterpartyId={sellerCounterpartyId}
+              sellerFirm={sellerFirm}
+              onDone={() => {
+                setQuoting(false);
+                onQuoted();
+              }}
+            />
+          </Td>
+        </tr>
+      )}
+    </>
   );
 }
 

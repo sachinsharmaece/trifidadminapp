@@ -9,6 +9,7 @@ import { Card } from '../../components/ui/Card';
 import { Input, Textarea } from '../../components/ui/Input';
 import { Button } from '../../components/ui/Button';
 import { DevNote } from '../../components/dev/DevNote';
+import { CompanyPicker } from './CompanyPicker';
 
 /** For a dealer the desk found itself, rather than one who registered on his own. */
 export function AddSellerPage() {
@@ -27,6 +28,7 @@ export function AddSellerPage() {
   const [refFirm2, setRefFirm2] = useState('');
   const [refPhone2, setRefPhone2] = useState('');
   const [callNote, setCallNote] = useState('');
+  const [dealershipIds, setDealershipIds] = useState<string[]>([]);
   const [result, setResult] = useState<{
     registrationId: string;
     accountNameWarning: string | null;
@@ -65,6 +67,9 @@ export function AddSellerPage() {
                 whatTheySaid: 'Reliable',
               },
             ],
+            ...(dealershipIds.length > 0
+              ? { dealerships: dealershipIds.map((manufacturerId) => ({ manufacturerId })) }
+              : {}),
             bankDetail: { accountNumber, ifsc, accountName },
             consent: { noticeVersion: 'v1', marketingOptIn: false },
             callNote,
@@ -211,6 +216,15 @@ export function AddSellerPage() {
             error={fieldErrors['references.1.phone']}
             required
           />
+          <div className="col-span-2">
+            <span className="mb-1 block text-sm font-medium text-slate-700">
+              Companies he deals in
+            </span>
+            <p className="mb-2 text-sm text-slate-500">
+              Optional — can be ticked later from his seller file.
+            </p>
+            <CompanyPicker value={dealershipIds} onChange={setDealershipIds} />
+          </div>
           <div className="col-span-2">
             <Textarea
               id="ss-note"

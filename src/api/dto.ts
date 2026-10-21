@@ -38,10 +38,27 @@ export interface ManufacturerDto {
   state?: 'draft' | 'live';
 }
 
+export type ProductCategory = 'seed' | 'pesticide' | 'fertilizer';
+
+export interface TechnicalDto {
+  technicalId: string;
+  name: string;
+  state?: 'draft' | 'live';
+}
+
+export interface HsnDto {
+  hsnId: string;
+  code: string;
+  description: string;
+  taxPercent: number;
+}
+
 export interface ProductDto {
   productId: string;
   brand: string;
   hsn: string;
+  category?: ProductCategory;
+  taxPercent?: number;
   class: 'High' | 'Medium' | 'Low';
   technical?: string;
   manufacturerId?: string;
@@ -99,6 +116,10 @@ export interface MarginMatrixCellDto {
   pct: number;
   creditPct: number;
   effectiveFrom: string;
+}
+
+export interface MarginMatrixHistoryRowDto extends MarginMatrixCellDto {
+  createdAt: string;
 }
 
 export interface CreateSoResult {

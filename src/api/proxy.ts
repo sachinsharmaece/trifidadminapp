@@ -30,7 +30,10 @@ export function proxyRaiseAsk(
   return apiFetch('/staff/proxy/buyer/asks', { method: 'POST', body: input, accessToken });
 }
 
-export type ProxyRaiseAskLine = Omit<ProxyRaiseAskInput, 'buyerCounterpartyId' | 'callNote'>;
+export type ProxyRaiseAskLine = Omit<ProxyRaiseAskInput, 'buyerCounterpartyId' | 'callNote'> & {
+  /** What he said he hopes to pay, in paise — kept for Sales only. */
+  expectedRatePaise?: number;
+};
 
 /** One entry per submitted line, by position — an ask id if it was raised, an error if it wasn't. */
 export type ProxyRaiseAsksLineResult =
@@ -166,6 +169,8 @@ export interface ProxyPostQuoteInput {
   provenance: 'company' | 'auth';
   batch?: string;
   daysToIndore: number;
+  /** Needed only when the ask names a product, not one pack. */
+  skuId?: string;
   callNote: string;
 }
 

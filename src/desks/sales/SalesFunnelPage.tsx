@@ -19,6 +19,8 @@ const FUNNEL_DESTINATIONS: Partial<Record<SalesFunnelMetric['key'], string>> = {
   rate_held: '/sales/funnel/rate-held',
   took_it: '/sales/orders',
   paid: '/sales/orders',
+  billed: '/sales/orders',
+  dispatched: '/sales/orders',
   delivered: '/sales/orders',
 };
 
@@ -29,7 +31,7 @@ function formatValue(metric: SalesFunnelMetric): string {
   return String(metric.value);
 }
 
-/** Nine joints (BR-278-adjacent funnel report) — the ladder from registered to ordered-again. */
+/** Eleven joints (BR-278-adjacent funnel report) — the ladder from registered to ordered-again. */
 export function SalesFunnelPage() {
   const { callApi } = useAuth();
   const navigate = useNavigate();
@@ -41,7 +43,7 @@ export function SalesFunnelPage() {
       <div>
         <h1 className="text-xl font-semibold text-slate-900">Funnel</h1>
         <p className="mt-1 text-sm text-slate-500">
-          Nine joints, one leak at each. This desk is measured on leaks closed, not orders placed.
+          Eleven joints, one leak at each. This desk is measured on leaks closed, not orders placed.
         </p>
       </div>
       <AsyncBoundary state={state} onRetry={retry} emptyMessage="No funnel data yet.">

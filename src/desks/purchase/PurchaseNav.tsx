@@ -6,6 +6,9 @@ import {
   getDispatchChaseQueue,
   getInspectionsPendingApply,
   getReturnNoteAgeing,
+  getStockQueue,
+  getPoQueue,
+  getBilledQueue,
 } from '../../api/purchase';
 import { listRegistrations } from '../../api/onboarding';
 import { useAuth } from '../../auth/AuthContext';
@@ -13,6 +16,9 @@ import { useAuth } from '../../auth/AuthContext';
 interface NavCounts {
   demand: number;
   confirmations: number;
+  stock: number;
+  po: number;
+  billed: number;
   dispatch: number;
   sellers: number;
   recovery: number;
@@ -32,11 +38,21 @@ function useNavCounts(): Partial<NavCounts> {
       callApi((token) => listRegistrations(token, 'pending')),
       callApi((token) => getInspectionsPendingApply(token)),
       callApi((token) => getReturnNoteAgeing(token)),
-    ]).then(([demand, piles, dispatch, registrations, inspections, returns]) => {
+      callApi((token) => getStockQueue(token)),
+      callApi((token) => getPoQueue(token)),
+      callApi((token) => getBilledQueue(token)),
+    ]).then(([demand, piles, dispatch, registrations, inspections, returns, stock, pos, billed]) => {
       if (cancelled) return;
       setCounts({
         demand: demand.status === 'fulfilled' ? demand.value.length : undefined,
         confirmations: piles.status === 'fulfilled' ? piles.value.length : undefined,
+        // Stock: orders whose hold has run out while the buyer has still not paid.
+        stock:
+          stock.status === 'fulfilled'
+            ? stock.value.filter((s) => s.hold === 'lapsed').length
+            : undefined,
+        po: pos.status === 'fulfilled' ? pos.value.length : undefined,
+        billed: billed.status === 'fulfilled' ? billed.value.length : undefined,
         dispatch:
           dispatch.status === 'fulfilled'
             ? dispatch.value.filter((d) => d.bucket === 'overdue').length
@@ -63,6 +79,9 @@ const ITEMS: Array<{ to: string; label: string; end?: boolean; countKey?: keyof 
   { to: '/purchase', label: 'Today', end: true },
   { to: '/purchase/demand', label: 'Demand', countKey: 'demand' },
   { to: '/purchase/confirmations', label: 'Confirmations', countKey: 'confirmations' },
+  { to: '/purchase/stock', label: 'Hold', countKey: 'stock' },
+  { to: '/purchase/po', label: 'PO', countKey: 'po' },
+  { to: '/purchase/billed', label: 'Billed', countKey: 'billed' },
   { to: '/purchase/dispatch', label: 'Dispatch', countKey: 'dispatch' },
   { to: '/purchase/sellers', label: 'Sellers', countKey: 'sellers' },
   { to: '/purchase/matrix', label: 'Supply matrix' },
@@ -71,7 +90,8 @@ const ITEMS: Array<{ to: string; label: string; end?: boolean; countKey?: keyof 
 ];
 
 /**
- * Purchase-desk v2 — eight screens, one desk. This sub-nav sits inside the
+ * Purchase-desk v2 — eleven screens, one desk (Stock, PO and Billed sit between Confirmations
+ * and Dispatch). This sub-nav sits inside the
  * app's existing sidebar route (`/purchase`), the same way `Manage`'s
  * children do, rather than adding eight new top-level sidebar entries.
  */

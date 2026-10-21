@@ -18,7 +18,7 @@ import { DevNote } from '../../components/dev/DevNote';
 import { SellerFunnel } from './SellerFunnel';
 import { RaiseQuoteForm } from './RaiseQuoteForm';
 import { SellerDealershipsCard } from './SellerDealershipsCard';
-import { listBlockedReason } from './listBlockedReason';
+import { CatalogueCompanyGroup } from './CatalogueProductRow';
 
 export function SellerFilePage() {
   const { id } = useParams<{ id: string }>();
@@ -114,79 +114,22 @@ export function SellerFilePage() {
                       Nothing recorded. Tick the companies he deals in, or add a product he carries.
                     </p>
                   ) : (
-                    <div className="flex flex-col gap-5">
-                      {groupByCompany(file.catalogue).map(([manufacturerName, entries]) => (
-                        <div key={manufacturerName}>
-                          <h3 className="mb-2 text-xs font-medium uppercase tracking-wide text-slate-500">
-                            {manufacturerName}
-                          </h3>
-                          <ul className="flex flex-col gap-3">
-                            {entries.map((c) => (
-                              <li
-                                key={c.entryId ?? `dealership-${c.productId}`}
-                                className="rounded-md border border-slate-200 p-3"
-                              >
-                                <div className="flex items-center justify-between">
-                                  <span className="font-medium">
-                                    {c.brand}
-                                    {c.productState === 'draft' && (
-                                      <span className="ml-2">
-                                        <Badge tone="warn">draft</Badge>
-                                      </span>
-                                    )}
-                                    {c.source === 'dealership' && (
-                                      <span className="ml-2">
-                                        <Badge tone="neutral">via company</Badge>
-                                      </span>
-                                    )}
-                                  </span>
-                                  <Button
-                                    size="sm"
-                                    variant="secondary"
-                                    icon={<FiPlus />}
-                                    onClick={() =>
-                                      navigate(
-                                        `/purchase/sellers/${id}/listing/new?productId=${c.productId}`,
-                                      )
-                                    }
-                                  >
-                                    Add to listing
-                                  </Button>
-                                </div>
-                                {listBlockedReason(c) && (
-                                  <p className="mt-1 text-right text-xs text-slate-400">
-                                    Can’t be listed yet — {listBlockedReason(c)}.
-                                  </p>
-                                )}
-                                <p className="text-xs text-slate-500">{c.technical}</p>
-                                <div className="mt-2 flex flex-wrap gap-1">
-                                  {c.packsDetailed ? (
-                                    c.packs.map((p) => (
-                                      <span
-                                        key={p.skuId}
-                                        className={`rounded border px-2 py-0.5 text-xs ${
-                                          p.listed
-                                            ? 'border-success-500 text-success-600'
-                                            : 'border-slate-300 text-slate-600'
-                                        }`}
-                                      >
-                                        {p.packLabel}
-                                        {p.listed
-                                          ? ` · ${(p.listingRatePaise! / 100).toFixed(2)}`
-                                          : ''}
-                                      </span>
-                                    ))
-                                  ) : (
-                                    <span className="text-xs italic text-slate-400">
-                                      packs not detailed
-                                    </span>
-                                  )}
-                                </div>
-                              </li>
-                            ))}
-                          </ul>
-                        </div>
-                      ))}
+                    <div className="flex flex-col gap-3">
+                      {(() => {
+                        const groups = groupByCompany(file.catalogue);
+                        return groups.map(([manufacturerName, entries]) => (
+                          <CatalogueCompanyGroup
+                            key={manufacturerName}
+                            name={manufacturerName}
+                            items={entries}
+                            // One company: nothing to fold away, so show its products at once.
+                            defaultOpen={groups.length === 1}
+                            onAddToListing={(productId) =>
+                              navigate(`/purchase/sellers/${id}/listing/new?productId=${productId}`)
+                            }
+                          />
+                        ));
+                      })()}
                     </div>
                   )}
                 </Card>

@@ -83,6 +83,7 @@ export function staffRegisterSeller(
     ownerName: string;
     licenceNo: string;
     references: Array<{ firm: string; phone: string; relationship: string; whatTheySaid: string }>;
+    dealerships?: Array<{ manufacturerId: string }>;
     bankDetail: { accountNumber: string; ifsc: string; accountName: string };
     consent: { noticeVersion: string; marketingOptIn: boolean };
     callNote: string;

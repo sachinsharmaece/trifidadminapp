@@ -17,6 +17,8 @@ import { Button } from '../../components/ui/Button';
 import { DevNote } from '../../components/dev/DevNote';
 import { SellerFunnel } from './SellerFunnel';
 import { RaiseQuoteForm } from './RaiseQuoteForm';
+import { SellerDealershipsCard } from './SellerDealershipsCard';
+import { listBlockedReason } from './listBlockedReason';
 
 export function SellerFilePage() {
   const { id } = useParams<{ id: string }>();
@@ -104,11 +106,12 @@ export function SellerFilePage() {
                   }
                 >
                   <p className="mb-3 text-sm text-slate-500">
-                    His catalogue — no rate, no territory, never on the buyer board on its own.
+                    Every product of the companies he deals in, plus anything added by hand — no
+                    rate, no territory, never on the buyer board on its own.
                   </p>
                   {file.catalogue.length === 0 ? (
                     <p className="text-sm text-slate-500">
-                      Nothing recorded. Nobody has asked him what he sells.
+                      Nothing recorded. Tick the companies he deals in, or add a product he carries.
                     </p>
                   ) : (
                     <div className="flex flex-col gap-5">
@@ -120,7 +123,7 @@ export function SellerFilePage() {
                           <ul className="flex flex-col gap-3">
                             {entries.map((c) => (
                               <li
-                                key={c.entryId}
+                                key={c.entryId ?? `dealership-${c.productId}`}
                                 className="rounded-md border border-slate-200 p-3"
                               >
                                 <div className="flex items-center justify-between">
@@ -131,31 +134,30 @@ export function SellerFilePage() {
                                         <Badge tone="warn">draft</Badge>
                                       </span>
                                     )}
+                                    {c.source === 'dealership' && (
+                                      <span className="ml-2">
+                                        <Badge tone="neutral">via company</Badge>
+                                      </span>
+                                    )}
                                   </span>
-                                  {c.productState !== 'draft' &&
-                                  c.packs.some((p) => p.skuState !== 'draft') ? (
-                                    <Button
-                                      size="sm"
-                                      variant="secondary"
-                                      icon={<FiPlus />}
-                                      onClick={() =>
-                                        navigate(
-                                          `/purchase/sellers/${id}/listing/new?productId=${c.productId}`,
-                                        )
-                                      }
-                                    >
-                                      Add to listing
-                                    </Button>
-                                  ) : (
-                                    <span className="text-xs text-slate-400">
-                                      {c.productState === 'draft'
-                                        ? 'Draft product — can’t be listed yet'
-                                        : c.packs.length === 0
-                                          ? 'No pack on this product — can’t be listed'
-                                          : 'Packs are drafts — can’t be listed yet'}
-                                    </span>
-                                  )}
+                                  <Button
+                                    size="sm"
+                                    variant="secondary"
+                                    icon={<FiPlus />}
+                                    onClick={() =>
+                                      navigate(
+                                        `/purchase/sellers/${id}/listing/new?productId=${c.productId}`,
+                                      )
+                                    }
+                                  >
+                                    Add to listing
+                                  </Button>
                                 </div>
+                                {listBlockedReason(c) && (
+                                  <p className="mt-1 text-right text-xs text-slate-400">
+                                    Can’t be listed yet — {listBlockedReason(c)}.
+                                  </p>
+                                )}
                                 <p className="text-xs text-slate-500">{c.technical}</p>
                                 <div className="mt-2 flex flex-wrap gap-1">
                                   {c.packsDetailed ? (
@@ -362,6 +364,14 @@ export function SellerFilePage() {
                     </ul>
                   </Card>
                 )}
+                <SellerDealershipsCard
+                  sellerId={id!}
+                  dealerships={file.dealerships}
+                  onSaved={() => {
+                    retry();
+                    setFunnelRefresh((n) => n + 1);
+                  }}
+                />
               </div>
             </div>
           </div>

@@ -12,6 +12,7 @@ import { Card } from '../../components/ui/Card';
 import { Input, Select, Textarea } from '../../components/ui/Input';
 import { Button } from '../../components/ui/Button';
 import { DevNote } from '../../components/dev/DevNote';
+import { listBlockedReason } from './listBlockedReason';
 
 interface ListablePack {
   productId: string;
@@ -148,11 +149,27 @@ function ListingForm({ file }: { file: SellerFileDto }) {
     }
   }
 
+  // "Add to listing" is on every product he carries, so the product the desk
+  // came here for may not be listable yet — say so plainly instead of leaving
+  // an empty pack picker.
+  const chosen = preselectProductId
+    ? file.catalogue.find((c) => c.productId === preselectProductId)
+    : undefined;
+  const chosenBlockedReason = chosen ? listBlockedReason(chosen) : null;
+  const chosenNotice = chosen && chosenBlockedReason && (
+    <p role="alert" className="mb-4 rounded-md bg-danger-50 px-3 py-2 text-sm text-danger-600">
+      {chosen.brand} can’t be listed yet — {chosenBlockedReason}.
+    </p>
+  );
+
   if (packs.length === 0) {
     return (
       <Card title={`Enter a listing for ${file.firm}`}>
+        {chosenNotice}
         <p className="text-sm text-danger-500">
-          His catalogue is empty — add what he carries first, from his seller file.
+          {file.catalogue.length === 0
+            ? 'His catalogue is empty — tick the companies he deals in, or add what he carries, from his seller file.'
+            : 'None of the products he carries has a pack that can be listed yet.'}
         </p>
       </Card>
     );
@@ -160,9 +177,10 @@ function ListingForm({ file }: { file: SellerFileDto }) {
 
   return (
     <Card title={`Enter a listing for ${file.firm}`}>
+      {chosenNotice}
       <p className="mb-4 text-sm text-slate-500">
-        Same fields, same validation as the seller&apos;s own listing screen. Only products already
-        in his catalogue can be listed.
+        Same fields, same validation as the seller&apos;s own listing screen. Only products he
+        carries — his companies&apos; products and anything added by hand — can be listed.
       </p>
       {blocked.length > 0 && (
         <p className="mb-4 rounded-md bg-warning-50 px-3 py-2 text-sm text-warning-700">

@@ -203,7 +203,9 @@ export interface SellerCataloguePackItem {
 }
 
 export interface SellerCatalogueItem {
-  entryId: string;
+  /** Null when he carries this product only through a company he deals in. */
+  entryId: string | null;
+  source: 'manual' | 'dealership';
   productId: string;
   brand: string;
   technical: string;
@@ -212,7 +214,27 @@ export interface SellerCatalogueItem {
   packsDetailed: boolean;
   packs: SellerCataloguePackItem[];
   setAt: string;
-  setBy: string;
+  setBy: string | null;
+}
+
+/** A company he deals in; every live product of it counts as carried. */
+export interface SellerDealershipItem {
+  manufacturerId: string;
+  name: string;
+  state: string;
+  productCount: number;
+}
+
+export function putSellerDealerships(
+  accessToken: string,
+  sellerId: string,
+  manufacturerIds: string[],
+): Promise<SellerDealershipItem[]> {
+  return apiFetch(`/staff/purchase/sellers/${sellerId}/dealerships`, {
+    method: 'PUT',
+    body: { manufacturerIds },
+    accessToken,
+  });
 }
 
 export function getSellerCatalogue(
@@ -300,6 +322,7 @@ export interface SellerFileDto {
     overdue: boolean;
   }>;
   catalogue: SellerCatalogueItem[];
+  dealerships: SellerDealershipItem[];
   listings: SellerFileListingItem[];
   openDemand: SellerOpenDemandItem[];
 }

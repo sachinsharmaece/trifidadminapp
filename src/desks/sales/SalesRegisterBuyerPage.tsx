@@ -182,7 +182,7 @@ export function SalesRegisterBuyerPage() {
           )}
           {result && (
             <p className="col-span-2 text-sm text-success-600">
-              Registered as {result.registrationId} — ready for approval on the Registrations desk.
+              Buyer registered — ready for approval on the Registrations desk.
             </p>
           )}
           <div className="col-span-2">

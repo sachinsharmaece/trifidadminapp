@@ -10,6 +10,7 @@ import { Table, Th, Td } from '../../components/ui/Table';
 import { Badge, type BadgeTone } from '../../components/ui/Badge';
 import { Button } from '../../components/ui/Button';
 import { poolConditionLabel } from '../../lib/labels';
+import { formatDateTime } from '../../lib/dates';
 
 function statusTone(status: string): BadgeTone {
   switch (status) {
@@ -95,7 +96,7 @@ export function SalesPoolDetailPage() {
               <Kpi label="State" value={pool.status} />
               <Kpi
                 label="Pay deadline"
-                value={pool.payDeadline ? new Date(pool.payDeadline).toLocaleString() : '—'}
+                value={pool.payDeadline ? formatDateTime(pool.payDeadline) : '—'}
               />
             </div>
 
@@ -131,14 +132,12 @@ export function SalesPoolDetailPage() {
                         </Td>
                         <Td numeric>{c.qty}</Td>
                         <Td>{commitmentBadge(c)}</Td>
-                        <Td>
-                          {c.reconfirmedAt ? new Date(c.reconfirmedAt).toLocaleString() : '—'}
-                        </Td>
+                        <Td>{c.reconfirmedAt ? formatDateTime(c.reconfirmedAt) : '—'}</Td>
                         <Td>
                           {notPaid ? (
                             <Badge tone="bad">not paid</Badge>
                           ) : c.paidAt ? (
-                            new Date(c.paidAt).toLocaleString()
+                            formatDateTime(c.paidAt)
                           ) : (
                             '—'
                           )}

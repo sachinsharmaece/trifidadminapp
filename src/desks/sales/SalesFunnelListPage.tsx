@@ -16,6 +16,7 @@ import { Table, Th, Td } from '../../components/ui/Table';
 import { Badge } from '../../components/ui/Badge';
 import { Button } from '../../components/ui/Button';
 import { formatRupees } from '../../lib/labels';
+import { formatDateTime } from '../../lib/dates';
 
 const linkClass = 'underline-offset-2 hover:underline';
 
@@ -114,7 +115,7 @@ export function SalesFunnelAskedPage() {
                       </span>
                     )}
                   </Td>
-                  <Td>{new Date(a.createdAt).toLocaleString()}</Td>
+                  <Td>{formatDateTime(a.createdAt)}</Td>
                 </tr>
               ))}
             </tbody>
@@ -160,7 +161,7 @@ export function SalesFunnelRateHeldPage() {
                   <Td numeric>{formatRupees(q.ratePaise)}</Td>
                   <Td numeric>{q.qty}</Td>
                   <Td numeric>{q.daysToIndore}</Td>
-                  <Td>{new Date(q.heldUntil).toLocaleString()}</Td>
+                  <Td>{formatDateTime(q.heldUntil)}</Td>
                 </tr>
               ))}
             </tbody>

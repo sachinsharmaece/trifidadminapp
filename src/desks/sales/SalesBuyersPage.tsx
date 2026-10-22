@@ -18,6 +18,7 @@ import { Badge } from '../../components/ui/Badge';
 import { Input, Textarea } from '../../components/ui/Input';
 import { Button } from '../../components/ui/Button';
 import { Modal } from '../../components/ui/Modal';
+import { formatDate } from '../../lib/dates';
 
 type BookQueueTab = 'book' | 'queue';
 type Tab = BookQueueTab | 'waiting';
@@ -205,7 +206,9 @@ function BuyerTable({
     const needle = q.trim().toLowerCase();
     if (!needle) return items;
     return items.filter((b) =>
-      [b.firm, b.contactName, b.mobile, b.gstin, b.tehsil, b.ownerName].some((field) => field?.toLowerCase().includes(needle)),
+      [b.firm, b.contactName, b.mobile, b.gstin, b.tehsil, b.ownerName].some((field) =>
+        field?.toLowerCase().includes(needle),
+      ),
     );
   }, [items, q]);
 
@@ -249,7 +252,7 @@ function BuyerTable({
               )}
             </Td>
             <Td numeric>{b.orderCount}</Td>
-            <Td>{b.lastOrderAt ? new Date(b.lastOrderAt).toLocaleDateString() : 'never'}</Td>
+            <Td>{b.lastOrderAt ? formatDate(b.lastOrderAt) : 'never'}</Td>
             <Td numeric className={b.rateViews >= 25 ? 'font-semibold text-danger-500' : undefined}>
               {b.rateViews}
             </Td>
@@ -325,7 +328,7 @@ function WaitingTab() {
                   <tr key={r.registrationId}>
                     <Td>{r.firm ?? '—'}</Td>
                     <Td className="font-mono text-xs">{r.gstin ?? '—'}</Td>
-                    <Td>{new Date(r.createdAt).toLocaleDateString()}</Td>
+                    <Td>{formatDate(r.createdAt)}</Td>
                     <Td>
                       <Button
                         size="sm"

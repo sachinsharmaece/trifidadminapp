@@ -252,8 +252,7 @@ export function AddSellerPage() {
           {result && (
             <>
               <p className="col-span-2 text-sm text-success-600">
-                Registered as {result.registrationId} — pending OTP confirmation, then set his area
-                from Registrations.
+                Seller registered — pending OTP confirmation, then set his area from Registrations.
               </p>
               {result.accountNameWarning && (
                 <p

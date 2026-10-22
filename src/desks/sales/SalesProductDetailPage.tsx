@@ -22,6 +22,7 @@ import {
   moqBandLabel,
   provenanceLabel,
 } from '../../lib/labels';
+import { formatDateTime } from '../../lib/dates';
 
 function formatRate(ratePaise: number | null): string {
   return ratePaise === null ? '—' : formatRupees(ratePaise);
@@ -141,7 +142,7 @@ export function SalesProductDetailPage() {
                           <Td>
                             <Badge tone={askStateTone(ask.state)}>{askStateLabel(ask.state)}</Badge>
                           </Td>
-                          <Td>{new Date(ask.createdAt).toLocaleString()}</Td>
+                          <Td>{formatDateTime(ask.createdAt)}</Td>
                         </tr>
                       ))}
                     </tbody>

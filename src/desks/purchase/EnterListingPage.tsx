@@ -74,7 +74,8 @@ function ListingForm({ file }: { file: SellerFileDto }) {
   // preselect that product's first selectable pack so the rep only fills the rate.
   const preselectProductId = useSearchParams()[0].get('productId');
   const [skuId, setSkuId] = useState(
-    () => (preselectProductId && eligible.find((p) => p.productId === preselectProductId)?.skuId) || '',
+    () =>
+      (preselectProductId && eligible.find((p) => p.productId === preselectProductId)?.skuId) || '',
   );
   // Sellers quote a rate in rupees on the phone (BR-055 stores it in paise,
   // but nobody speaks paise) — the field takes rupees and this converts,
@@ -83,11 +84,11 @@ function ListingForm({ file }: { file: SellerFileDto }) {
   const parsedRatePaise =
     rateRupeesText.trim() === '' ? null : Math.round(Number(rateRupeesText) * 100);
   const [expiryBand, setExpiryBand] = useState<'over12' | 'under12'>('over12');
-  const [moqExact, setMoqExact] = useState(1);
+  const [moqExact, setMoqExact] = useState('');
   const [deliveryBand, setDeliveryBand] = useState<'48h' | '2-5d'>('48h');
   const [provenance, setProvenance] = useState<'company' | 'auth'>('company');
   const [batch, setBatch] = useState('');
-  const [qty, setQty] = useState(1);
+  const [qty, setQty] = useState('');
   const [scopeType, setScopeType] = useState<'my_area' | 'all_india' | 'all_except_mine'>(
     'my_area',
   );
@@ -118,11 +119,11 @@ function ListingForm({ file }: { file: SellerFileDto }) {
                 skuId,
                 ratePaise: parsedRatePaise,
                 expiryBand,
-                moqExact,
+                moqExact: Number(moqExact),
                 deliveryBand,
                 provenance,
                 batch: provenance === 'auth' ? batch : undefined,
-                qty,
+                qty: Number(qty),
               },
             ],
             callNote,
@@ -135,11 +136,11 @@ function ListingForm({ file }: { file: SellerFileDto }) {
       setSkuId('');
       setRateRupeesText('');
       setExpiryBand('over12');
-      setMoqExact(1);
+      setMoqExact('');
       setDeliveryBand('48h');
       setProvenance('company');
       setBatch('');
-      setQty(1);
+      setQty('');
       setScopeType('my_area');
       setCallNote('');
     } catch (submitError) {
@@ -234,7 +235,7 @@ function ListingForm({ file }: { file: SellerFileDto }) {
           min={1}
           hint="Any value above 1 opens a pool on this SKU's condition set (BR-150)."
           value={moqExact}
-          onChange={(e) => setMoqExact(Number(e.target.value))}
+          onChange={(e) => setMoqExact(e.target.value)}
           required
         />
         <Select
@@ -270,7 +271,7 @@ function ListingForm({ file }: { file: SellerFileDto }) {
           type="number"
           min={1}
           value={qty}
-          onChange={(e) => setQty(Number(e.target.value))}
+          onChange={(e) => setQty(e.target.value)}
           required
         />
         <Select

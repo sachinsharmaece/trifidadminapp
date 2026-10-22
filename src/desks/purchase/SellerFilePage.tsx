@@ -19,6 +19,7 @@ import { SellerFunnel } from './SellerFunnel';
 import { RaiseQuoteForm } from './RaiseQuoteForm';
 import { SellerDealershipsCard } from './SellerDealershipsCard';
 import { CatalogueCompanyGroup } from './CatalogueProductRow';
+import { formatDate } from '../../lib/dates';
 
 export function SellerFilePage() {
   const { id } = useParams<{ id: string }>();
@@ -42,8 +43,7 @@ export function SellerFilePage() {
               <h2 className="text-lg font-semibold text-slate-900">{file.firm}</h2>
               <p className="text-sm text-slate-500">
                 {file.ownerName} · <span className="font-mono">{file.gstin}</span> · licence{' '}
-                <span className="font-mono">{file.licenceNo}</span> · since{' '}
-                {new Date(file.since).toLocaleDateString()}
+                <span className="font-mono">{file.licenceNo}</span> · since {formatDate(file.since)}
               </p>
             </div>
 
@@ -260,7 +260,7 @@ export function SellerFilePage() {
                                   <Badge tone="warn">{r.daysOld}d of 30</Badge>
                                 )}
                               </Td>
-                              <Td>{new Date(r.dueDate).toLocaleDateString()}</Td>
+                              <Td>{formatDate(r.dueDate)}</Td>
                             </tr>
                           ))}
                         </tbody>

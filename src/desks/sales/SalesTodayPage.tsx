@@ -11,6 +11,7 @@ import { Table, Th, Td } from '../../components/ui/Table';
 import { Badge } from '../../components/ui/Badge';
 import { Input } from '../../components/ui/Input';
 import { Button } from '../../components/ui/Button';
+import { formatDateTime } from '../../lib/dates';
 
 const BUCKET_ORDER: SalesWorkItem['bucket'][] = ['money', 'promised', 'he_asked', 'market'];
 
@@ -143,7 +144,7 @@ function WorkRow({ item }: { item: SalesWorkItem }) {
         : 'Rising'
       : REF_LABEL[item.refType],
     item.qty != null ? `${item.qty} boxes` : null,
-    due ? `due ${due.toLocaleString()}` : null,
+    due ? `due ${formatDateTime(due)}` : null,
   ].filter(Boolean);
 
   const content = (

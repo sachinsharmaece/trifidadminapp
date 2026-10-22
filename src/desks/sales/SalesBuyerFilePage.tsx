@@ -29,6 +29,7 @@ import { Badge } from '../../components/ui/Badge';
 import { Button } from '../../components/ui/Button';
 import { formatRupees } from '../../lib/labels';
 import { timeAgo, useMinuteClock } from '../../lib/timeAgo';
+import { formatDate, formatDateTime } from '../../lib/dates';
 
 function humanize(value: string): string {
   return value.replace(/_/g, ' ');
@@ -191,7 +192,7 @@ export function SalesBuyerFilePage() {
                               <Badge tone="neutral">{a.state}</Badge>
                               <div
                                 className="mt-1 text-xs text-slate-500"
-                                title={new Date(a.askedAt).toLocaleString()}
+                                title={formatDateTime(a.askedAt)}
                               >
                                 Asked {timeAgo(a.askedAt, now)}
                               </div>
@@ -259,10 +260,10 @@ export function SalesBuyerFilePage() {
                             <Td numeric>{q.qtyAvailable}</Td>
                             <Td numeric>{q.daysToIndore}</Td>
                             <Td>
-                              <div>{new Date(q.bindingUntil).toLocaleString()}</div>
+                              <div>{formatDateTime(q.bindingUntil)}</div>
                               <div
                                 className="text-xs text-slate-500"
-                                title={`Given ${new Date(q.givenAt).toLocaleString()}`}
+                                title={`Given ${formatDateTime(q.givenAt)}`}
                               >
                                 Given {timeAgo(q.givenAt, now)}
                               </div>
@@ -416,7 +417,7 @@ export function SalesBuyerFilePage() {
                         <tbody>
                           {calls.map((c) => (
                             <tr key={c.callLogId}>
-                              <Td>{new Date(c.at).toLocaleString()}</Td>
+                              <Td>{formatDateTime(c.at)}</Td>
                               <Td>
                                 {c.direction === 'in' ? '↓' : c.direction === 'out' ? '↑' : '—'}
                               </Td>
@@ -467,7 +468,7 @@ export function SalesBuyerFilePage() {
                         {promised.map((c) => (
                           <li key={c.callLogId} className="rounded-md border border-slate-200 p-2">
                             <div className="text-xs font-semibold text-slate-500">
-                              due {new Date(c.promiseDueAt!).toLocaleDateString()}
+                              due {formatDate(c.promiseDueAt!)}
                             </div>
                             <p className="text-slate-700">{c.note}</p>
                           </li>
@@ -491,7 +492,7 @@ export function SalesBuyerFilePage() {
                         {notes.map((c) => (
                           <li key={c.callLogId} className="rounded-md border border-slate-200 p-2">
                             <div className="text-xs font-semibold text-slate-500">
-                              {new Date(c.at).toLocaleDateString()}
+                              {formatDate(c.at)}
                             </div>
                             <p className="text-slate-700">{c.note}</p>
                           </li>
@@ -601,17 +602,14 @@ function OrdersTable({
             <Td>{o.soNo}</Td>
             <Td>{o.productDisplay}</Td>
             <Td numeric>₹{(o.totalPaise / 100).toFixed(2)}</Td>
-            {showDeadline && <Td>{new Date(o.payDeadline).toLocaleString()}</Td>}
+            {showDeadline && <Td>{formatDateTime(o.payDeadline)}</Td>}
             <Td>
               <div className="flex flex-wrap items-center gap-1">
                 <Badge tone="neutral">{humanize(o.state)}</Badge>
                 {o.claimNeedsApplying && <Badge tone="warn">he says he paid</Badge>}
               </div>
               {since && (
-                <div
-                  className="mt-1 text-xs text-slate-500"
-                  title={new Date(since(o).at).toLocaleString()}
-                >
+                <div className="mt-1 text-xs text-slate-500" title={formatDateTime(since(o).at)}>
                   {since(o).verb} {timeAgo(since(o).at, now)}
                 </div>
               )}

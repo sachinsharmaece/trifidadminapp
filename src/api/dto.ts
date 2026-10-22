@@ -165,6 +165,7 @@ export interface SalesRegisterRow {
   soId: string;
   soNo: string;
   buyerId: string;
+  buyerFirm: string;
   totalPaise: number;
 }
 
@@ -172,6 +173,7 @@ export interface PurchaseRegisterRow {
   poId: string;
   poNo: string;
   sellerId: string;
+  sellerFirm: string;
   billed: boolean;
 }
 

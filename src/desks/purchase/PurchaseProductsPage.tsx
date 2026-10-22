@@ -23,10 +23,11 @@ import { Button } from '../../components/ui/Button';
 import { Input, Select } from '../../components/ui/Input';
 import { DevNote } from '../../components/dev/DevNote';
 import { isExactNameMatch, isNearMatch } from '../../lib/fuzzyMatch';
+import { formatDate } from '../../lib/dates';
 
 const NEW_TECHNICAL = '__new_technical';
 
-type MasterProductLite =Awaited<ReturnType<typeof getMastersProducts>>[number];
+type MasterProductLite = Awaited<ReturnType<typeof getMastersProducts>>[number];
 
 export function PurchaseProductsPage() {
   const [tab, setTab] = useState<'analysis' | 'master'>('analysis');
@@ -227,9 +228,7 @@ function MasterTab() {
                       <Badge tone="warn">{d.kind}</Badge>
                     </Td>
                     <Td className="font-medium">{d.name}</Td>
-                    <Td className="text-xs text-slate-500">
-                      {new Date(d.createdAt).toLocaleDateString()}
-                    </Td>
+                    <Td className="text-xs text-slate-500">{formatDate(d.createdAt)}</Td>
                   </tr>
                 ))}
               </tbody>
@@ -347,9 +346,9 @@ function NewMastersCard({
   const [hsn, setHsn] = useState('3808');
   const [packProductId, setPackProductId] = useState('');
   const [packLabel, setPackLabel] = useState('');
-  const [packSize, setPackSize] = useState(1);
+  const [packSize, setPackSize] = useState('');
   const [baseUnit, setBaseUnit] = useState<'LTR' | 'KG' | 'PC'>('LTR');
-  const [unitsPerBox, setUnitsPerBox] = useState(1);
+  const [unitsPerBox, setUnitsPerBox] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [message, setMessage] = useState<string | null>(null);
@@ -595,7 +594,7 @@ function NewMastersCard({
               label="Pack size"
               type="number"
               value={packSize}
-              onChange={(e) => setPackSize(Number(e.target.value))}
+              onChange={(e) => setPackSize(e.target.value)}
               error={fieldErrors.packSize}
             />
             <Input
@@ -603,7 +602,7 @@ function NewMastersCard({
               label="Units/box"
               type="number"
               value={unitsPerBox}
-              onChange={(e) => setUnitsPerBox(Number(e.target.value))}
+              onChange={(e) => setUnitsPerBox(e.target.value)}
               error={fieldErrors.unitsPerBox}
             />
           </div>
@@ -619,9 +618,9 @@ function NewMastersCard({
                 postDraftSku(token, {
                   productId: packProductId,
                   packLabel,
-                  packSize,
+                  packSize: Number(packSize),
                   baseUnit,
-                  unitsPerBox,
+                  unitsPerBox: Number(unitsPerBox),
                 }),
               )
                 .then(() => {

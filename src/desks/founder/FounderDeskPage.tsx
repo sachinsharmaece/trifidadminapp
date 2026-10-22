@@ -5,6 +5,7 @@ import { AsyncBoundary } from '../../components/AsyncBoundary';
 import { Card } from '../../components/ui/Card';
 import { useAsyncData } from '../../lib/useAsyncData';
 import { FunnelMetricsGrid } from '../purchase/FunnelMetrics';
+import { formatDateTime } from '../../lib/dates';
 
 /**
  * New — M8. The Founder view: read-only and deliberately small. Every figure
@@ -36,7 +37,7 @@ export function FounderDeskPage() {
               <p className="mt-2 text-xs text-slate-500">
                 {formatRupees(overview.buyerMoneyHeld.undeliveredOrdersPaise)} in paid, undelivered
                 orders + {formatRupees(overview.buyerMoneyHeld.pendingRefundsPaise)} in refunds not
-                yet released. As of {new Date(overview.asOf).toLocaleString()}.
+                yet released. As of {formatDateTime(overview.asOf)}.
               </p>
             </Card>
 

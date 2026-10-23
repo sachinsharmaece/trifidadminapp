@@ -12,6 +12,8 @@ export const PERMISSIONS = {
   LOCATION_MASTER_WRITE: 'location:master_write',
   // Phase 1 — correcting and verifying a pincode (Admin).
   PINCODE_VERIFY: 'location:pincode_verify',
+  // Phase 2 — showing an employee's full PAN or Aadhaar (Admin only, audited).
+  EMPLOYEE_PII_REVEAL: 'employee:pii_reveal',
   ONBOARDING_READ: 'onboarding:read',
   ONBOARDING_APPROVE: 'onboarding:approve',
   // M4 additions.

@@ -7,17 +7,18 @@ import { listSalesBuyers, type BuyerListRow } from '../../api/sales';
 import { listRegistrations } from '../../api/onboarding';
 import { assignBook } from '../../api/admin';
 import type { RegistrationListItem } from '../../api/dto';
-import { ApiError } from '../../api/errors';
+import { useFormSubmit } from '../../lib/useFormSubmit';
 import { AsyncBoundary } from '../../components/AsyncBoundary';
 import { useAsyncData } from '../../lib/useAsyncData';
 import { useAuth } from '../../auth/AuthContext';
-import { useToast } from '../../components/ui/Toast';
 import { Card } from '../../components/ui/Card';
+import { LeadLookup } from '../../components/lead/LeadLookup';
 import { Table, Th, Td } from '../../components/ui/Table';
 import { Badge } from '../../components/ui/Badge';
-import { Input, Textarea } from '../../components/ui/Input';
+import { Input, Select, Textarea } from '../../components/ui/Input';
 import { Button } from '../../components/ui/Button';
 import { Modal } from '../../components/ui/Modal';
+import { formatDate } from '../../lib/dates';
 
 type BookQueueTab = 'book' | 'queue';
 type Tab = BookQueueTab | 'waiting';
@@ -33,6 +34,10 @@ export function SalesBuyersPage() {
         <h1 className="text-xl font-semibold text-slate-900">Buyers</h1>
         <Button onClick={() => navigate('/sales/buyers/new')}>Register a buyer</Button>
       </div>
+
+      <Card title="Already on TriFid?">
+        <LeadLookup side="buyer" fileHref={(id) => `/sales/buyers/${id}`} />
+      </Card>
 
       <div className="flex gap-2">
         <Button
@@ -87,18 +92,36 @@ function BuyerListTab({ tab }: { tab: BookQueueTab }) {
     [callApi, tab],
   );
   const { state, retry } = useAsyncData(loader, (items) => items.length === 0, [loader]);
+  // Phase 3 — Category, District and Assigned to filters, drawn from the rows.
+  const [filters, setFilters] = useState({ category: '', district: '', assignedTo: '' });
 
   return (
     <div className="flex flex-col gap-4">
       <Input
         label="Search"
-        placeholder="Firm, owner, mobile, GSTIN, tehsil…"
+        placeholder="Firm, proprietor, mobile, GSTIN, PAN, tehsil…"
         value={q}
         onChange={(e) => setQ(e.target.value)}
       />
       <AsyncBoundary state={state} onRetry={retry} emptyMessage="Nobody here yet.">
         {(items) => (
-          <BuyerTable items={items} q={q} navigate={navigate} onAssignToMe={setAssigning} />
+          <>
+            <BuyerFilters items={items} value={filters} onChange={setFilters} />
+            <BuyerTable
+              items={items.filter(
+                (b) =>
+                  (!filters.category || b.tier === filters.category) &&
+                  (!filters.district || b.district === filters.district) &&
+                  (!filters.assignedTo ||
+                    (filters.assignedTo === 'queue'
+                      ? !b.assignedToEmployeeId
+                      : b.assignedToEmployeeId === filters.assignedTo)),
+              )}
+              q={q}
+              navigate={navigate}
+              onAssignToMe={setAssigning}
+            />
+          </>
         )}
       </AsyncBoundary>
       <AssignToBookModal
@@ -114,12 +137,10 @@ function BuyerListTab({ tab }: { tab: BookQueueTab }) {
 }
 
 /**
- * B-10 — BR-276's automatic queue-to-book trigger fires on a buyer's first
- * order, but if no Sales employee is active at that exact moment it
- * silently leaves him in Queue with no retry (`ensureBookAssignment`,
- * `modules/chain/chain.service.ts`). This is the already-built manual
- * fallback (`POST /admin/book-assignments`) — previously not wired to any
- * screen, so a buyer stuck this way had no way out at all.
+ * B-10 — take a buyer from the Queue into your own book
+ * (`POST /admin/book-assignments`). With the first-order auto-assign off
+ * (DEC-062) this is how an unowned buyer is picked up; moving one someone
+ * already owns is Change owner, for his leader or Admin (BR-362).
  */
 function AssignToBookModal({
   target,
@@ -131,30 +152,25 @@ function AssignToBookModal({
   onAssigned: () => void;
 }) {
   const { callApi, me } = useAuth();
-  const { show } = useToast();
   const [reason, setReason] = useState('');
-  const [error, setError] = useState<string | null>(null);
-  const [submitting, setSubmitting] = useState(false);
-
-  async function handleSubmit(event: FormEvent): Promise<void> {
-    event.preventDefault();
-    if (!target || !me) return;
-    setError(null);
-    setSubmitting(true);
-    try {
-      await callApi((token) =>
-        assignBook(token, { buyerId: target.buyerId, ownerEmployeeId: me.employeeId, reason }),
-      );
-      show(`${target.firm} is now in your book.`);
+  const save = useFormSubmit<unknown>({
+    fields: ['reason'],
+    success: `${target?.firm ?? 'He'} is now in your book.`,
+    onSuccess: () => {
       setReason('');
       onAssigned();
-    } catch (submitError) {
-      setError(
-        submitError instanceof ApiError ? submitError.message : 'Could not assign this buyer.',
-      );
-    } finally {
-      setSubmitting(false);
-    }
+    },
+    toastOnSuccess: true,
+  });
+
+  function handleSubmit(event: FormEvent): void {
+    event.preventDefault();
+    if (!target || !me) return;
+    void save.submit((key) =>
+      callApi((token) =>
+        assignBook(token, { buyerId: target.buyerId, ownerEmployeeId: me.employeeId, reason }, key),
+      ),
+    );
   }
 
   return (
@@ -172,21 +188,83 @@ function AssignToBookModal({
           onChange={(e) => setReason(e.target.value)}
           required
         />
-        {error && (
+        {save.formError && (
           <p role="alert" className="text-sm text-danger-500">
-            {error}
+            {save.formError}
           </p>
         )}
         <div className="flex justify-end gap-2">
           <Button type="button" variant="secondary" onClick={onClose}>
             Cancel
           </Button>
-          <Button type="submit" loading={submitting}>
+          <Button type="submit" loading={save.submitting}>
             Add to my book
           </Button>
         </div>
       </form>
     </Modal>
+  );
+}
+
+function BuyerFilters({
+  items,
+  value,
+  onChange,
+}: {
+  items: BuyerListRow[];
+  value: { category: string; district: string; assignedTo: string };
+  onChange: (next: { category: string; district: string; assignedTo: string }) => void;
+}) {
+  const categories = [...new Set(items.map((b) => b.tier).filter((t): t is string => !!t))].sort();
+  const districts = [
+    ...new Set(items.map((b) => b.district).filter((d): d is string => !!d)),
+  ].sort();
+  const people = new Map<string, string>();
+  for (const b of items) {
+    if (b.assignedToEmployeeId && b.ownerName) people.set(b.assignedToEmployeeId, b.ownerName);
+  }
+  return (
+    <div className="grid max-w-3xl grid-cols-3 gap-4">
+      <Select
+        label="Category"
+        value={value.category}
+        onChange={(e) => onChange({ ...value, category: e.target.value })}
+      >
+        <option value="">All</option>
+        {categories.map((c) => (
+          <option key={c} value={c}>
+            {c}
+          </option>
+        ))}
+      </Select>
+      <Select
+        label="District"
+        value={value.district}
+        onChange={(e) => onChange({ ...value, district: e.target.value })}
+      >
+        <option value="">All</option>
+        {districts.map((d) => (
+          <option key={d} value={d}>
+            {d}
+          </option>
+        ))}
+      </Select>
+      <Select
+        label="Assigned to"
+        value={value.assignedTo}
+        onChange={(e) => onChange({ ...value, assignedTo: e.target.value })}
+      >
+        <option value="">Anyone</option>
+        <option value="queue">Queue (nobody)</option>
+        {[...people.entries()]
+          .sort((a, b) => a[1].localeCompare(b[1]))
+          .map(([id, name]) => (
+            <option key={id} value={id}>
+              {name}
+            </option>
+          ))}
+      </Select>
+    </div>
   );
 }
 
@@ -205,12 +283,18 @@ function BuyerTable({
     const needle = q.trim().toLowerCase();
     if (!needle) return items;
     return items.filter((b) =>
-      [b.firm, b.contactName, b.mobile, b.gstin, b.tehsil, b.ownerName].some((field) => field?.toLowerCase().includes(needle)),
+      [b.firm, b.contactName, b.mobile, b.gstin, b.pan, b.tehsil, b.district, b.ownerName].some(
+        (field) => field?.toLowerCase().includes(needle),
+      ),
     );
   }, [items, q]);
 
   if (filtered.length === 0) {
-    return <p className="text-sm text-slate-500">No match for &quot;{q}&quot;.</p>;
+    return (
+      <p className="text-sm text-slate-500">
+        {q ? <>No match for &quot;{q}&quot;.</> : 'No buyer matches these filters.'}
+      </p>
+    );
   }
 
   return (
@@ -219,11 +303,12 @@ function BuyerTable({
         <tr>
           <Th>Firm</Th>
           <Th>Tehsil</Th>
-          <Th>Position</Th>
+          <Th>District</Th>
+          <Th>Category</Th>
           <Th numeric>Orders</Th>
           <Th>Last order</Th>
           <Th numeric>Rate views</Th>
-          <Th>Owner</Th>
+          <Th>Assigned to</Th>
           <Th />
         </tr>
       </thead>
@@ -236,9 +321,12 @@ function BuyerTable({
           >
             <Td>
               <div className="font-medium text-slate-900">{b.firm}</div>
-              <div className="font-mono text-xs text-slate-500">{b.gstin ?? '—'}</div>
+              <div className="font-mono text-xs text-slate-500">
+                {b.gstin ?? (b.pan ? `Unregistered · PAN ${b.pan}` : '—')}
+              </div>
             </Td>
             <Td>{b.tehsil ?? '—'}</Td>
+            <Td>{b.district ?? '—'}</Td>
             <Td>
               {b.tier ? (
                 <Badge tone="neutral" variant="chip">
@@ -249,7 +337,7 @@ function BuyerTable({
               )}
             </Td>
             <Td numeric>{b.orderCount}</Td>
-            <Td>{b.lastOrderAt ? new Date(b.lastOrderAt).toLocaleDateString() : 'never'}</Td>
+            <Td>{b.lastOrderAt ? formatDate(b.lastOrderAt) : 'never'}</Td>
             <Td numeric className={b.rateViews >= 25 ? 'font-semibold text-danger-500' : undefined}>
               {b.rateViews}
             </Td>
@@ -325,7 +413,7 @@ function WaitingTab() {
                   <tr key={r.registrationId}>
                     <Td>{r.firm ?? '—'}</Td>
                     <Td className="font-mono text-xs">{r.gstin ?? '—'}</Td>
-                    <Td>{new Date(r.createdAt).toLocaleDateString()}</Td>
+                    <Td>{formatDate(r.createdAt)}</Td>
                     <Td>
                       <Button
                         size="sm"

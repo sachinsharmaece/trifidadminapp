@@ -13,14 +13,61 @@ export interface StaffMeDto {
   mfaEnabled: boolean;
 }
 
+export type Position = 'SALES_LEADER' | 'PURCHASE_LEADER' | 'SALES_EXEC' | 'PURCHASE_EXEC';
+export type EducationLevel = '10th' | '12th' | 'graduate' | 'post_graduate' | 'other';
+
+export interface EmployeeRef {
+  employeeId: string;
+  person: string;
+}
+
+/** API-134 row — the Team list (Phase 2). PAN/Aadhaar never appear here. */
 export interface EmployeeListItem {
   employeeId: string;
   person: string;
   email: string;
+  mobile: string | null;
   desk?: string;
   roleKeys: string[];
+  positions: Position[];
+  reportsToSalesLeader: EmployeeRef | null;
+  reportsToPurchaseLeader: EmployeeRef | null;
+  worksForTeams: EmployeeRef[];
+  worksForAllTeams: boolean;
+  laneKeys: string[];
   active: boolean;
   mfaEnabled: boolean;
+  /** False for staff created before Phase 2 — mobile and HR still to fill in. */
+  hrComplete: boolean;
+}
+
+export interface EmployeeDetail extends EmployeeListItem {
+  hr: {
+    dob: string;
+    panMasked: string;
+    aadhaarMasked: string;
+    fatherName: string;
+    fatherMobile: string | null;
+    husbandName: string | null;
+    husbandMobile: string | null;
+    emergencyContact: { name: string; relation: string; mobile: string };
+    permanentAddress: string;
+    currentAddress: string;
+    currentSameAsPermanent: boolean;
+    education: { level: EducationLevel | null; other: string | null };
+  } | null;
+}
+
+export interface DeactivationImpact {
+  employeeId: string;
+  person: string;
+  buyersOwned: number;
+  sellersOwned: number;
+  laneKeys: string[];
+  directReports: Array<EmployeeRef & { side: 'sales' | 'purchase' }>;
+  teamMembersServed: number;
+  needsReassign: boolean;
+  defaultReassignTo: EmployeeRef | null;
 }
 
 export interface TehsilDto {
@@ -28,6 +75,39 @@ export interface TehsilDto {
   name: string;
   district: string;
   state: string;
+  // Phase 1 — the masters this tehsil sits under; null until it is migrated.
+  districtId: string | null;
+  stateId: string | null;
+}
+
+export interface StateDto {
+  stateId: string;
+  name: string;
+  gstStateCode: string;
+}
+
+export interface DistrictDto {
+  districtId: string;
+  name: string;
+  stateId: string;
+  stateName: string;
+}
+
+export interface PincodeLocationDto {
+  pincode: string;
+  status: 'verified' | 'unverified';
+  tehsilId: string;
+  tehsilName: string;
+  districtId: string | null;
+  districtName: string;
+  stateId: string | null;
+  stateName: string;
+}
+
+export interface PincodeListItemDto extends PincodeLocationDto {
+  createdByName: string | null;
+  verifiedByName: string | null;
+  createdAt: string;
 }
 
 export interface ManufacturerDto {
@@ -90,10 +170,56 @@ export interface RegistrationListItem {
   registrationId: string;
   firm?: string;
   gstin?: string;
+  pan?: string;
   kind: 'buyer' | 'seller' | 'both';
   status: 'pending' | 'active' | 'rejected' | 'blacklisted';
   createdAt: string;
   staffAssisted: boolean;
+  /** Phase 3 — the Sales person he is assigned to; null = the Queue. */
+  assignedTo: string | null;
+  district: string | null;
+}
+
+/** Phase 3 — the buyer profile (header, details card, approval prefill, Edit). */
+export interface BuyerProfileDto {
+  buyerId: string;
+  counterpartyId: string;
+  status: string;
+  firm: string;
+  ownerName: string | null;
+  gstin: string | null;
+  pan: string | null;
+  registered: boolean;
+  loginMobile: string | null;
+  contactMobile: string | null;
+  category: 'Retailer' | 'Dealer' | 'Distributor' | 'Trader' | null;
+  location: {
+    address: string | null;
+    pincode: string | null;
+    stateId: string | null;
+    districtId: string | null;
+    tehsilId: string | null;
+    tehsil: string | null;
+    district: string | null;
+    state: string | null;
+  };
+  licenceNo: string | null;
+  margPartyCode: string | null;
+  companies: Array<{ manufacturerId: string; name: string }>;
+  assignedTo: { employeeId: string; person: string } | null;
+  assignedLeader: { employeeId: string; person: string } | null;
+  canEdit: boolean;
+  canEditCategory: boolean;
+  canEditIdentity: boolean;
+  /** Phase 5 — his leader (his team and the Queue) or Admin may move him. */
+  canChangeOwner: boolean;
+}
+
+/** Phase 3 — someone a buyer can be assigned to by the person asking. */
+export interface AssignableSalesPerson {
+  employeeId: string;
+  person: string;
+  isSelf: boolean;
 }
 
 export interface RegistrationStatusDto {
@@ -165,6 +291,7 @@ export interface SalesRegisterRow {
   soId: string;
   soNo: string;
   buyerId: string;
+  buyerFirm: string;
   totalPaise: number;
 }
 
@@ -172,6 +299,7 @@ export interface PurchaseRegisterRow {
   poId: string;
   poNo: string;
   sellerId: string;
+  sellerFirm: string;
   billed: boolean;
 }
 

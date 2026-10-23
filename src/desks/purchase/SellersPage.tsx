@@ -8,6 +8,7 @@ import { AsyncBoundary } from '../../components/AsyncBoundary';
 import { useAsyncData } from '../../lib/useAsyncData';
 import { useAuth } from '../../auth/AuthContext';
 import { Card } from '../../components/ui/Card';
+import { LeadLookup } from '../../components/lead/LeadLookup';
 import { Table, Th, Td } from '../../components/ui/Table';
 import { Badge } from '../../components/ui/Badge';
 import { Button } from '../../components/ui/Button';
@@ -45,6 +46,10 @@ export function SellersPage() {
           Add a seller
         </Button>
       </div>
+
+      <Card title="Already on TriFid?">
+        <LeadLookup side="seller" fileHref={(id) => `/purchase/sellers/${id}`} />
+      </Card>
 
       <Card title="Waiting on us">
         <p className="mb-4 text-sm text-slate-500">
@@ -98,6 +103,8 @@ export function SellersPage() {
               <thead>
                 <tr>
                   <Th>Firm</Th>
+                  <Th>District</Th>
+                  <Th>Assigned to</Th>
                   <Th>Tier</Th>
                   <Th numeric>Carries</Th>
                   <Th numeric>Listed</Th>
@@ -109,6 +116,8 @@ export function SellersPage() {
                 {items.map((s) => (
                   <tr key={s.sellerId}>
                     <Td className="font-medium">{s.firm}</Td>
+                    <Td>{s.district ?? '—'}</Td>
+                    <Td>{s.assignedTo ?? <Badge tone="warn">Queue</Badge>}</Td>
                     <Td>
                       <Badge tone="neutral">{s.trustTier}</Badge>
                     </Td>

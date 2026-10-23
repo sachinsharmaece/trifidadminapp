@@ -36,6 +36,7 @@ import { Badge } from '../../components/ui/Badge';
 import { Input, Select, Textarea } from '../../components/ui/Input';
 import { Button } from '../../components/ui/Button';
 import { deliveryBandLabel, expiryBandLabel, formatRupees, moqBandLabel } from '../../lib/labels';
+import { formatDateTime } from '../../lib/dates';
 
 const OUTCOMES: CallOutcome[] = [
   'placed_an_order',
@@ -396,7 +397,7 @@ function CallOutcomeSection({ buyerId, direction }: { buyerId: string; direction
               <tbody>
                 {items.map((c) => (
                   <tr key={c.callLogId}>
-                    <Td>{new Date(c.at).toLocaleString()}</Td>
+                    <Td>{formatDateTime(c.at)}</Td>
                     <Td>{c.direction === 'in' ? '↓' : c.direction === 'out' ? '↑' : '—'}</Td>
                     <Td>{c.outcome ? humanize(c.outcome) : '—'}</Td>
                     <Td>{c.note}</Td>
@@ -598,12 +599,17 @@ export function LogBuyerCallSection({ buyerCounterpartyId }: { buyerCounterparty
     <Card title="Log a buyer call">
       <p className="mb-4 text-sm text-slate-500">
         Raises an ask on the buyer&apos;s behalf. A call can name several products: each becomes its
-        own ask, all under the one call note. The expected rate is only what he said he hopes to
-        pay — it stays with Sales and is never shown to a seller or to him (BR-121).
+        own ask, all under the one call note. The expected rate is only what he said he hopes to pay
+        — it stays with Sales and is never shown to a seller or to him (BR-121).
       </p>
       <form onSubmit={handleSubmit} className="flex w-full flex-col gap-4">
         <div className="max-w-md">
-          <Input id="lbc-buyer" label="Buyer counterparty ID" value={buyerCounterpartyId} disabled />
+          <Input
+            id="lbc-buyer"
+            label="Buyer counterparty ID"
+            value={buyerCounterpartyId}
+            disabled
+          />
         </div>
         {lines.map((line, i) => (
           <CallLineFields

@@ -9,6 +9,7 @@ import { ProductCreatePage } from '../desks/admin/ProductCreatePage';
 import { ProductDetailPage } from '../desks/admin/ProductDetailPage';
 import { ManufacturersPage } from '../desks/admin/ManufacturersPage';
 import { TehsilsPage } from '../desks/admin/TehsilsPage';
+import { PincodesPage } from '../desks/admin/PincodesPage';
 import { MarginMatrixPage } from '../desks/admin/MarginMatrixPage';
 import { RegistrationsPage } from '../desks/admin/RegistrationsPage';
 // ChainDeskPage — only used by the commented-out /chain route below; restore
@@ -67,6 +68,9 @@ import { SalesCallWorkspacePage } from '../desks/sales/SalesCallWorkspacePage';
 import { SalesPulsePage } from '../desks/sales/SalesPulsePage';
 import { SalesMspPage } from '../desks/sales/SalesMspPage';
 import { SalesComplaintsPage } from '../desks/sales/SalesComplaintsPage';
+import { SalesPushedPage } from '../desks/sales/SalesPushedPage';
+import { FromSalesPage } from '../desks/purchase/FromSalesPage';
+import { FromSalesDetailPage } from '../desks/purchase/FromSalesDetailPage';
 import { LogisticsDeskPage } from '../desks/logistics/LogisticsDeskPage';
 import { ControllerDeskPage } from '../desks/controller/ControllerDeskPage';
 import { NotificationLogPage } from '../desks/notifications/NotificationLogPage';
@@ -145,9 +149,19 @@ export function App() {
         <Route
           path="/manage/tehsils"
           element={
-            <RequireAuth permission={PERMISSIONS.CATALOG_WRITE}>
+            <RequireAuth permission={PERMISSIONS.TERRITORY_READ}>
               <AppShell>
                 <TehsilsPage />
+              </AppShell>
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/manage/pincodes"
+          element={
+            <RequireAuth permission={PERMISSIONS.TERRITORY_READ}>
+              <AppShell>
+                <PincodesPage />
               </AppShell>
             </RequireAuth>
           }
@@ -273,6 +287,8 @@ export function App() {
           <Route path="sellers" element={<SellersPage />} />
           <Route path="add-seller" element={<AddSellerPage />} />
           <Route path="sellers/:id" element={<SellerFilePage />} />
+          <Route path="from-sales" element={<FromSalesPage />} />
+          <Route path="from-sales/:pushId" element={<FromSalesDetailPage />} />
           <Route path="sellers/:id/catalogue/new" element={<AddCatalogueEntryPage />} />
           <Route path="sellers/:id/listing/new" element={<EnterListingPage />} />
           <Route path="matrix" element={<SupplyMatrixPage />} />
@@ -306,6 +322,7 @@ export function App() {
           <Route path="pulse" element={<SalesPulsePage />} />
           <Route path="msp" element={<SalesMspPage />} />
           <Route path="complaints" element={<SalesComplaintsPage />} />
+          <Route path="pushed" element={<SalesPushedPage />} />
         </Route>
         <Route
           path="/registers"

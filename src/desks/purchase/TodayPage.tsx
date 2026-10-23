@@ -30,6 +30,7 @@ import { Card } from '../../components/ui/Card';
 import { Badge } from '../../components/ui/Badge';
 import { DevNote } from '../../components/dev/DevNote';
 import { FunnelMetricsGrid } from './FunnelMetrics';
+import { formatDateTime } from '../../lib/dates';
 
 interface TodaySummary {
   noSellerAsks: ActiveDemandItem[];
@@ -298,7 +299,7 @@ export function TodayPage() {
                     <li key={a.soId} className="flex items-center justify-between text-sm">
                       <span>SO {a.soId.slice(-6)}</span>
                       <Badge tone={a.withinCap ? 'good' : 'warn'}>
-                        expires {new Date(a.expiresAt).toLocaleString()}
+                        expires {formatDateTime(a.expiresAt)}
                       </Badge>
                     </li>
                   ))}

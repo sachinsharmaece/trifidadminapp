@@ -12,6 +12,7 @@ import { Table, Th, Td } from '../../components/ui/Table';
 import { Badge } from '../../components/ui/Badge';
 import { Button } from '../../components/ui/Button';
 import { DevNote } from '../../components/dev/DevNote';
+import { formatDate, formatDateTime } from '../../lib/dates';
 
 export function DispatchPage() {
   const { callApi } = useAuth();
@@ -79,9 +80,7 @@ export function DispatchPage() {
                       <Td>
                         {d.brand} {d.packLabel} · {d.boxes} boxes
                       </Td>
-                      <Td>
-                        {d.dispatchedAt ? new Date(d.dispatchedAt).toLocaleDateString() : '—'}
-                      </Td>
+                      <Td>{d.dispatchedAt ? formatDate(d.dispatchedAt) : '—'}</Td>
                       <Td numeric>{d.daysInTransit ?? '—'}</Td>
                     </tr>
                   ))}
@@ -113,7 +112,7 @@ function DispatchRow({ item, onChased }: { item: DispatchQueueItem; onChased: ()
         {item.brand} {item.packLabel} · {item.boxes} boxes
       </Td>
       <Td>{item.sellerCutoffTime}</Td>
-      <Td>{new Date(item.dispatchDueDate).toLocaleString()}</Td>
+      <Td>{formatDateTime(item.dispatchDueDate)}</Td>
       <Td>
         {item.bucket === 'overdue' ? (
           <Badge tone="bad">{Math.abs(Math.round(item.hoursLeft ?? 0))}h over</Badge>

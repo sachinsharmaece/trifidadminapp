@@ -365,6 +365,10 @@ export interface SupplyMatrixSellerRow {
   sellerId: string;
   firm: string;
   trustTier: string;
+  /** Phase 4 — his own district, and who he is assigned to (null = the Queue). */
+  district: string | null;
+  assignedTo: string | null;
+  assignedToEmployeeId: string | null;
   carryCount: number;
   listedCount: number;
   manufacturerNames: string[];
@@ -803,4 +807,11 @@ export interface OnBoardNotQuotedItem {
 
 export function getOnBoardNotQuotedQueue(accessToken: string): Promise<OnBoardNotQuotedItem[]> {
   return apiFetch('/staff/purchase/demand/on-board-not-quoted', { accessToken });
+}
+
+/** Phase 4 — who the caller may assign a seller to (himself; his team; Admin: all Purchase). */
+export function getAssignablePurchasePeople(
+  accessToken: string,
+): Promise<import('./dto').AssignableSalesPerson[]> {
+  return apiFetch('/staff/purchase/assignees', { accessToken });
 }

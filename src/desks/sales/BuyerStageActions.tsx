@@ -40,7 +40,7 @@ export function HeWantsItButton({
   onDone: () => void;
 }) {
   const [open, setOpen] = useState(false);
-  const [qty, setQty] = useState('1');
+  const [qty, setQty] = useState('');
   const parsedQty = Number(qty);
   const qtyOk = Number.isInteger(parsedQty) && parsedQty >= 1;
   const submit = useAction(async (token, callNote) => {
@@ -161,7 +161,8 @@ export function GiveRateButton({
         setLines([...matching].sort((a, b) => quotedFirst(a) - quotedFirst(b)));
       })
       .catch((caught: unknown) => setLoadError(errorText(caught)));
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- `quotedLineIds` is rebuilt each render.
+    // `quotedLineIds` is left out of the deps on purpose: it is rebuilt each render.
+    // (No react-hooks lint plugin is installed here, so no disable comment.)
   }, [open, callApi, buyerId, ask.productId, ask.skuId]);
 
   const submit = useAction(async (token, callNote) => {

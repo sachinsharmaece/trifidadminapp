@@ -6,6 +6,7 @@ import { useAuth } from '../../auth/AuthContext';
 import { Card } from '../../components/ui/Card';
 import { Table, Th, Td } from '../../components/ui/Table';
 import { HandToDispatchButton } from './StageActions';
+import { formatDate } from '../../lib/dates';
 
 /** Billed — the seller has invoiced the goods; ready to be handed to Dispatch. */
 export function BilledPage() {
@@ -21,7 +22,11 @@ export function BilledPage() {
           the goods are on the way to Indore. This invoice is separate from the seller bill booked
           after inspection, which is what he is paid on.
         </p>
-        <AsyncBoundary state={state} onRetry={retry} emptyMessage="No billed PO is waiting to move on.">
+        <AsyncBoundary
+          state={state}
+          onRetry={retry}
+          emptyMessage="No billed PO is waiting to move on."
+        >
           {(items: PoStageItem[]) => (
             <Table>
               <thead>
@@ -45,9 +50,7 @@ export function BilledPage() {
                     <Td>
                       <div className="font-mono">{po.invoiceNo}</div>
                       {po.invoiceDate && (
-                        <div className="text-xs text-slate-500">
-                          {new Date(po.invoiceDate).toLocaleDateString()}
-                        </div>
+                        <div className="text-xs text-slate-500">{formatDate(po.invoiceDate)}</div>
                       )}
                     </Td>
                     <Td className="font-mono">{po.ewayNo}</Td>

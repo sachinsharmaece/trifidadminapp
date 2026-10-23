@@ -68,6 +68,9 @@ import { SalesCallWorkspacePage } from '../desks/sales/SalesCallWorkspacePage';
 import { SalesPulsePage } from '../desks/sales/SalesPulsePage';
 import { SalesMspPage } from '../desks/sales/SalesMspPage';
 import { SalesComplaintsPage } from '../desks/sales/SalesComplaintsPage';
+import { SalesPushedPage } from '../desks/sales/SalesPushedPage';
+import { FromSalesPage } from '../desks/purchase/FromSalesPage';
+import { FromSalesDetailPage } from '../desks/purchase/FromSalesDetailPage';
 import { LogisticsDeskPage } from '../desks/logistics/LogisticsDeskPage';
 import { ControllerDeskPage } from '../desks/controller/ControllerDeskPage';
 import { NotificationLogPage } from '../desks/notifications/NotificationLogPage';
@@ -284,6 +287,8 @@ export function App() {
           <Route path="sellers" element={<SellersPage />} />
           <Route path="add-seller" element={<AddSellerPage />} />
           <Route path="sellers/:id" element={<SellerFilePage />} />
+          <Route path="from-sales" element={<FromSalesPage />} />
+          <Route path="from-sales/:pushId" element={<FromSalesDetailPage />} />
           <Route path="sellers/:id/catalogue/new" element={<AddCatalogueEntryPage />} />
           <Route path="sellers/:id/listing/new" element={<EnterListingPage />} />
           <Route path="matrix" element={<SupplyMatrixPage />} />
@@ -317,6 +322,7 @@ export function App() {
           <Route path="pulse" element={<SalesPulsePage />} />
           <Route path="msp" element={<SalesMspPage />} />
           <Route path="complaints" element={<SalesComplaintsPage />} />
+          <Route path="pushed" element={<SalesPushedPage />} />
         </Route>
         <Route
           path="/registers"

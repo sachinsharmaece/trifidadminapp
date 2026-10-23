@@ -13,6 +13,7 @@ import { useAuth } from '../../auth/AuthContext';
 import { DropdownCard } from '../../components/DropdownCard';
 import { Card } from '../../components/ui/Card';
 import { BuyerDetailsCard } from '../../components/buyer/BuyerDetailsCard';
+import { PushToPurchaseCard } from '../../components/push/PushToPurchaseCard';
 import { BoardForHimBody } from './SalesCallWorkspacePage';
 import {
   CancelAskButton,
@@ -446,6 +447,8 @@ export function SalesBuyerFilePage() {
               <div className="flex flex-col gap-6">
                 {/* Phase 3 — details, Assigned to and Edit. */}
                 <BuyerDetailsCard buyerId={buyerId} onSaved={retry} />
+                {/* Phase 6 — a buyer who can also supply. */}
+                <PushToPurchaseCard buyerId={buyerId} firm={file.firm} />
 
                 <Card title="Promised">
                   {(() => {

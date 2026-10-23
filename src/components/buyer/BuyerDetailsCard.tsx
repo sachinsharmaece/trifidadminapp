@@ -192,6 +192,7 @@ function EditBuyerModal({
     fields: FIELDS,
     success: 'Saved.',
     onSuccess: onSaved,
+    toastOnSuccess: true,
   });
   const e = save.fieldErrors;
 

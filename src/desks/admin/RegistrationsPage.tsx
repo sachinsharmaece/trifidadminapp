@@ -254,6 +254,7 @@ function ApproveBuyerFields({
   });
   const [assignedTo, setAssignedTo] = useState(profile.assignedTo?.employeeId ?? '');
   const save = useFormSubmit<unknown>({
+    toastOnSuccess: true,
     fields: [
       'category',
       'assignedToEmployeeId',
@@ -431,6 +432,7 @@ function ApproveSellerFields({
   });
   const [assignedTo, setAssignedTo] = useState(profile.assignedTo?.employeeId ?? '');
   const save = useFormSubmit<unknown>({
+    toastOnSuccess: true,
     fields: [
       'tehsilIds',
       'dispatchCutoffTime',

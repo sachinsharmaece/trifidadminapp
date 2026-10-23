@@ -6,7 +6,10 @@ import { TehsilsPage } from '../src/desks/admin/TehsilsPage';
 
 vi.mock('../src/auth/AuthContext', () => ({ useAuth: vi.fn() }));
 vi.mock('../src/components/dev/DevNote', () => ({ DevNote: () => null }));
-vi.mock('../src/components/ui/Toast', () => ({ useToast: () => ({ show: vi.fn() }) }));
+vi.mock('../src/components/ui/Toast', () => ({
+  useToast: () => ({ show: vi.fn() }),
+  useOptionalToast: () => null,
+}));
 vi.mock('../src/api/territory', () => ({
   getStates: vi.fn(),
   getDistricts: vi.fn(),

@@ -116,6 +116,7 @@ function PushDialog({
     fields: ['note', 'receiverEmployeeId'],
     success: (result) => `${firm} pushed to ${result.receiver.person}.`,
     onSuccess: onPushed,
+    toastOnSuccess: true,
   });
 
   function handleSubmit(event: FormEvent): void {

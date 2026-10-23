@@ -1,6 +1,7 @@
 import { useCallback, useRef, useState } from 'react';
 import { ApiError } from '../api/errors';
 import { newIdempotencyKey } from './idempotency';
+import { useOptionalToast } from '../components/ui/Toast';
 
 /**
  * The one way a staff form saves (Phase 0 form kit). It owns:
@@ -17,7 +18,9 @@ import { newIdempotencyKey } from './idempotency';
  * - **Duplicates.** A duplicate refusal names the clashing field and the
  *   existing record (`meta.existingCounterpartyId`).
  * - **Success.** `successMessage` is set and `onSuccess` runs; the form
- *   resets its own fields there.
+ *   resets its own fields there. A form that closes or disappears on
+ *   success (a modal, a decision panel) passes `toastOnSuccess`, so the
+ *   message is still seen.
  */
 export interface DuplicateHit {
   field: string;
@@ -32,6 +35,8 @@ export interface FormSubmitOptions<T> {
   onSuccess?: (result: T) => void;
   /** Shown for an error that is not an ApiError. */
   fallbackError?: string;
+  /** Also show the success message as a toast — for a form that closes on success. */
+  toastOnSuccess?: boolean;
 }
 
 export function useFormSubmit<T>(options: FormSubmitOptions<T> = {}) {
@@ -44,6 +49,9 @@ export function useFormSubmit<T>(options: FormSubmitOptions<T> = {}) {
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const optionsRef = useRef(options);
   optionsRef.current = options;
+  const toast = useOptionalToast();
+  const toastRef = useRef(toast);
+  toastRef.current = toast;
 
   const clearFieldError = useCallback((field: string) => {
     setFieldErrors((current) => {
@@ -65,7 +73,7 @@ export function useFormSubmit<T>(options: FormSubmitOptions<T> = {}) {
     async (action: (idempotencyKey: string) => Promise<T>): Promise<T | undefined> => {
       if (inFlight.current) return undefined;
       inFlight.current = true;
-      const { fields, success, onSuccess, fallbackError } = optionsRef.current;
+      const { fields, success, onSuccess, fallbackError, toastOnSuccess } = optionsRef.current;
       clearMessages();
       setSubmitting(true);
       const key = keyRef.current ?? newIdempotencyKey();
@@ -73,7 +81,9 @@ export function useFormSubmit<T>(options: FormSubmitOptions<T> = {}) {
       try {
         const result = await action(key);
         keyRef.current = null;
-        setSuccessMessage(typeof success === 'function' ? success(result) : (success ?? 'Saved.'));
+        const message = typeof success === 'function' ? success(result) : (success ?? 'Saved.');
+        setSuccessMessage(message);
+        if (toastOnSuccess) toastRef.current?.show(message);
         onSuccess?.(result);
         return result;
       } catch (caught) {

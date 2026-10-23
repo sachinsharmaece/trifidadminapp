@@ -176,6 +176,7 @@ function CompleteForm({ push, onSaved }: { push: PushDetailDto; onSaved: () => v
     fields: COMPLETE_FIELDS,
     success: 'Saved — he is ready for a Purchase Leader to approve.',
     onSuccess: onSaved,
+    toastOnSuccess: true,
   });
   const e = save.fieldErrors;
   const setRef = (i: number, key: keyof typeof blankReference, value: string) =>
@@ -371,11 +372,13 @@ function DecidePanel({ push, onDecided }: { push: PushDetailDto; onDecided: () =
     fields: ['tehsilIds', 'dispatchCutoffTime', 'assignedToEmployeeId', 'gstin'],
     success: `${push.firm} is now a seller.`,
     onSuccess: onDecided,
+    toastOnSuccess: true,
   });
   const reject = useFormSubmit<unknown>({
     fields: ['reason'],
     success: 'Rejected — Sales has been told.',
     onSuccess: onDecided,
+    toastOnSuccess: true,
   });
 
   function toggle(id: string): void {

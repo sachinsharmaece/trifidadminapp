@@ -1,8 +1,10 @@
-import { act, renderHook } from '@testing-library/react';
+import type { ReactNode } from 'react';
+import { act, renderHook, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { ApiError } from '../src/api/errors';
 import { formatDate, formatDateTime } from '../src/lib/dates';
 import { splitFieldErrors, useFormSubmit } from '../src/lib/useFormSubmit';
+import { ToastProvider } from '../src/components/ui/Toast';
 
 describe('formatDate / formatDateTime (DD/MM/YYYY, IST)', () => {
   it('reads the IST calendar day, not the browser one', () => {
@@ -85,6 +87,31 @@ describe('useFormSubmit (Phase 0 form kit)', () => {
     await act(async () => void (await result.current.submit(action)));
     expect(result.current.duplicate).toEqual({ field: 'gstin', existingId: 'abc123' });
     expect(result.current.fieldErrors.gstin).toMatch(/already exists/);
+  });
+});
+
+describe('useFormSubmit — success on a form that closes (Phase 7, check 22)', () => {
+  it('shows the success message as a toast when asked, so a closing modal still says it', async () => {
+    const wrapper = ({ children }: { children: ReactNode }) => (
+      <ToastProvider>{children}</ToastProvider>
+    );
+    const { result } = renderHook(
+      () => useFormSubmit<string>({ success: 'Owner changed.', toastOnSuccess: true }),
+      { wrapper },
+    );
+    await act(async () => {
+      await result.current.submit(async () => 'ok');
+    });
+    expect(result.current.successMessage).toBe('Owner changed.');
+    expect(await screen.findByText('Owner changed.')).toBeTruthy();
+  });
+
+  it('works outside the shell too (no toast provider) without throwing', async () => {
+    const { result } = renderHook(() => useFormSubmit<string>({ toastOnSuccess: true }));
+    await act(async () => {
+      await result.current.submit(async () => 'ok');
+    });
+    expect(result.current.successMessage).toBe('Saved.');
   });
 });
 

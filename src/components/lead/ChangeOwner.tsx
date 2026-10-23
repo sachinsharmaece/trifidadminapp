@@ -74,6 +74,7 @@ function ChangeOwnerModal({
     success: (result) =>
       result.owner ? `${firm} now belongs to ${result.owner}.` : `${firm} is back in the Queue.`,
     onSuccess: onChanged,
+    toastOnSuccess: true,
   });
   const unchanged = ownerEmployeeId === (current?.employeeId ?? '');
 

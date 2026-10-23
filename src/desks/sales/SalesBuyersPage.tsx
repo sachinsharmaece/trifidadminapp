@@ -7,11 +7,10 @@ import { listSalesBuyers, type BuyerListRow } from '../../api/sales';
 import { listRegistrations } from '../../api/onboarding';
 import { assignBook } from '../../api/admin';
 import type { RegistrationListItem } from '../../api/dto';
-import { ApiError } from '../../api/errors';
+import { useFormSubmit } from '../../lib/useFormSubmit';
 import { AsyncBoundary } from '../../components/AsyncBoundary';
 import { useAsyncData } from '../../lib/useAsyncData';
 import { useAuth } from '../../auth/AuthContext';
-import { useToast } from '../../components/ui/Toast';
 import { Card } from '../../components/ui/Card';
 import { LeadLookup } from '../../components/lead/LeadLookup';
 import { Table, Th, Td } from '../../components/ui/Table';
@@ -138,12 +137,10 @@ function BuyerListTab({ tab }: { tab: BookQueueTab }) {
 }
 
 /**
- * B-10 — BR-276's automatic queue-to-book trigger fires on a buyer's first
- * order, but if no Sales employee is active at that exact moment it
- * silently leaves him in Queue with no retry (`ensureBookAssignment`,
- * `modules/chain/chain.service.ts`). This is the already-built manual
- * fallback (`POST /admin/book-assignments`) — previously not wired to any
- * screen, so a buyer stuck this way had no way out at all.
+ * B-10 — take a buyer from the Queue into your own book
+ * (`POST /admin/book-assignments`). With the first-order auto-assign off
+ * (DEC-062) this is how an unowned buyer is picked up; moving one someone
+ * already owns is Change owner, for his leader or Admin (BR-362).
  */
 function AssignToBookModal({
   target,
@@ -155,30 +152,25 @@ function AssignToBookModal({
   onAssigned: () => void;
 }) {
   const { callApi, me } = useAuth();
-  const { show } = useToast();
   const [reason, setReason] = useState('');
-  const [error, setError] = useState<string | null>(null);
-  const [submitting, setSubmitting] = useState(false);
-
-  async function handleSubmit(event: FormEvent): Promise<void> {
-    event.preventDefault();
-    if (!target || !me) return;
-    setError(null);
-    setSubmitting(true);
-    try {
-      await callApi((token) =>
-        assignBook(token, { buyerId: target.buyerId, ownerEmployeeId: me.employeeId, reason }),
-      );
-      show(`${target.firm} is now in your book.`);
+  const save = useFormSubmit<unknown>({
+    fields: ['reason'],
+    success: `${target?.firm ?? 'He'} is now in your book.`,
+    onSuccess: () => {
       setReason('');
       onAssigned();
-    } catch (submitError) {
-      setError(
-        submitError instanceof ApiError ? submitError.message : 'Could not assign this buyer.',
-      );
-    } finally {
-      setSubmitting(false);
-    }
+    },
+    toastOnSuccess: true,
+  });
+
+  function handleSubmit(event: FormEvent): void {
+    event.preventDefault();
+    if (!target || !me) return;
+    void save.submit((key) =>
+      callApi((token) =>
+        assignBook(token, { buyerId: target.buyerId, ownerEmployeeId: me.employeeId, reason }, key),
+      ),
+    );
   }
 
   return (
@@ -196,16 +188,16 @@ function AssignToBookModal({
           onChange={(e) => setReason(e.target.value)}
           required
         />
-        {error && (
+        {save.formError && (
           <p role="alert" className="text-sm text-danger-500">
-            {error}
+            {save.formError}
           </p>
         )}
         <div className="flex justify-end gap-2">
           <Button type="button" variant="secondary" onClick={onClose}>
             Cancel
           </Button>
-          <Button type="submit" loading={submitting}>
+          <Button type="submit" loading={save.submitting}>
             Add to my book
           </Button>
         </div>

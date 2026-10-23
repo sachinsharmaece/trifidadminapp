@@ -75,6 +75,7 @@ export function TeamPage() {
   };
 
   const reactivate = useFormSubmit<unknown>({
+    toastOnSuccess: true,
     success: 'Switched back on.',
     onSuccess: () => {
       setNotice('Switched back on.');

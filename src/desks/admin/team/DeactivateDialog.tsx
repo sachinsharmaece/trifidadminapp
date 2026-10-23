@@ -33,6 +33,7 @@ export function DeactivateDialog({
   const [target, setTarget] = useState('');
   const [reason, setReason] = useState('');
   const save = useFormSubmit<unknown>({
+    toastOnSuccess: true,
     fields: ['reassignToEmployeeId'],
     success: `${employee.person} is switched off.`,
     onSuccess: onDone,

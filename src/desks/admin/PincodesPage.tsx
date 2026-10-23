@@ -39,6 +39,7 @@ export function PincodesPage() {
   const { state, retry } = useAsyncData(loader, (items) => items.length === 0, [loader]);
 
   const verify = useFormSubmit<unknown>({
+    toastOnSuccess: true,
     success: 'Pincode verified.',
     onSuccess: () => {
       show('Pincode verified.');
@@ -173,6 +174,7 @@ function ChangeTehsilModal({
   });
   const [alsoVerify, setAlsoVerify] = useState(row.status === 'unverified');
   const form = useFormSubmit<unknown>({
+    toastOnSuccess: true,
     fields: ['tehsilId'],
     success: 'Saved.',
     onSuccess: onSaved,

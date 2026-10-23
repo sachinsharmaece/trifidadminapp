@@ -73,6 +73,11 @@ export function ToastProvider({ children }: { children: ReactNode }) {
 }
 
 /** Any page inside `<ToastProvider>` (wrapped once at the app shell) can call this. */
+/** The toast when there is one — for code (the form kit) that may render outside the shell. */
+export function useOptionalToast(): ToastContextValue | null {
+  return useContext(ToastContext);
+}
+
 export function useToast(): ToastContextValue {
   const ctx = useContext(ToastContext);
   if (!ctx) throw new Error('useToast must be used within a ToastProvider');

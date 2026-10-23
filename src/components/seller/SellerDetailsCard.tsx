@@ -146,6 +146,7 @@ function EditSellerModal({
     ],
     success: 'Saved.',
     onSuccess: onSaved,
+    toastOnSuccess: true,
   });
   const e = save.fieldErrors;
 

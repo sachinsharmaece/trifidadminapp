@@ -151,6 +151,12 @@ export function createAbsence(
 export function assignBook(
   accessToken: string,
   input: { buyerId: string; ownerEmployeeId: string; reason?: string },
+  idempotencyKey: string,
 ): Promise<{ bookAssignmentId: string }> {
-  return apiFetch('/admin/book-assignments', { method: 'POST', body: input, accessToken });
+  return apiFetch('/admin/book-assignments', {
+    method: 'POST',
+    body: input,
+    accessToken,
+    idempotencyKey,
+  });
 }

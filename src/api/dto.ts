@@ -170,10 +170,54 @@ export interface RegistrationListItem {
   registrationId: string;
   firm?: string;
   gstin?: string;
+  pan?: string;
   kind: 'buyer' | 'seller' | 'both';
   status: 'pending' | 'active' | 'rejected' | 'blacklisted';
   createdAt: string;
   staffAssisted: boolean;
+  /** Phase 3 — the Sales person he is assigned to; null = the Queue. */
+  assignedTo: string | null;
+  district: string | null;
+}
+
+/** Phase 3 — the buyer profile (header, details card, approval prefill, Edit). */
+export interface BuyerProfileDto {
+  buyerId: string;
+  counterpartyId: string;
+  status: string;
+  firm: string;
+  ownerName: string | null;
+  gstin: string | null;
+  pan: string | null;
+  registered: boolean;
+  loginMobile: string | null;
+  contactMobile: string | null;
+  category: 'Retailer' | 'Dealer' | 'Distributor' | 'Trader' | null;
+  location: {
+    address: string | null;
+    pincode: string | null;
+    stateId: string | null;
+    districtId: string | null;
+    tehsilId: string | null;
+    tehsil: string | null;
+    district: string | null;
+    state: string | null;
+  };
+  licenceNo: string | null;
+  margPartyCode: string | null;
+  companies: Array<{ manufacturerId: string; name: string }>;
+  assignedTo: { employeeId: string; person: string } | null;
+  assignedLeader: { employeeId: string; person: string } | null;
+  canEdit: boolean;
+  canEditCategory: boolean;
+  canEditIdentity: boolean;
+}
+
+/** Phase 3 — someone a buyer can be assigned to by the person asking. */
+export interface AssignableSalesPerson {
+  employeeId: string;
+  person: string;
+  isSelf: boolean;
 }
 
 export interface RegistrationStatusDto {

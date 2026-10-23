@@ -15,7 +15,7 @@ import { useToast } from '../../components/ui/Toast';
 import { Card } from '../../components/ui/Card';
 import { Table, Th, Td } from '../../components/ui/Table';
 import { Badge } from '../../components/ui/Badge';
-import { Input, Textarea } from '../../components/ui/Input';
+import { Input, Select, Textarea } from '../../components/ui/Input';
 import { Button } from '../../components/ui/Button';
 import { Modal } from '../../components/ui/Modal';
 import { formatDate } from '../../lib/dates';
@@ -88,18 +88,36 @@ function BuyerListTab({ tab }: { tab: BookQueueTab }) {
     [callApi, tab],
   );
   const { state, retry } = useAsyncData(loader, (items) => items.length === 0, [loader]);
+  // Phase 3 — Category, District and Assigned to filters, drawn from the rows.
+  const [filters, setFilters] = useState({ category: '', district: '', assignedTo: '' });
 
   return (
     <div className="flex flex-col gap-4">
       <Input
         label="Search"
-        placeholder="Firm, owner, mobile, GSTIN, tehsil…"
+        placeholder="Firm, proprietor, mobile, GSTIN, PAN, tehsil…"
         value={q}
         onChange={(e) => setQ(e.target.value)}
       />
       <AsyncBoundary state={state} onRetry={retry} emptyMessage="Nobody here yet.">
         {(items) => (
-          <BuyerTable items={items} q={q} navigate={navigate} onAssignToMe={setAssigning} />
+          <>
+            <BuyerFilters items={items} value={filters} onChange={setFilters} />
+            <BuyerTable
+              items={items.filter(
+                (b) =>
+                  (!filters.category || b.tier === filters.category) &&
+                  (!filters.district || b.district === filters.district) &&
+                  (!filters.assignedTo ||
+                    (filters.assignedTo === 'queue'
+                      ? !b.assignedToEmployeeId
+                      : b.assignedToEmployeeId === filters.assignedTo)),
+              )}
+              q={q}
+              navigate={navigate}
+              onAssignToMe={setAssigning}
+            />
+          </>
         )}
       </AsyncBoundary>
       <AssignToBookModal
@@ -191,6 +209,68 @@ function AssignToBookModal({
   );
 }
 
+function BuyerFilters({
+  items,
+  value,
+  onChange,
+}: {
+  items: BuyerListRow[];
+  value: { category: string; district: string; assignedTo: string };
+  onChange: (next: { category: string; district: string; assignedTo: string }) => void;
+}) {
+  const categories = [...new Set(items.map((b) => b.tier).filter((t): t is string => !!t))].sort();
+  const districts = [
+    ...new Set(items.map((b) => b.district).filter((d): d is string => !!d)),
+  ].sort();
+  const people = new Map<string, string>();
+  for (const b of items) {
+    if (b.assignedToEmployeeId && b.ownerName) people.set(b.assignedToEmployeeId, b.ownerName);
+  }
+  return (
+    <div className="grid max-w-3xl grid-cols-3 gap-4">
+      <Select
+        label="Category"
+        value={value.category}
+        onChange={(e) => onChange({ ...value, category: e.target.value })}
+      >
+        <option value="">All</option>
+        {categories.map((c) => (
+          <option key={c} value={c}>
+            {c}
+          </option>
+        ))}
+      </Select>
+      <Select
+        label="District"
+        value={value.district}
+        onChange={(e) => onChange({ ...value, district: e.target.value })}
+      >
+        <option value="">All</option>
+        {districts.map((d) => (
+          <option key={d} value={d}>
+            {d}
+          </option>
+        ))}
+      </Select>
+      <Select
+        label="Assigned to"
+        value={value.assignedTo}
+        onChange={(e) => onChange({ ...value, assignedTo: e.target.value })}
+      >
+        <option value="">Anyone</option>
+        <option value="queue">Queue (nobody)</option>
+        {[...people.entries()]
+          .sort((a, b) => a[1].localeCompare(b[1]))
+          .map(([id, name]) => (
+            <option key={id} value={id}>
+              {name}
+            </option>
+          ))}
+      </Select>
+    </div>
+  );
+}
+
 function BuyerTable({
   items,
   q,
@@ -206,14 +286,18 @@ function BuyerTable({
     const needle = q.trim().toLowerCase();
     if (!needle) return items;
     return items.filter((b) =>
-      [b.firm, b.contactName, b.mobile, b.gstin, b.tehsil, b.ownerName].some((field) =>
-        field?.toLowerCase().includes(needle),
+      [b.firm, b.contactName, b.mobile, b.gstin, b.pan, b.tehsil, b.district, b.ownerName].some(
+        (field) => field?.toLowerCase().includes(needle),
       ),
     );
   }, [items, q]);
 
   if (filtered.length === 0) {
-    return <p className="text-sm text-slate-500">No match for &quot;{q}&quot;.</p>;
+    return (
+      <p className="text-sm text-slate-500">
+        {q ? <>No match for &quot;{q}&quot;.</> : 'No buyer matches these filters.'}
+      </p>
+    );
   }
 
   return (
@@ -222,11 +306,12 @@ function BuyerTable({
         <tr>
           <Th>Firm</Th>
           <Th>Tehsil</Th>
-          <Th>Position</Th>
+          <Th>District</Th>
+          <Th>Category</Th>
           <Th numeric>Orders</Th>
           <Th>Last order</Th>
           <Th numeric>Rate views</Th>
-          <Th>Owner</Th>
+          <Th>Assigned to</Th>
           <Th />
         </tr>
       </thead>
@@ -239,9 +324,12 @@ function BuyerTable({
           >
             <Td>
               <div className="font-medium text-slate-900">{b.firm}</div>
-              <div className="font-mono text-xs text-slate-500">{b.gstin ?? '—'}</div>
+              <div className="font-mono text-xs text-slate-500">
+                {b.gstin ?? (b.pan ? `Unregistered · PAN ${b.pan}` : '—')}
+              </div>
             </Td>
             <Td>{b.tehsil ?? '—'}</Td>
+            <Td>{b.district ?? '—'}</Td>
             <Td>
               {b.tier ? (
                 <Badge tone="neutral" variant="chip">

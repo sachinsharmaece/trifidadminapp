@@ -1,3 +1,4 @@
+import type { AssignableSalesPerson } from './dto';
 import { apiFetch } from './client';
 
 export interface SalesWorkItem {
@@ -296,8 +297,14 @@ export interface BuyerListRow {
   buyerId: string;
   firm: string;
   gstin: string | null;
+  /** Phase 3 — shown as "Unregistered · PAN" when there is no GSTIN. */
+  pan: string | null;
   tehsil: string | null;
+  district: string | null;
+  /** The category: Retailer / Dealer / Distributor / Trader. */
   tier: string | null;
+  /** null = the Queue. */
+  assignedToEmployeeId: string | null;
   orderCount: number;
   lastOrderAt: string | null;
   rateViews: number;
@@ -308,11 +315,21 @@ export interface BuyerListRow {
 
 export function listSalesBuyers(
   accessToken: string,
-  filters?: { q?: string; tab?: 'book' | 'queue' },
+  filters?: {
+    q?: string;
+    tab?: 'book' | 'queue';
+    category?: string;
+    districtId?: string;
+    /** An employee id, or `queue`. */
+    assignedTo?: string;
+  },
 ): Promise<BuyerListRow[]> {
   const params = new URLSearchParams();
   if (filters?.q) params.set('q', filters.q);
   if (filters?.tab) params.set('tab', filters.tab);
+  if (filters?.category) params.set('category', filters.category);
+  if (filters?.districtId) params.set('districtId', filters.districtId);
+  if (filters?.assignedTo) params.set('assignedTo', filters.assignedTo);
   const qs = params.toString();
   return apiFetch(`/staff/sales/buyers${qs ? `?${qs}` : ''}`, { accessToken });
 }
@@ -658,4 +675,9 @@ export function cancelUnpaidOrder(
     body: input,
     accessToken,
   });
+}
+
+/** Phase 3 — who the caller may assign a buyer to (himself; his team; Admin: all Sales). */
+export function getAssignableSalesPeople(accessToken: string): Promise<AssignableSalesPerson[]> {
+  return apiFetch('/staff/sales/assignees', { accessToken });
 }

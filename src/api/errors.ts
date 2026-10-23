@@ -20,6 +20,8 @@ export type ErrorCode =
   | 'IDEMPOTENCY_CONFLICT'
   | 'RATE_LIMITED'
   | 'VALIDATION_FAILED'
+  // Phase 3 — a save that needs a person's confirm first; meta.warnings says what.
+  | 'CONFIRMATION_REQUIRED'
   | 'INTERNAL_ERROR'
   | 'NETWORK_ERROR'; // client-only: fetch itself failed, no response came back
 

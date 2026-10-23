@@ -9,5 +9,8 @@ export default defineConfig({
     environment: 'jsdom',
     setupFiles: ['./tests/setup.ts'],
     globals: true,
+    // The long form tests (Team, product create, buyer forms) fill dozens of
+    // fields; on a loaded dev laptop they ran past the 5 s default.
+    testTimeout: 15000,
   },
 });

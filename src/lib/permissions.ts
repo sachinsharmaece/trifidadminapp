@@ -14,6 +14,10 @@ export const PERMISSIONS = {
   PINCODE_VERIFY: 'location:pincode_verify',
   // Phase 2 — showing an employee's full PAN or Aadhaar (Admin only, audited).
   EMPLOYEE_PII_REVEAL: 'employee:pii_reveal',
+  // Phase 3 — approving a buyer (Sales Leaders by position, Admin) / a seller (Purchase).
+  BUYER_APPROVE: 'onboarding:approve_buyer',
+  SELLER_APPROVE: 'onboarding:approve_seller',
+  BUYER_ADMIN: 'buyer:admin',
   ONBOARDING_READ: 'onboarding:read',
   ONBOARDING_APPROVE: 'onboarding:approve',
   // M4 additions.

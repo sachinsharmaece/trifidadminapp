@@ -12,6 +12,7 @@ import { useAsyncData } from '../../lib/useAsyncData';
 import { useAuth } from '../../auth/AuthContext';
 import { DropdownCard } from '../../components/DropdownCard';
 import { Card } from '../../components/ui/Card';
+import { BuyerDetailsCard } from '../../components/buyer/BuyerDetailsCard';
 import { BoardForHimBody } from './SalesCallWorkspacePage';
 import {
   CancelAskButton,
@@ -115,7 +116,7 @@ export function SalesBuyerFilePage() {
             <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
               <Kpi label="Orders" value={String(file.orders.length)} />
               <Kpi label="Products he buys" value={String(file.productHistory.length)} />
-              <Kpi label="Rate tier" value={file.tier ?? '—'} />
+              <Kpi label="Category" value={file.tier ?? '—'} />
               <Kpi label="Rate views" value={String(file.rateViews)} />
             </div>
 
@@ -443,18 +444,8 @@ export function SalesBuyerFilePage() {
               </div>
 
               <div className="flex flex-col gap-6">
-                <Card title="Owner">
-                  {file.ownerName ? (
-                    <p className="text-sm text-slate-700">{file.ownerName}</p>
-                  ) : (
-                    <div>
-                      <Badge tone="warn">queue</Badge>
-                      <p className="mt-2 text-xs text-slate-500">
-                        He joins a book automatically on his first order.
-                      </p>
-                    </div>
-                  )}
-                </Card>
+                {/* Phase 3 — details, Assigned to and Edit. */}
+                <BuyerDetailsCard buyerId={buyerId} onSaved={retry} />
 
                 <Card title="Promised">
                   {(() => {

@@ -28,6 +28,39 @@ export interface TehsilDto {
   name: string;
   district: string;
   state: string;
+  // Phase 1 — the masters this tehsil sits under; null until it is migrated.
+  districtId: string | null;
+  stateId: string | null;
+}
+
+export interface StateDto {
+  stateId: string;
+  name: string;
+  gstStateCode: string;
+}
+
+export interface DistrictDto {
+  districtId: string;
+  name: string;
+  stateId: string;
+  stateName: string;
+}
+
+export interface PincodeLocationDto {
+  pincode: string;
+  status: 'verified' | 'unverified';
+  tehsilId: string;
+  tehsilName: string;
+  districtId: string | null;
+  districtName: string;
+  stateId: string | null;
+  stateName: string;
+}
+
+export interface PincodeListItemDto extends PincodeLocationDto {
+  createdByName: string | null;
+  verifiedByName: string | null;
+  createdAt: string;
 }
 
 export interface ManufacturerDto {

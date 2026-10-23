@@ -9,6 +9,7 @@ import { ProductCreatePage } from '../desks/admin/ProductCreatePage';
 import { ProductDetailPage } from '../desks/admin/ProductDetailPage';
 import { ManufacturersPage } from '../desks/admin/ManufacturersPage';
 import { TehsilsPage } from '../desks/admin/TehsilsPage';
+import { PincodesPage } from '../desks/admin/PincodesPage';
 import { MarginMatrixPage } from '../desks/admin/MarginMatrixPage';
 import { RegistrationsPage } from '../desks/admin/RegistrationsPage';
 // ChainDeskPage — only used by the commented-out /chain route below; restore
@@ -145,9 +146,19 @@ export function App() {
         <Route
           path="/manage/tehsils"
           element={
-            <RequireAuth permission={PERMISSIONS.CATALOG_WRITE}>
+            <RequireAuth permission={PERMISSIONS.TERRITORY_READ}>
               <AppShell>
                 <TehsilsPage />
+              </AppShell>
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/manage/pincodes"
+          element={
+            <RequireAuth permission={PERMISSIONS.TERRITORY_READ}>
+              <AppShell>
+                <PincodesPage />
               </AppShell>
             </RequireAuth>
           }

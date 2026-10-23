@@ -8,6 +8,10 @@ export const PERMISSIONS = {
   CATALOG_WRITE: 'catalog:write',
   TERRITORY_READ: 'territory:read',
   TERRITORY_WRITE: 'territory:write',
+  // Phase 1 — adding a State/District/Tehsil and editing a tehsil (Admin and leaders).
+  LOCATION_MASTER_WRITE: 'location:master_write',
+  // Phase 1 — correcting and verifying a pincode (Admin).
+  PINCODE_VERIFY: 'location:pincode_verify',
   ONBOARDING_READ: 'onboarding:read',
   ONBOARDING_APPROVE: 'onboarding:approve',
   // M4 additions.

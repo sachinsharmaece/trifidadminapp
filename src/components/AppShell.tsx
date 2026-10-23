@@ -52,11 +52,13 @@ const NAV_ITEMS: NavItem[] = [
   {
     label: 'Manage',
     icon: <FiDatabase />,
-    permission: PERMISSIONS.CATALOG_WRITE,
+    // Phase 1 — leaders (location:master_write) manage tehsils without catalogue rights.
+    permission: [PERMISSIONS.CATALOG_WRITE, PERMISSIONS.LOCATION_MASTER_WRITE],
     children: [
-      { to: '/manage/products', label: 'Products' },
-      { to: '/manage/manufacturers', label: 'Manufacturers' },
-      { to: '/manage/tehsils', label: 'Tehsils' },
+      { to: '/manage/products', label: 'Products', permission: PERMISSIONS.CATALOG_WRITE },
+      { to: '/manage/manufacturers', label: 'Manufacturers', permission: PERMISSIONS.CATALOG_WRITE },
+      { to: '/manage/tehsils', label: 'Tehsils', permission: PERMISSIONS.TERRITORY_READ },
+      { to: '/manage/pincodes', label: 'Pincodes', permission: PERMISSIONS.TERRITORY_READ },
       { to: '/manage/margin-matrix', label: 'Margin matrix', permission: PERMISSIONS.MARGIN_MATRIX_READ },
     ],
   },

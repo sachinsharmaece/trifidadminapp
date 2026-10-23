@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { getAssignableSalesPeople } from '../../api/sales';
+import { getAssignablePurchasePeople } from '../../api/purchase';
 import type { AssignableSalesPerson } from '../../api/dto';
 import type { BuyerCategory, BuyerConfirmations } from '../../api/onboarding';
 import { ApiError } from '../../api/errors';
@@ -168,6 +169,7 @@ export function AssigneeSelect({
   required,
   current,
   onLoaded,
+  side = 'sales',
 }: {
   value: string;
   onChange: (value: string) => void;
@@ -178,20 +180,24 @@ export function AssigneeSelect({
   current?: { employeeId: string; person: string } | null;
   /** Called once the list arrives — e.g. to pre-select the caller himself. */
   onLoaded?: (people: AssignableSalesPerson[]) => void;
+  /** Phase 4 — 'purchase' lists Purchase people, for a seller. */
+  side?: 'sales' | 'purchase';
 }) {
   const { callApi } = useAuth();
   const [people, setPeople] = useState<AssignableSalesPerson[]>([]);
   const [loadError, setLoadError] = useState<string | null>(null);
   const load = useCallback(
     () =>
-      callApi((token) => getAssignableSalesPeople(token))
+      callApi((token) =>
+        side === 'purchase' ? getAssignablePurchasePeople(token) : getAssignableSalesPeople(token),
+      )
         .then((list) => {
           setPeople(list);
           onLoaded?.(list);
         })
         .catch(() => setLoadError('Could not load who can be assigned.')),
     // `onLoaded` is read once, when the list first arrives.
-    [callApi],
+    [callApi, side],
   );
   useEffect(() => void load(), [load]);
   const options =

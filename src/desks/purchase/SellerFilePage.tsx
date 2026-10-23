@@ -1,3 +1,4 @@
+import { SellerDetailsCard } from '../../components/seller/SellerDetailsCard';
 import { useCallback, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { FiArrowLeft, FiPlus } from 'react-icons/fi';
@@ -271,6 +272,8 @@ export function SellerFilePage() {
               </div>
 
               <div className="flex flex-col gap-6">
+                {/* Phase 4 — details, Assigned to and Edit. */}
+                <SellerDetailsCard sellerId={file.sellerId} />
                 <Card title="Area">
                   <div className="flex flex-wrap gap-1">
                     {file.area.map((a) => (

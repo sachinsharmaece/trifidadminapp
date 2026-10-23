@@ -18,6 +18,7 @@ export const PERMISSIONS = {
   BUYER_APPROVE: 'onboarding:approve_buyer',
   SELLER_APPROVE: 'onboarding:approve_seller',
   BUYER_ADMIN: 'buyer:admin',
+  SELLER_ADMIN: 'seller:admin',
   ONBOARDING_READ: 'onboarding:read',
   ONBOARDING_APPROVE: 'onboarding:approve',
   // M4 additions.

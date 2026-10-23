@@ -99,6 +99,9 @@ export function approveSeller(
     dispatchCutoffTime: string;
     trustTier?: string;
     seedReason?: string;
+    // Phase 4 — his own location (needed if he came without one) and Assigned to (required).
+    location?: BuyerLocationInput;
+    assignedToEmployeeId: string;
   },
   idempotencyKey: string,
 ): Promise<{ approved: boolean }> {
@@ -156,9 +159,82 @@ export function staffRegisterSeller(
     bankDetail: { accountNumber: string; ifsc: string; accountName: string };
     consent: { noticeVersion: string; marketingOptIn: boolean };
     callNote: string;
+    // Phase 4 — his own location, Marg code, who he is assigned to (null =
+    // Queue; left out = the person adding him), and the proprietor tick.
+    location: BuyerLocationInput;
+    margPartyCode?: string;
+    assignedToEmployeeId?: string | null;
+    proprietorAgreed: true;
   },
+  idempotencyKey: string,
 ): Promise<{ registrationId: string; accountNameWarning: string | null }> {
-  return apiFetch('/staff/registrations/seller', { method: 'POST', body: input, accessToken });
+  return apiFetch('/staff/registrations/seller', {
+    method: 'POST',
+    body: input,
+    accessToken,
+    idempotencyKey,
+  });
+}
+
+export interface SellerProfileDto {
+  sellerId: string;
+  counterpartyId: string;
+  status: string;
+  firm: string;
+  ownerName: string | null;
+  gstin: string | null;
+  pan: string | null;
+  loginMobile: string | null;
+  contactMobile: string | null;
+  licenceNo: string | null;
+  margPartyCode: string | null;
+  location: {
+    address: string | null;
+    pincode: string | null;
+    stateId: string | null;
+    districtId: string | null;
+    tehsilId: string | null;
+    tehsil: string | null;
+    district: string | null;
+    state: string | null;
+  };
+  assignedTo: { employeeId: string; person: string } | null;
+  assignedLeader: { employeeId: string; person: string } | null;
+  canEdit: boolean;
+  canEditIdentity: boolean;
+}
+
+export function getRegistrationSellerProfile(
+  accessToken: string,
+  registrationId: string,
+): Promise<SellerProfileDto> {
+  return apiFetch(`/staff/registrations/${registrationId}/seller-profile`, { accessToken });
+}
+
+export function getSellerProfile(accessToken: string, sellerId: string): Promise<SellerProfileDto> {
+  return apiFetch(`/staff/sellers/${sellerId}/profile`, { accessToken });
+}
+
+export function updateSellerProfile(
+  accessToken: string,
+  sellerId: string,
+  input: {
+    firm: string;
+    ownerName: string;
+    contactMobile: string;
+    gstin: string;
+    licenceNo: string;
+    location: BuyerLocationInput;
+    margPartyCode?: string;
+  },
+  idempotencyKey: string,
+): Promise<SellerProfileDto> {
+  return apiFetch(`/staff/sellers/${sellerId}/profile`, {
+    method: 'PUT',
+    body: input,
+    accessToken,
+    idempotencyKey,
+  });
 }
 
 // API-015

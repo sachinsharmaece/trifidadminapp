@@ -98,6 +98,8 @@ export function SellersPage() {
               <thead>
                 <tr>
                   <Th>Firm</Th>
+                  <Th>District</Th>
+                  <Th>Assigned to</Th>
                   <Th>Tier</Th>
                   <Th numeric>Carries</Th>
                   <Th numeric>Listed</Th>
@@ -109,6 +111,8 @@ export function SellersPage() {
                 {items.map((s) => (
                   <tr key={s.sellerId}>
                     <Td className="font-medium">{s.firm}</Td>
+                    <Td>{s.district ?? '—'}</Td>
+                    <Td>{s.assignedTo ?? <Badge tone="warn">Queue</Badge>}</Td>
                     <Td>
                       <Badge tone="neutral">{s.trustTier}</Badge>
                     </Td>

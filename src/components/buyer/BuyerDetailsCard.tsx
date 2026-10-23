@@ -20,6 +20,7 @@ import { Modal } from '../ui/Modal';
 import { Input } from '../ui/Input';
 import { LocationBlock, type LocationValue } from '../location/LocationBlock';
 import { CompanyPicker } from '../../desks/purchase/CompanyPicker';
+import { ChangeOwnerButton } from '../lead/ChangeOwner';
 import {
   CategorySelect,
   ConfirmWarnings,
@@ -101,16 +102,30 @@ export function BuyerDetailsCard({ buyerId, onSaved }: { buyerId: string; onSave
                 )}
               </dd>
             </dl>
-            {profile.canEdit && (
-              <Button
-                size="sm"
-                variant="secondary"
-                icon={<FiEdit2 />}
-                onClick={() => setEditing(true)}
-              >
-                Edit
-              </Button>
-            )}
+            <div className="flex flex-wrap gap-2">
+              {profile.canEdit && (
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  icon={<FiEdit2 />}
+                  onClick={() => setEditing(true)}
+                >
+                  Edit
+                </Button>
+              )}
+              {profile.canChangeOwner && (
+                <ChangeOwnerButton
+                  side="buyer"
+                  profileId={profile.buyerId}
+                  firm={profile.firm}
+                  current={profile.assignedTo}
+                  onChanged={() => {
+                    retry();
+                    onSaved?.();
+                  }}
+                />
+              )}
+            </div>
             {editing && (
               <EditBuyerModal
                 profile={profile}

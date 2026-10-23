@@ -13,6 +13,7 @@ import { Button } from '../ui/Button';
 import { Modal } from '../ui/Modal';
 import { Input } from '../ui/Input';
 import { LocationBlock, type LocationValue } from '../location/LocationBlock';
+import { ChangeOwnerButton } from '../lead/ChangeOwner';
 
 /**
  * Phase 4 — the seller profile's details card: proprietor, mobile, GSTIN,
@@ -68,16 +69,27 @@ export function SellerDetailsCard({ sellerId }: { sellerId: string }) {
                 )}
               </dd>
             </dl>
-            {profile.canEdit && (
-              <Button
-                size="sm"
-                variant="secondary"
-                icon={<FiEdit2 />}
-                onClick={() => setEditing(true)}
-              >
-                Edit
-              </Button>
-            )}
+            <div className="flex flex-wrap gap-2">
+              {profile.canEdit && (
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  icon={<FiEdit2 />}
+                  onClick={() => setEditing(true)}
+                >
+                  Edit
+                </Button>
+              )}
+              {profile.canChangeOwner && (
+                <ChangeOwnerButton
+                  side="seller"
+                  profileId={profile.sellerId}
+                  firm={profile.firm}
+                  current={profile.assignedTo}
+                  onChanged={retry}
+                />
+              )}
+            </div>
             {editing && (
               <EditSellerModal
                 profile={profile}

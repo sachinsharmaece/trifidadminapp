@@ -8,6 +8,7 @@ import { AsyncBoundary } from '../../components/AsyncBoundary';
 import { useAsyncData } from '../../lib/useAsyncData';
 import { useAuth } from '../../auth/AuthContext';
 import { Card } from '../../components/ui/Card';
+import { LeadLookup } from '../../components/lead/LeadLookup';
 import { Table, Th, Td } from '../../components/ui/Table';
 import { Badge } from '../../components/ui/Badge';
 import { Button } from '../../components/ui/Button';
@@ -45,6 +46,10 @@ export function SellersPage() {
           Add a seller
         </Button>
       </div>
+
+      <Card title="Already on TriFid?">
+        <LeadLookup side="seller" fileHref={(id) => `/purchase/sellers/${id}`} />
+      </Card>
 
       <Card title="Waiting on us">
         <p className="mb-4 text-sm text-slate-500">

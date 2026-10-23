@@ -13,6 +13,7 @@ import { useAsyncData } from '../../lib/useAsyncData';
 import { useAuth } from '../../auth/AuthContext';
 import { useToast } from '../../components/ui/Toast';
 import { Card } from '../../components/ui/Card';
+import { LeadLookup } from '../../components/lead/LeadLookup';
 import { Table, Th, Td } from '../../components/ui/Table';
 import { Badge } from '../../components/ui/Badge';
 import { Input, Select, Textarea } from '../../components/ui/Input';
@@ -34,6 +35,10 @@ export function SalesBuyersPage() {
         <h1 className="text-xl font-semibold text-slate-900">Buyers</h1>
         <Button onClick={() => navigate('/sales/buyers/new')}>Register a buyer</Button>
       </div>
+
+      <Card title="Already on TriFid?">
+        <LeadLookup side="buyer" fileHref={(id) => `/sales/buyers/${id}`} />
+      </Card>
 
       <div className="flex gap-2">
         <Button

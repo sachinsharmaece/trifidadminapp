@@ -15,6 +15,8 @@ export type ErrorCode =
   | 'ACCOUNT_BLACKLISTED'
   | 'PERMISSION_DENIED'
   | 'NOT_VISIBLE'
+  // Phase 5 — the buyer/seller is another team's; meta says the firm and its leader.
+  | 'OUT_OF_SCOPE'
   | 'NOT_FOUND'
   | 'REAUTH_REQUIRED'
   | 'IDEMPOTENCY_CONFLICT'

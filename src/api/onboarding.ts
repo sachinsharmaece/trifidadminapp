@@ -202,6 +202,8 @@ export interface SellerProfileDto {
   assignedLeader: { employeeId: string; person: string } | null;
   canEdit: boolean;
   canEditIdentity: boolean;
+  /** Phase 5 — his leader (his team and the Queue) or Admin may move him. */
+  canChangeOwner: boolean;
 }
 
 export function getRegistrationSellerProfile(

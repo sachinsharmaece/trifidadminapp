@@ -211,6 +211,8 @@ export interface BuyerProfileDto {
   canEdit: boolean;
   canEditCategory: boolean;
   canEditIdentity: boolean;
+  /** Phase 5 — his leader (his team and the Queue) or Admin may move him. */
+  canChangeOwner: boolean;
 }
 
 /** Phase 3 — someone a buyer can be assigned to by the person asking. */

@@ -64,9 +64,15 @@ export function getAllManufacturers(accessToken: string): Promise<ManufacturerDt
 export function createManufacturer(
   accessToken: string,
   name: string,
+  idempotencyKey: string,
   aka?: string[],
 ): Promise<{ manufacturerId: string }> {
-  return apiFetch('/admin/manufacturers', { method: 'POST', body: { name, aka }, accessToken });
+  return apiFetch('/admin/manufacturers', {
+    method: 'POST',
+    body: { name, aka },
+    accessToken,
+    idempotencyKey,
+  });
 }
 
 // Purchase-desk v2 — Admin's rename/confirm action (the draft → live PATCH).
@@ -105,8 +111,9 @@ export function createProduct(
     class?: 'High' | 'Medium' | 'Low';
     packs?: ProductPackInput[];
   },
+  idempotencyKey: string,
 ): Promise<{ productId: string; skuIds: string[] }> {
-  return apiFetch('/admin/products', { method: 'POST', body: input, accessToken });
+  return apiFetch('/admin/products', { method: 'POST', body: input, accessToken, idempotencyKey });
 }
 
 // Technical and HSN masters — the product form's pickers.
@@ -117,8 +124,14 @@ export function getTechnicalMasters(accessToken: string): Promise<TechnicalDto[]
 export function createTechnical(
   accessToken: string,
   name: string,
+  idempotencyKey: string,
 ): Promise<{ technicalId: string }> {
-  return apiFetch('/admin/technicals', { method: 'POST', body: { name }, accessToken });
+  return apiFetch('/admin/technicals', {
+    method: 'POST',
+    body: { name },
+    accessToken,
+    idempotencyKey,
+  });
 }
 
 export function getHsnMasters(accessToken: string): Promise<HsnDto[]> {
@@ -128,8 +141,9 @@ export function getHsnMasters(accessToken: string): Promise<HsnDto[]> {
 export function createHsn(
   accessToken: string,
   input: { code: string; description?: string; taxPercent: number },
+  idempotencyKey: string,
 ): Promise<{ hsnId: string }> {
-  return apiFetch('/admin/hsn', { method: 'POST', body: input, accessToken });
+  return apiFetch('/admin/hsn', { method: 'POST', body: input, accessToken, idempotencyKey });
 }
 
 // API-024 PATCH — was built server-side but had no client function yet.
@@ -147,8 +161,14 @@ export function updateProduct(
     active: boolean;
     state: 'live';
   }>,
+  idempotencyKey: string,
 ): Promise<{ productId: string }> {
-  return apiFetch(`/admin/products/${productId}`, { method: 'PATCH', body: input, accessToken });
+  return apiFetch(`/admin/products/${productId}`, {
+    method: 'PATCH',
+    body: input,
+    accessToken,
+    idempotencyKey,
+  });
 }
 
 // API-025
@@ -163,8 +183,14 @@ export function importSkus(
   accessToken: string,
   productId: string,
   rows: SkuImportRowInput[],
+  idempotencyKey: string,
 ): Promise<SkuImportRowResult[]> {
-  return apiFetch('/admin/skus/import', { method: 'POST', body: { productId, rows }, accessToken });
+  return apiFetch('/admin/skus/import', {
+    method: 'POST',
+    body: { productId, rows },
+    accessToken,
+    idempotencyKey,
+  });
 }
 
 // New — the Manage desk's own SKU edit. `baseUnit` is deliberately not an
@@ -174,11 +200,44 @@ export function updateSku(
   skuId: string,
   input: Partial<{
     packLabel: string;
+    /** With `unit`, in that unit (500 for 500 ML); the unit itself cannot change. */
     packSize: number;
+    unit: PackUnit;
     unitsPerBox: number;
     active: boolean;
     state: 'live';
   }>,
+  idempotencyKey: string,
 ): Promise<{ skuId: string; baseUnitsPerBox: number }> {
-  return apiFetch(`/admin/skus/${skuId}`, { method: 'PATCH', body: input, accessToken });
+  return apiFetch(`/admin/skus/${skuId}`, {
+    method: 'PATCH',
+    body: input,
+    accessToken,
+    idempotencyKey,
+  });
+}
+
+/** 24 Oct — the Manage desk's own pack list: every pack, inactive and draft too, read in its own unit. */
+export interface AdminSkuDto extends SkuDto {
+  unit: PackUnit;
+  displaySize: number;
+}
+
+export function getAdminSkus(accessToken: string, productId: string): Promise<AdminSkuDto[]> {
+  return apiFetch(`/admin/products/${productId}/skus`, { accessToken });
+}
+
+/** 24 Oct — "Add pack" on an existing product, typed as on create. */
+export function addProductPacks(
+  accessToken: string,
+  productId: string,
+  packs: ProductPackInput[],
+  idempotencyKey: string,
+): Promise<{ skuIds: string[] }> {
+  return apiFetch(`/admin/products/${productId}/packs`, {
+    method: 'POST',
+    body: { packs },
+    accessToken,
+    idempotencyKey,
+  });
 }

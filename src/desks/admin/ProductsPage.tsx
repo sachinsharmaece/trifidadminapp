@@ -2,6 +2,9 @@ import { useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FiPlus, FiEye } from 'react-icons/fi';
 import { getAllProducts, updateProduct } from '../../api/catalog';
+import { ApiError } from '../../api/errors';
+import { newIdempotencyKey } from '../../lib/idempotency';
+import { useToast } from '../../components/ui/Toast';
 import { CATEGORY_LABEL } from './productMasters';
 import { AsyncBoundary } from '../../components/AsyncBoundary';
 import { DevNote } from '../../components/dev/DevNote';
@@ -16,13 +19,20 @@ import type { ProductDto } from '../../api/dto';
 /** Manage → Products. The catalog-management list — every product, not scoped to one technical. */
 export function ProductsPage() {
   const { callApi } = useAuth();
+  const { show } = useToast();
   const navigate = useNavigate();
   const loader = useCallback(() => callApi((token) => getAllProducts(token)), [callApi]);
   const { state, retry } = useAsyncData(loader, (items) => items.length === 0, [loader]);
 
   async function confirmDraft(productId: string): Promise<void> {
-    await callApi((token) => updateProduct(token, productId, { state: 'live' }));
-    retry();
+    try {
+      const key = newIdempotencyKey();
+      await callApi((token) => updateProduct(token, productId, { state: 'live' }, key));
+      show('Confirmed — the product is live now.');
+      retry();
+    } catch (error) {
+      show(error instanceof ApiError ? error.message : 'Could not confirm it. Try again.');
+    }
   }
 
   return (

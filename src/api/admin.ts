@@ -47,7 +47,8 @@ export interface EmployeeInput {
   reportsToPurchaseLeaderId: string | null;
   worksForTeamLeaderIds: string[];
   worksForAllTeams: boolean;
-  hr: EmployeeHrInput;
+  /** Left out on Edit keeps what is on record (an employee with no HR details yet). */
+  hr?: EmployeeHrInput;
 }
 
 // API-132 — BR-262: the save fails unless the lane board is fully covered

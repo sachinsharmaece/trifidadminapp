@@ -8,6 +8,7 @@ import {
   getEmployees,
   getLaneBoard,
   revealEmployeePii,
+  updateEmployee,
 } from '../src/api/admin';
 import { ApiError } from '../src/api/errors';
 import type { EmployeeDetail, EmployeeListItem } from '../src/api/dto';
@@ -118,7 +119,7 @@ describe('TeamPage (Phase 2)', () => {
     expect(key).toEqual(expect.any(String));
   });
 
-  it('ticking Sales Leader ticks and locks Purchase Executive and asks for a Purchase Leader', async () => {
+  it('ticking Sales Leader ticks and locks Purchase Executive, who reports to Admin (DEC-066)', async () => {
     mockAuth();
     render(<TeamPage />);
     await screen.findByRole('heading', { name: 'Create employee' });
@@ -128,7 +129,13 @@ describe('TeamPage (Phase 2)', () => {
     const purchaseExec = card.getByLabelText(/^Purchase Executive/) as HTMLInputElement;
     expect(purchaseExec.checked).toBe(true);
     expect(purchaseExec.disabled).toBe(true);
+    expect(card.queryByLabelText(/Reports to \(Purchase Leader\)/)).not.toBeInTheDocument();
+    expect(card.getByText(/a\s+Sales Leader reports to Admin/)).toBeInTheDocument();
+    // A plain Purchase Executive still picks his Purchase Leader.
+    // (Unticking Sales Leader leaves Purchase Executive ticked, now unlocked.)
+    fireEvent.click(card.getByLabelText(/^Sales Leader/));
     expect(card.getByLabelText(/Reports to \(Purchase Leader\)/)).toBeInTheDocument();
+    fireEvent.click(card.getByLabelText(/^Sales Leader/));
     // Its role is ticked from the position.
     expect(
       (card.getByLabelText(/^Sales\s*\(from the position\)/) as HTMLInputElement).checked,
@@ -195,5 +202,29 @@ describe('TeamPage (Phase 2)', () => {
     fireEvent.click((await screen.findAllByRole('button', { name: 'Show' }))[0]!);
     await waitFor(() => expect(screen.getByPlaceholderText('ABCPE1234F')).toBeInTheDocument());
     expect(revealEmployeePii).toHaveBeenCalledWith('token', 'p1', 'pan');
+  });
+
+  it('Edit of an employee with no HR details saves without them, unless "Add HR details now" is ticked', async () => {
+    const older: EmployeeDetail = { ...LEADER, hrComplete: false, hr: null };
+    vi.mocked(getEmployee).mockResolvedValue(older);
+    vi.mocked(updateEmployee).mockResolvedValue({ employeeId: 'p1' });
+    mockAuth(['employee:write']);
+    render(<TeamPage />);
+    fireEvent.click(await screen.findByRole('button', { name: 'Edit' }));
+    expect(await screen.findByText(/No HR details on record/)).toBeInTheDocument();
+    // Only the Create form on the page asks for a date of birth.
+    expect(screen.getAllByLabelText(/^Date of birth/)).toHaveLength(1);
+    fireEvent.click(screen.getByRole('button', { name: /save changes/i }));
+    await waitFor(() => expect(updateEmployee).toHaveBeenCalled());
+    const [, , input] = vi.mocked(updateEmployee).mock.calls[0]!;
+    expect(input).not.toHaveProperty('hr');
+
+    // Ticked, the HR fields are back and checked before sending.
+    vi.mocked(updateEmployee).mockClear();
+    fireEvent.click(screen.getByLabelText(/Add HR details now/));
+    expect(screen.getAllByLabelText(/^Date of birth/)).toHaveLength(2);
+    fireEvent.click(screen.getByRole('button', { name: /save changes/i }));
+    expect(await screen.findByText('Enter the PAN.')).toBeInTheDocument();
+    expect(updateEmployee).not.toHaveBeenCalled();
   });
 });

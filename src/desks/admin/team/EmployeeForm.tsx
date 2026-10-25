@@ -146,6 +146,14 @@ function fromDetail(detail: EmployeeDetail): FormState {
   };
 }
 
+/**
+ * DEC-066 — a Sales Leader is his team's Purchase Executive but reports to
+ * Admin, not to a Purchase Leader (unless he is a Purchase Leader too).
+ */
+function purchaseReportsToAdmin(positions: Position[]): boolean {
+  return positions.includes('SALES_LEADER') && !positions.includes('PURCHASE_LEADER');
+}
+
 /** Sales Leader always brings Purchase Executive with it (DEC-059). */
 function withImplied(positions: Position[]): Position[] {
   const held = new Set(positions);
@@ -161,7 +169,12 @@ function ageOnDate(dob: string, today = new Date()): number {
 }
 
 /** The checks the server makes too — run first so the person sees every problem at once. */
-function checkLocally(form: FormState, mode: 'create' | 'edit', hasStoredPii: boolean) {
+function checkLocally(
+  form: FormState,
+  mode: 'create' | 'edit',
+  hasStoredPii: boolean,
+  withHr: boolean,
+) {
   const errors: Record<string, string> = {};
   if (form.person.trim().length < 2) errors.person = 'Enter the name.';
   if (!/^\S+@\S+\.\S+$/.test(form.email.trim())) errors.email = 'Enter a valid email address.';
@@ -173,11 +186,16 @@ function checkLocally(form: FormState, mode: 'create' | 'edit', hasStoredPii: bo
   if (positions.includes('SALES_EXEC') && !form.reportsToSalesLeaderId) {
     errors.reportsToSalesLeaderId = 'Pick the Sales Leader this person reports to.';
   }
-  if (positions.includes('PURCHASE_EXEC') && !form.reportsToPurchaseLeaderId) {
+  if (
+    positions.includes('PURCHASE_EXEC') &&
+    !purchaseReportsToAdmin(positions) &&
+    !form.reportsToPurchaseLeaderId
+  ) {
     errors.reportsToPurchaseLeaderId = 'Pick the Purchase Leader this person reports to.';
   }
   if (form.roleKeys.length === 0 && positions.length === 0)
     errors.roleKeys = 'Tick at least one role or position.';
+  if (!withHr) return errors;
   if (!form.dob) errors['hr.dob'] = 'Enter the date of birth.';
   else if (ageOnDate(form.dob) < 18)
     errors['hr.dob'] = 'An employee must be at least 18 years old.';
@@ -219,7 +237,7 @@ function checkLocally(form: FormState, mode: 'create' | 'edit', hasStoredPii: bo
   return errors;
 }
 
-function toInput(form: FormState): EmployeeInput {
+function toInput(form: FormState, withHr: boolean): EmployeeInput {
   const positions = withImplied(form.positions);
   return {
     person: form.person.trim(),
@@ -230,31 +248,36 @@ function toInput(form: FormState): EmployeeInput {
     reportsToSalesLeaderId: positions.includes('SALES_EXEC')
       ? form.reportsToSalesLeaderId || null
       : null,
-    reportsToPurchaseLeaderId: positions.includes('PURCHASE_EXEC')
-      ? form.reportsToPurchaseLeaderId || null
-      : null,
+    reportsToPurchaseLeaderId:
+      positions.includes('PURCHASE_EXEC') && !purchaseReportsToAdmin(positions)
+        ? form.reportsToPurchaseLeaderId || null
+        : null,
     worksForTeamLeaderIds: form.worksForAllTeams ? [] : form.worksForTeamLeaderIds,
     worksForAllTeams: form.worksForAllTeams,
-    hr: {
-      dob: form.dob,
-      ...(form.pan.trim() ? { pan: form.pan.trim().toUpperCase() } : {}),
-      ...(form.aadhaar.trim() ? { aadhaar: form.aadhaar.replace(/\s/g, '') } : {}),
-      fatherName: form.fatherName,
-      fatherMobile: form.fatherMobile,
-      husbandName: form.husbandName,
-      husbandMobile: form.husbandMobile,
-      emergencyContact: {
-        name: form.emergencyName,
-        relation: form.emergencyRelation,
-        mobile: form.emergencyMobile,
-      },
-      permanentAddress: form.permanentAddress,
-      currentSameAsPermanent: form.currentSameAsPermanent,
-      currentAddress: form.currentSameAsPermanent ? '' : form.currentAddress,
-      education: {
-        level: form.educationLevel || null,
-        other: form.educationLevel === 'other' ? form.educationOther : '',
-      },
+    ...(withHr ? { hr: hrInput(form) } : {}),
+  };
+}
+
+function hrInput(form: FormState): NonNullable<EmployeeInput['hr']> {
+  return {
+    dob: form.dob,
+    ...(form.pan.trim() ? { pan: form.pan.trim().toUpperCase() } : {}),
+    ...(form.aadhaar.trim() ? { aadhaar: form.aadhaar.replace(/\s/g, '') } : {}),
+    fatherName: form.fatherName,
+    fatherMobile: form.fatherMobile,
+    husbandName: form.husbandName,
+    husbandMobile: form.husbandMobile,
+    emergencyContact: {
+      name: form.emergencyName,
+      relation: form.emergencyRelation,
+      mobile: form.emergencyMobile,
+    },
+    permanentAddress: form.permanentAddress,
+    currentSameAsPermanent: form.currentSameAsPermanent,
+    currentAddress: form.currentSameAsPermanent ? '' : form.currentAddress,
+    education: {
+      level: form.educationLevel || null,
+      other: form.educationLevel === 'other' ? form.educationOther : '',
     },
   };
 }
@@ -337,6 +360,11 @@ export function EmployeeForm({
   const [revealed, setRevealed] = useState<{ pan?: string; aadhaar?: string }>({});
   const [revealError, setRevealError] = useState<string | null>(null);
   const hasStoredPii = mode === 'edit' && Boolean(detail?.hr);
+  // An employee created before the Team page has no HR details; Edit can
+  // save without them (the Team page shows "HR details missing").
+  const hrOptional = mode === 'edit' && !detail?.hr;
+  const [addHr, setAddHr] = useState(!hrOptional);
+  const withHr = !hrOptional || addHr;
   const selfId = detail?.employeeId;
 
   const save = useFormSubmit<{ mfaSecret?: string }>({
@@ -437,14 +465,17 @@ export function EmployeeForm({
 
   function handleSubmit(event: FormEvent): void {
     event.preventDefault();
-    const found = checkLocally(form, mode, hasStoredPii);
+    const found = checkLocally(form, mode, hasStoredPii, withHr);
     setLocalErrors(found);
     if (Object.keys(found).length > 0) return;
-    const input = toInput({
-      ...form,
-      // Positions tick their department's role.
-      roleKeys: [...new Set([...form.roleKeys, ...impliedRoles])],
-    });
+    const input = toInput(
+      {
+        ...form,
+        // Positions tick their department's role.
+        roleKeys: [...new Set([...form.roleKeys, ...impliedRoles])],
+      },
+      withHr,
+    );
     void save.submit((key) =>
       callApi((token) =>
         mode === 'create'
@@ -540,7 +571,14 @@ export function EmployeeForm({
         </div>
         {positions.includes('SALES_EXEC') && leaderSelect('sales', salesLeaders, 'SALES_LEADER')}
         {positions.includes('PURCHASE_EXEC') &&
-          leaderSelect('purchase', purchaseLeaders, 'PURCHASE_LEADER')}
+          (purchaseReportsToAdmin(positions) ? (
+            <p className="self-end pb-2 text-sm text-slate-600">
+              <span className="font-medium text-slate-700">Reports to (Purchase):</span> Admin — a
+              Sales Leader reports to Admin, not to a Purchase Leader.
+            </p>
+          ) : (
+            leaderSelect('purchase', purchaseLeaders, 'PURCHASE_LEADER')
+          ))}
       </Section>
 
       <Section title="Roles">
@@ -619,167 +657,192 @@ export function EmployeeForm({
         </Section>
       )}
 
-      <Section title="HR details">
-        <Input
-          label="Date of birth"
-          type="date"
-          required
-          value={form.dob}
-          onChange={(e) => set('dob', e.target.value, 'hr.dob')}
-          error={errors['hr.dob']}
-        />
-        <div />
-        <div>
-          <Input
-            label="PAN"
-            required={!hasStoredPii}
-            placeholder={hasStoredPii ? (revealed.pan ?? detail?.hr?.panMasked) : 'ABCPE1234F'}
-            hint={hasStoredPii ? 'Leave blank to keep the PAN on record.' : undefined}
-            value={form.pan}
-            onChange={(e) => set('pan', e.target.value.toUpperCase(), 'hr.pan')}
-            error={errors['hr.pan']}
-          />
-          {hasStoredPii && canReveal && !revealed.pan && (
-            <Button
-              type="button"
-              size="sm"
-              variant="ghost"
-              icon={<FiEye />}
-              onClick={() => void reveal('pan')}
-            >
-              Show
-            </Button>
-          )}
-        </div>
-        <div>
-          <Input
-            label="Aadhaar"
-            required={!hasStoredPii}
-            inputMode="numeric"
-            placeholder={
-              hasStoredPii ? (revealed.aadhaar ?? detail?.hr?.aadhaarMasked) : '12 digits'
-            }
-            hint={hasStoredPii ? 'Leave blank to keep the Aadhaar on record.' : undefined}
-            value={form.aadhaar}
-            onChange={(e) => set('aadhaar', e.target.value, 'hr.aadhaar')}
-            error={errors['hr.aadhaar']}
-          />
-          {hasStoredPii && canReveal && !revealed.aadhaar && (
-            <Button
-              type="button"
-              size="sm"
-              variant="ghost"
-              icon={<FiEye />}
-              onClick={() => void reveal('aadhaar')}
-            >
-              Show
-            </Button>
-          )}
-        </div>
-        {revealError && <p className="col-span-2 text-sm text-danger-500">{revealError}</p>}
-        <Input
-          label="Father's name"
-          required
-          value={form.fatherName}
-          onChange={(e) => set('fatherName', e.target.value, 'hr.fatherName')}
-          error={errors['hr.fatherName']}
-        />
-        <Input
-          label="Father's mobile"
-          hint="Optional"
-          value={form.fatherMobile}
-          onChange={(e) => set('fatherMobile', e.target.value, 'hr.fatherMobile')}
-          error={errors['hr.fatherMobile']}
-        />
-        <Input
-          label="Husband's name"
-          hint="Optional"
-          value={form.husbandName}
-          onChange={(e) => set('husbandName', e.target.value)}
-        />
-        <Input
-          label="Husband's mobile"
-          hint="Optional"
-          value={form.husbandMobile}
-          onChange={(e) => set('husbandMobile', e.target.value, 'hr.husbandMobile')}
-          error={errors['hr.husbandMobile']}
-        />
-        <Input
-          label="Emergency contact name"
-          required
-          value={form.emergencyName}
-          onChange={(e) => set('emergencyName', e.target.value, 'hr.emergencyContact.name')}
-          error={errors['hr.emergencyContact.name']}
-        />
-        <Input
-          label="Relation"
-          required
-          value={form.emergencyRelation}
-          onChange={(e) => set('emergencyRelation', e.target.value, 'hr.emergencyContact.relation')}
-          error={errors['hr.emergencyContact.relation']}
-        />
-        <Input
-          label="Emergency contact mobile"
-          required
-          value={form.emergencyMobile}
-          onChange={(e) => set('emergencyMobile', e.target.value, 'hr.emergencyContact.mobile')}
-          error={errors['hr.emergencyContact.mobile']}
-        />
-        <div />
-        <div className="col-span-2">
-          <Textarea
-            label="Permanent address"
-            required
-            value={form.permanentAddress}
-            onChange={(e) => set('permanentAddress', e.target.value, 'hr.permanentAddress')}
-            error={errors['hr.permanentAddress']}
-          />
-        </div>
-        <div className="col-span-2">
-          <Check
-            label="Current local address is the same as permanent"
-            checked={form.currentSameAsPermanent}
-            onChange={() =>
-              set('currentSameAsPermanent', !form.currentSameAsPermanent, 'hr.currentAddress')
-            }
-          />
-        </div>
-        {!form.currentSameAsPermanent && (
-          <div className="col-span-2">
-            <Textarea
-              label="Current local address"
-              required
-              value={form.currentAddress}
-              onChange={(e) => set('currentAddress', e.target.value, 'hr.currentAddress')}
-              error={errors['hr.currentAddress']}
+      {hrOptional && (
+        <div className="col-span-2 rounded-md border border-warning-500/40 bg-warning-50 p-3 text-sm">
+          <p className="text-warning-600">
+            No HR details on record for this employee yet. You can save other changes now and add
+            them later.
+          </p>
+          <div className="mt-2">
+            <Check
+              label="Add HR details now"
+              checked={addHr}
+              onChange={() => {
+                setAddHr((v) => !v);
+                setLocalErrors((e) =>
+                  Object.fromEntries(Object.entries(e).filter(([k]) => !k.startsWith('hr.'))),
+                );
+              }}
             />
           </div>
-        )}
-        <Select
-          label="Education"
-          hint="Optional"
-          value={form.educationLevel}
-          onChange={(e) => set('educationLevel', e.target.value as EducationLevel | '')}
-        >
-          <option value="">Not given</option>
-          {EDUCATION_OPTIONS.map((o) => (
-            <option key={o.value} value={o.value}>
-              {o.label}
-            </option>
-          ))}
-        </Select>
-        {form.educationLevel === 'other' ? (
+        </div>
+      )}
+
+      {withHr && (
+        <Section title="HR details">
           <Input
-            label="Which education"
+            label="Date of birth"
+            type="date"
             required
-            value={form.educationOther}
-            onChange={(e) => set('educationOther', e.target.value, 'hr.education.other')}
-            error={errors['hr.education.other']}
+            value={form.dob}
+            onChange={(e) => set('dob', e.target.value, 'hr.dob')}
+            error={errors['hr.dob']}
           />
-        ) : (
           <div />
-        )}
-      </Section>
+          <div>
+            <Input
+              label="PAN"
+              required={!hasStoredPii}
+              placeholder={hasStoredPii ? (revealed.pan ?? detail?.hr?.panMasked) : 'ABCPE1234F'}
+              hint={hasStoredPii ? 'Leave blank to keep the PAN on record.' : undefined}
+              value={form.pan}
+              onChange={(e) => set('pan', e.target.value.toUpperCase(), 'hr.pan')}
+              error={errors['hr.pan']}
+            />
+            {hasStoredPii && canReveal && !revealed.pan && (
+              <Button
+                type="button"
+                size="sm"
+                variant="ghost"
+                icon={<FiEye />}
+                onClick={() => void reveal('pan')}
+              >
+                Show
+              </Button>
+            )}
+          </div>
+          <div>
+            <Input
+              label="Aadhaar"
+              required={!hasStoredPii}
+              inputMode="numeric"
+              placeholder={
+                hasStoredPii ? (revealed.aadhaar ?? detail?.hr?.aadhaarMasked) : '12 digits'
+              }
+              hint={hasStoredPii ? 'Leave blank to keep the Aadhaar on record.' : undefined}
+              value={form.aadhaar}
+              onChange={(e) => set('aadhaar', e.target.value, 'hr.aadhaar')}
+              error={errors['hr.aadhaar']}
+            />
+            {hasStoredPii && canReveal && !revealed.aadhaar && (
+              <Button
+                type="button"
+                size="sm"
+                variant="ghost"
+                icon={<FiEye />}
+                onClick={() => void reveal('aadhaar')}
+              >
+                Show
+              </Button>
+            )}
+          </div>
+          {revealError && <p className="col-span-2 text-sm text-danger-500">{revealError}</p>}
+          <Input
+            label="Father's name"
+            required
+            value={form.fatherName}
+            onChange={(e) => set('fatherName', e.target.value, 'hr.fatherName')}
+            error={errors['hr.fatherName']}
+          />
+          <Input
+            label="Father's mobile"
+            hint="Optional"
+            value={form.fatherMobile}
+            onChange={(e) => set('fatherMobile', e.target.value, 'hr.fatherMobile')}
+            error={errors['hr.fatherMobile']}
+          />
+          <Input
+            label="Husband's name"
+            hint="Optional"
+            value={form.husbandName}
+            onChange={(e) => set('husbandName', e.target.value)}
+          />
+          <Input
+            label="Husband's mobile"
+            hint="Optional"
+            value={form.husbandMobile}
+            onChange={(e) => set('husbandMobile', e.target.value, 'hr.husbandMobile')}
+            error={errors['hr.husbandMobile']}
+          />
+          <Input
+            label="Emergency contact name"
+            required
+            value={form.emergencyName}
+            onChange={(e) => set('emergencyName', e.target.value, 'hr.emergencyContact.name')}
+            error={errors['hr.emergencyContact.name']}
+          />
+          <Input
+            label="Relation"
+            required
+            value={form.emergencyRelation}
+            onChange={(e) =>
+              set('emergencyRelation', e.target.value, 'hr.emergencyContact.relation')
+            }
+            error={errors['hr.emergencyContact.relation']}
+          />
+          <Input
+            label="Emergency contact mobile"
+            required
+            value={form.emergencyMobile}
+            onChange={(e) => set('emergencyMobile', e.target.value, 'hr.emergencyContact.mobile')}
+            error={errors['hr.emergencyContact.mobile']}
+          />
+          <div />
+          <div className="col-span-2">
+            <Textarea
+              label="Permanent address"
+              required
+              value={form.permanentAddress}
+              onChange={(e) => set('permanentAddress', e.target.value, 'hr.permanentAddress')}
+              error={errors['hr.permanentAddress']}
+            />
+          </div>
+          <div className="col-span-2">
+            <Check
+              label="Current local address is the same as permanent"
+              checked={form.currentSameAsPermanent}
+              onChange={() =>
+                set('currentSameAsPermanent', !form.currentSameAsPermanent, 'hr.currentAddress')
+              }
+            />
+          </div>
+          {!form.currentSameAsPermanent && (
+            <div className="col-span-2">
+              <Textarea
+                label="Current local address"
+                required
+                value={form.currentAddress}
+                onChange={(e) => set('currentAddress', e.target.value, 'hr.currentAddress')}
+                error={errors['hr.currentAddress']}
+              />
+            </div>
+          )}
+          <Select
+            label="Education"
+            hint="Optional"
+            value={form.educationLevel}
+            onChange={(e) => set('educationLevel', e.target.value as EducationLevel | '')}
+          >
+            <option value="">Not given</option>
+            {EDUCATION_OPTIONS.map((o) => (
+              <option key={o.value} value={o.value}>
+                {o.label}
+              </option>
+            ))}
+          </Select>
+          {form.educationLevel === 'other' ? (
+            <Input
+              label="Which education"
+              required
+              value={form.educationOther}
+              onChange={(e) => set('educationOther', e.target.value, 'hr.education.other')}
+              error={errors['hr.education.other']}
+            />
+          ) : (
+            <div />
+          )}
+        </Section>
+      )}
 
       {Object.keys(localErrors).length > 0 && (
         <p role="alert" className="col-span-2 text-sm text-danger-500">

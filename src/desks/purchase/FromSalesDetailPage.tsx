@@ -85,7 +85,7 @@ export function FromSalesDetailPage() {
                   </dd>
                 </dl>
                 {push.needsGstin && push.status !== 'rejected' && (
-                  <p className="rounded-md bg-warning-50 p-2 text-warning-700">
+                  <p className="rounded-md bg-warning-50 p-2 text-warning-600">
                     He has only a PAN. Add his GSTIN under Complete — he cannot be approved as a
                     seller without one.
                   </p>

@@ -194,6 +194,14 @@ function reportsTo(employee: EmployeeListItem): string {
     if (!ref) continue;
     parts.push(ref.employeeId === employee.employeeId ? 'Himself' : ref.person);
   }
+  // DEC-066 — a Sales Leader's Purchase side reports to Admin.
+  if (
+    employee.positions.includes('SALES_LEADER') &&
+    !employee.positions.includes('PURCHASE_LEADER') &&
+    !employee.reportsToPurchaseLeader
+  ) {
+    parts.push('Admin');
+  }
   return [...new Set(parts)].join(', ') || '—';
 }
 

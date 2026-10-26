@@ -211,7 +211,12 @@ export interface SellerCatalogueItem {
   technical: string;
   manufacturerName: string;
   productState: string;
+  /** 25 Oct — a draft company blocks a listing too. */
+  manufacturerState: string;
+  /** False when Admin switched the product off in Manage. */
+  productActive: boolean;
   packsDetailed: boolean;
+  /** Active packs only. */
   packs: SellerCataloguePackItem[];
   setAt: string;
   setBy: string | null;
@@ -247,8 +252,14 @@ export function getSellerCatalogue(
 export function postSellerCatalogueEntry(
   accessToken: string,
   input: { sellerId: string; productId: string; skuIds?: string[] },
+  idempotencyKey: string,
 ): Promise<{ entryId: string }> {
-  return apiFetch('/staff/purchase/catalogue', { method: 'POST', body: input, accessToken });
+  return apiFetch('/staff/purchase/catalogue', {
+    method: 'POST',
+    body: input,
+    accessToken,
+    idempotencyKey,
+  });
 }
 
 export interface SellerFileListingItem {

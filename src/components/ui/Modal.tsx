@@ -8,11 +8,14 @@ export function Modal({
   title,
   onClose,
   children,
+  size = 'md',
 }: {
   open: boolean;
   title: string;
   onClose: () => void;
   children: ReactNode;
+  /** `xl` — a wide dialog that scrolls inside itself, for a long form (e.g. approving a registration). */
+  size?: 'md' | 'xl';
 }) {
   useEffect(() => {
     if (!open) return;
@@ -32,7 +35,9 @@ export function Modal({
         role="dialog"
         aria-modal="true"
         aria-labelledby="modal-title"
-        className="relative w-full max-w-lg rounded-lg bg-white p-6 shadow-lg"
+        className={`relative w-full rounded-lg bg-white p-6 shadow-lg ${
+          size === 'xl' ? 'max-h-[90vh] max-w-4xl overflow-y-auto' : 'max-w-lg'
+        }`}
       >
         <div className="mb-4 flex items-center justify-between">
           <h2 id="modal-title" className="text-base font-semibold text-slate-900">

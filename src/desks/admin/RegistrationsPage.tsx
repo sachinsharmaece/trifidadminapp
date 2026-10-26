@@ -1,7 +1,7 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import type { FormEvent } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { FiCheck, FiX } from 'react-icons/fi';
+import { FiCheck, FiSearch, FiX } from 'react-icons/fi';
 import {
   approveBuyer,
   approveSeller,
@@ -9,7 +9,7 @@ import {
   getRegistrationBuyerProfile,
   getRegistrationSellerProfile,
   type SellerProfileDto,
-  listRegistrations,
+  listRegistrationsPage,
   rejectRegistration,
   type BuyerCategory,
 } from '../../api/onboarding';
@@ -30,6 +30,10 @@ import { Table, Th, Td } from '../../components/ui/Table';
 import { Button } from '../../components/ui/Button';
 import { Input, Select, Textarea } from '../../components/ui/Input';
 import { Badge, type BadgeTone } from '../../components/ui/Badge';
+import { Modal } from '../../components/ui/Modal';
+import { Loader } from '../../components/ui/Loader';
+import { ErrorState } from '../../components/ui/ErrorState';
+import { EmptyState } from '../../components/ui/EmptyState';
 import type { RegistrationListItem, RegistrationStatusDto, TehsilDto } from '../../api/dto';
 
 const STATUS_TONE: Record<string, BadgeTone> = {
@@ -38,28 +42,128 @@ const STATUS_TONE: Record<string, BadgeTone> = {
   rejected: 'bad',
 };
 
+const PAGE_SIZE = 25;
+
+/**
+ * Registrations (26 Oct): search at the top right (firm, GSTIN, PAN or
+ * mobile), 25 at a time with the next page loading as you scroll (or "Load
+ * more"), and "Open" shows the registration in a dialog over the list.
+ */
 export function RegistrationsPage() {
   const { callApi } = useAuth();
   const [stage, setStage] = useState('pending');
+  const [searchText, setSearchText] = useState('');
+  const [q, setQ] = useState('');
   // B-24 — a duplicate-registration error links here with the existing
-  // record's id (`?open=<id>`) so staff land straight on it, rather than
-  // being told a duplicate exists with nowhere to go look at it.
-  const [searchParams] = useSearchParams();
+  // record's id (`?open=<id>`) so staff land straight on it.
+  const [searchParams, setSearchParams] = useSearchParams();
   const [selectedId, setSelectedId] = useState<string | null>(searchParams.get('open'));
 
-  const listLoader = useCallback(
-    () => callApi((token) => listRegistrations(token, stage)),
-    [callApi, stage],
-  );
-  const list = useAsyncData(listLoader, (items) => items.length === 0, [listLoader]);
+  const [items, setItems] = useState<RegistrationListItem[]>([]);
+  const [nextCursor, setNextCursor] = useState<string | undefined>();
+  const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading');
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  // A newer search or stage makes an older answer stale; this tells them apart.
+  const generation = useRef(0);
+
+  // Wait for a pause in typing before searching.
+  useEffect(() => {
+    const timer = window.setTimeout(() => setQ(searchText.trim()), 300);
+    return () => window.clearTimeout(timer);
+  }, [searchText]);
+
+  const loadFirst = useCallback(async () => {
+    const mine = (generation.current += 1);
+    setStatus('loading');
+    setError(null);
+    try {
+      const page = await callApi((token) =>
+        listRegistrationsPage(token, { stage, q, limit: PAGE_SIZE }),
+      );
+      if (mine !== generation.current) return;
+      setItems(page.items);
+      setNextCursor(page.nextCursor);
+      setStatus('ready');
+    } catch (caught) {
+      if (mine !== generation.current) return;
+      setError(caught instanceof ApiError ? caught.message : 'Could not load registrations.');
+      setStatus('error');
+    }
+  }, [callApi, stage, q]);
+
+  useEffect(() => {
+    void loadFirst();
+  }, [loadFirst]);
+
+  const loadMore = useCallback(async () => {
+    if (!nextCursor || loadingMore) return;
+    const mine = generation.current;
+    setLoadingMore(true);
+    try {
+      const page = await callApi((token) =>
+        listRegistrationsPage(token, { stage, q, cursor: nextCursor, limit: PAGE_SIZE }),
+      );
+      if (mine !== generation.current) return;
+      setItems((current) => [...current, ...page.items]);
+      setNextCursor(page.nextCursor);
+    } catch (caught) {
+      setError(caught instanceof ApiError ? caught.message : 'Could not load more.');
+    } finally {
+      setLoadingMore(false);
+    }
+  }, [callApi, stage, q, nextCursor, loadingMore]);
+
+  // Infinite scroll: the next page loads as the end of the list comes into view.
+  const sentinel = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const el = sentinel.current;
+    if (!el || !nextCursor || typeof IntersectionObserver === 'undefined') return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((entry) => entry.isIntersecting)) void loadMore();
+      },
+      { rootMargin: '200px' },
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [nextCursor, loadMore]);
 
   const tehsilsLoader = useCallback(() => callApi((token) => getTehsils(token)), [callApi]);
-  const tehsils = useAsyncData(tehsilsLoader, (items) => items.length === 0, [tehsilsLoader]);
+  const tehsils = useAsyncData(tehsilsLoader, (rows) => rows.length === 0, [tehsilsLoader]);
+
+  function close(): void {
+    setSelectedId(null);
+    if (searchParams.has('open')) {
+      const next = new URLSearchParams(searchParams);
+      next.delete('open');
+      setSearchParams(next, { replace: true });
+    }
+  }
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-xl font-semibold text-slate-900">Registrations</h1>
+        <div className="w-full sm:w-80">
+          <label htmlFor="reg-search" className="sr-only">
+            Search registrations
+          </label>
+          <div className="relative">
+            <FiSearch
+              aria-hidden
+              className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+            />
+            <input
+              id="reg-search"
+              type="search"
+              placeholder="Search firm, GSTIN, PAN or mobile"
+              value={searchText}
+              onChange={(e) => setSearchText(e.target.value)}
+              className="w-full rounded-md border border-slate-300 bg-white py-2 pl-9 pr-3 text-sm text-slate-900 placeholder:text-slate-400 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
+            />
+          </div>
+        </div>
       </div>
       <DevNote screen="admin_registrations" />
 
@@ -72,12 +176,15 @@ export function RegistrationsPage() {
           </Select>
         </div>
 
-        <AsyncBoundary
-          state={list.state}
-          onRetry={list.retry}
-          emptyMessage="Nothing in this stage."
-        >
-          {(items: RegistrationListItem[]) => (
+        {status === 'loading' && <Loader />}
+        {status === 'error' && (
+          <ErrorState message={error ?? 'Could not load.'} onRetry={() => void loadFirst()} />
+        )}
+        {status === 'ready' && items.length === 0 && (
+          <EmptyState message={q ? `No registration matches “${q}”.` : 'Nothing in this stage.'} />
+        )}
+        {status === 'ready' && items.length > 0 && (
+          <>
             <Table>
               <thead>
                 <tr>
@@ -96,7 +203,7 @@ export function RegistrationsPage() {
                     <Td>{item.firm}</Td>
                     <Td>{item.gstin ?? (item.pan ? `Unregistered · PAN ${item.pan}` : '—')}</Td>
                     <Td className="capitalize">{item.kind}</Td>
-                    <Td>{item.kind === 'seller' ? '—' : (item.assignedTo ?? 'Queue')}</Td>
+                    <Td>{item.assignedTo ?? 'Queue'}</Td>
                     <Td>{item.district ?? '—'}</Td>
                     <Td>
                       <div className="flex items-center gap-2">
@@ -117,20 +224,46 @@ export function RegistrationsPage() {
                 ))}
               </tbody>
             </Table>
-          )}
-        </AsyncBoundary>
+            <div
+              ref={sentinel}
+              className="mt-4 flex items-center justify-between gap-3 text-sm text-slate-500"
+            >
+              <span>
+                Showing {items.length}
+                {nextCursor ? '' : ' — that is all'}
+              </span>
+              {nextCursor && (
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  loading={loadingMore}
+                  onClick={() => void loadMore()}
+                >
+                  Load more
+                </Button>
+              )}
+            </div>
+            {error && (
+              <p role="alert" className="mt-2 text-sm text-danger-500">
+                {error}
+              </p>
+            )}
+          </>
+        )}
       </Card>
 
-      {selectedId && (
-        <RegistrationDetail
-          registrationId={selectedId}
-          tehsils={tehsils.state.status === 'success' ? tehsils.state.data : []}
-          onDecided={() => {
-            setSelectedId(null);
-            list.retry();
-          }}
-        />
-      )}
+      <Modal open={selectedId !== null} title="Registration" size="xl" onClose={close}>
+        {selectedId && (
+          <RegistrationDetail
+            registrationId={selectedId}
+            tehsils={tehsils.state.status === 'success' ? tehsils.state.data : []}
+            onDecided={() => {
+              close();
+              void loadFirst();
+            }}
+          />
+        )}
+      </Modal>
     </div>
   );
 }
@@ -152,7 +285,7 @@ function RegistrationDetail({
   const { state, retry } = useAsyncData(loader, () => false, [loader]);
 
   return (
-    <Card title="Registration detail">
+    <div>
       <AsyncBoundary state={state} onRetry={retry}>
         {(registration: RegistrationStatusDto) => {
           return (
@@ -192,7 +325,7 @@ function RegistrationDetail({
           );
         }}
       </AsyncBoundary>
-    </Card>
+    </div>
   );
 }
 

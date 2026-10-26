@@ -39,6 +39,19 @@ interface RequestOptions {
  * attempting a silent refresh.
  */
 export async function apiFetch<T>(path: string, options: RequestOptions = {}): Promise<T> {
+  return (await apiFetchEnvelope<T>(path, options)).data;
+}
+
+/** One page of a list and the cursor for the next (`meta.nextCursor`; absent on the last page). */
+export async function apiFetchPage<T>(
+  path: string,
+  options: RequestOptions = {},
+): Promise<{ items: T[]; nextCursor?: string }> {
+  const envelope = await apiFetchEnvelope<T[]>(path, options);
+  return { items: envelope.data, nextCursor: envelope.meta?.nextCursor };
+}
+
+async function apiFetchEnvelope<T>(path: string, options: RequestOptions): Promise<Envelope<T>> {
   let response: Response;
   try {
     response = await fetch(`${env.apiBaseUrl}${path}`, {
@@ -77,5 +90,5 @@ export async function apiFetch<T>(path: string, options: RequestOptions = {}): P
     });
   }
 
-  return json.data;
+  return json;
 }

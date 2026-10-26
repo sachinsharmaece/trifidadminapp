@@ -1,4 +1,4 @@
-import { apiFetch } from './client';
+import { apiFetch, apiFetchPage } from './client';
 import type { BuyerProfileDto, RegistrationListItem, RegistrationStatusDto } from './dto';
 
 // API-013
@@ -12,6 +12,19 @@ export function listRegistrations(
   if (limit) params.set('limit', String(limit));
   const query = params.toString();
   return apiFetch(`/staff/registrations${query ? `?${query}` : ''}`, { accessToken });
+}
+
+/** 26 Oct — the Registrations desk: one page at a time, searchable (firm, GSTIN, PAN, mobile). */
+export function listRegistrationsPage(
+  accessToken: string,
+  filter: { stage?: string; q?: string; cursor?: string; limit?: number },
+): Promise<{ items: RegistrationListItem[]; nextCursor?: string }> {
+  const params = new URLSearchParams();
+  if (filter.stage) params.set('stage', filter.stage);
+  if (filter.q) params.set('q', filter.q);
+  if (filter.cursor) params.set('cursor', filter.cursor);
+  params.set('limit', String(filter.limit ?? 25));
+  return apiFetchPage(`/staff/registrations?${params.toString()}`, { accessToken });
 }
 
 // API-012

@@ -21,6 +21,8 @@ export interface ProxyRaiseAskInput {
   qty: number;
   conditionRequirement: { expiryBand: 'over12' | 'under12'; deliveryBand?: '48h' | '2-5d' };
   callNote: string;
+  /** 28 Oct — Incoming/Outgoing, for the call history. */
+  direction?: 'in' | 'out';
 }
 
 export function proxyRaiseAsk(
@@ -30,7 +32,10 @@ export function proxyRaiseAsk(
   return apiFetch('/staff/proxy/buyer/asks', { method: 'POST', body: input, accessToken });
 }
 
-export type ProxyRaiseAskLine = Omit<ProxyRaiseAskInput, 'buyerCounterpartyId' | 'callNote'> & {
+export type ProxyRaiseAskLine = Omit<
+  ProxyRaiseAskInput,
+  'buyerCounterpartyId' | 'callNote' | 'direction'
+> & {
   /** What he said he hopes to pay, in paise — kept for Sales only. */
   expectedRatePaise?: number;
 };
@@ -42,7 +47,12 @@ export type ProxyRaiseAsksLineResult =
 /** One call naming several products: one ask per line, all under the same call note. */
 export function proxyRaiseAsks(
   accessToken: string,
-  input: { buyerCounterpartyId: string; callNote: string; lines: ProxyRaiseAskLine[] },
+  input: {
+    buyerCounterpartyId: string;
+    callNote: string;
+    lines: ProxyRaiseAskLine[];
+    direction?: 'in' | 'out';
+  },
 ): Promise<{ results: ProxyRaiseAsksLineResult[] }> {
   return apiFetch('/staff/proxy/buyer/asks/batch', { method: 'POST', body: input, accessToken });
 }
@@ -84,6 +94,7 @@ export function proxyAcceptAskFill(
     option: 'partial' | 'full';
     quoteIds: string[];
     callNote: string;
+    direction?: 'in' | 'out';
   },
 ): Promise<{ soIds: string[] }> {
   return apiFetch(`/staff/proxy/buyer/asks/${askId}/accept`, {
@@ -97,7 +108,7 @@ export function proxyAcceptAskFill(
 export function proxyDeclineAsk(
   accessToken: string,
   askId: string,
-  input: { buyerCounterpartyId: string; callNote: string },
+  input: { buyerCounterpartyId: string; callNote: string; direction?: 'in' | 'out' },
 ): Promise<{ declined: boolean }> {
   return apiFetch(`/staff/proxy/buyer/asks/${askId}/decline`, {
     method: 'POST',
@@ -109,7 +120,7 @@ export function proxyDeclineAsk(
 export function proxyAcceptPromotion(
   accessToken: string,
   soId: string,
-  input: { buyerCounterpartyId: string; callNote: string },
+  input: { buyerCounterpartyId: string; callNote: string; direction?: 'in' | 'out' },
 ): Promise<{ accepted: boolean }> {
   return apiFetch(`/staff/proxy/buyer/orders/${soId}/promotion/accept`, {
     method: 'POST',
@@ -122,7 +133,7 @@ export function proxyAcceptPromotion(
 export function proxyRejectPromotion(
   accessToken: string,
   soId: string,
-  input: { buyerCounterpartyId: string; callNote: string },
+  input: { buyerCounterpartyId: string; callNote: string; direction?: 'in' | 'out' },
 ): Promise<{ rejected: boolean }> {
   return apiFetch(`/staff/proxy/buyer/orders/${soId}/promotion/reject`, {
     method: 'POST',

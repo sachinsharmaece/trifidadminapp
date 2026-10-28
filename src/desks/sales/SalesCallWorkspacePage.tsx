@@ -87,8 +87,10 @@ export function SalesCallWorkspacePage() {
   const navigate = useNavigate();
   const { callApi } = useAuth();
   const [direction, setDirection] = useState<'in' | 'out'>('out');
-  // Bumped when "He wants it" raises an ask, so "Advance an ask" lists it at once.
-  const [asksVersion, setAsksVersion] = useState(0);
+  // Bumped after any call action (raising, advancing or declining an ask, a
+  // promoted-offer decision), so "Advance an ask" and the call history reload.
+  const [callsVersion, setCallsVersion] = useState(0);
+  const onCallLogged = useCallback(() => setCallsVersion((v) => v + 1), []);
 
   const fileLoader = useCallback(
     () => callApi((token) => getSalesBuyerFile(token, buyerId)),
@@ -122,15 +124,25 @@ export function SalesCallWorkspacePage() {
             <BoardForHimSection
               buyerId={buyerId}
               counterpartyId={file.counterpartyId}
-              onAskRaised={() => setAsksVersion((v) => v + 1)}
+              direction={direction}
+              onAskRaised={onCallLogged}
             />
 
             <DirectionToggle direction={direction} onChange={setDirection} />
 
-            <LogBuyerCallSection buyerCounterpartyId={file.counterpartyId} />
-            <AdvanceAskSection buyerCounterpartyId={file.counterpartyId} refreshKey={asksVersion} />
+            <LogBuyerCallSection
+              buyerCounterpartyId={file.counterpartyId}
+              direction={direction}
+              onLogged={onCallLogged}
+            />
+            <AdvanceAskSection
+              buyerCounterpartyId={file.counterpartyId}
+              direction={direction}
+              refreshKey={callsVersion}
+              onActed={onCallLogged}
+            />
 
-            <CallOutcomeSection buyerId={buyerId} direction={direction} />
+            <CallOutcomeSection buyerId={buyerId} direction={direction} refreshKey={callsVersion} />
             <UpdateRequestSection buyerId={buyerId} />
           </div>
         )}
@@ -177,15 +189,22 @@ function DirectionToggle({
 function BoardForHimSection({
   buyerId,
   counterpartyId,
+  direction,
   onAskRaised,
 }: {
   buyerId: string;
   counterpartyId: string;
+  direction: 'in' | 'out';
   onAskRaised: () => void;
 }) {
   return (
     <Card title="On the board for him">
-      <BoardForHimBody buyerId={buyerId} counterpartyId={counterpartyId} onChanged={onAskRaised} />
+      <BoardForHimBody
+        buyerId={buyerId}
+        counterpartyId={counterpartyId}
+        direction={direction}
+        onChanged={onAskRaised}
+      />
     </Card>
   );
 }
@@ -199,10 +218,13 @@ function BoardForHimSection({
 export function BoardForHimBody({
   buyerId,
   counterpartyId,
+  direction,
   onChanged,
 }: {
   buyerId: string;
   counterpartyId: string;
+  /** Incoming/Outgoing on the call page; the buyer file has no call in progress. */
+  direction?: 'in' | 'out';
   onChanged?: () => void;
 }) {
   const { callApi } = useAuth();
@@ -224,6 +246,7 @@ export function BoardForHimBody({
             <BoardProductBlock
               key={detail.productId}
               counterpartyId={counterpartyId}
+              direction={direction}
               onChanged={onChanged}
               detail={detail}
             />
@@ -236,10 +259,12 @@ export function BoardForHimBody({
 
 function BoardProductBlock({
   counterpartyId,
+  direction,
   onChanged,
   detail,
 }: {
   counterpartyId: string;
+  direction?: 'in' | 'out';
   onChanged?: () => void;
   detail: BoardForBuyerProduct;
 }) {
@@ -275,6 +300,7 @@ function BoardProductBlock({
               <HeWantsItButton
                 line={line}
                 counterpartyId={counterpartyId}
+                direction={direction}
                 onDone={() => onChanged?.()}
               />
             </li>
@@ -286,7 +312,16 @@ function BoardProductBlock({
 }
 
 /** "What the call produced" (a fresh call log) plus this buyer's call history below it. */
-function CallOutcomeSection({ buyerId, direction }: { buyerId: string; direction: 'in' | 'out' }) {
+function CallOutcomeSection({
+  buyerId,
+  direction,
+  refreshKey = 0,
+}: {
+  buyerId: string;
+  direction: 'in' | 'out';
+  /** Changes after a call action elsewhere on the page, so the history reloads. */
+  refreshKey?: number;
+}) {
   const { callApi } = useAuth();
   const { show } = useToast();
   const [outcome, setOutcome] = useState<CallOutcome>(OUTCOMES[0]);
@@ -296,7 +331,7 @@ function CallOutcomeSection({ buyerId, direction }: { buyerId: string; direction
 
   const historyLoader = useCallback(
     () => callApi((token) => listCallLogsForBuyer(token, buyerId)),
-    [callApi, buyerId],
+    [callApi, buyerId, refreshKey],
   );
   const { state: historyState, retry: retryHistory } = useAsyncData(
     historyLoader,
@@ -487,7 +522,16 @@ function newCallLine(key: number): CallLine {
   return { key, skuId: '', qty: 1, expectedRate: '' };
 }
 
-export function LogBuyerCallSection({ buyerCounterpartyId }: { buyerCounterpartyId: string }) {
+export function LogBuyerCallSection({
+  buyerCounterpartyId,
+  direction,
+  onLogged,
+}: {
+  buyerCounterpartyId: string;
+  direction?: 'in' | 'out';
+  /** Called once any ask was raised, so the page can reload its lists. */
+  onLogged?: () => void;
+}) {
   const { callApi } = useAuth();
   const [lines, setLines] = useState<CallLine[]>(() => [newCallLine(0)]);
   const [nextKey, setNextKey] = useState(1);
@@ -532,6 +576,7 @@ export function LogBuyerCallSection({ buyerCounterpartyId }: { buyerCounterparty
         proxyRaiseAsks(token, {
           buyerCounterpartyId,
           callNote,
+          ...(direction ? { direction } : {}),
           lines: lines.map((l) => ({
             skuId: l.skuId,
             qty: l.qty,
@@ -549,6 +594,7 @@ export function LogBuyerCallSection({ buyerCounterpartyId }: { buyerCounterparty
         else failedByKey.set(lines[r.index]!.key, r.error);
       }
       setRaised(askIds);
+      if (askIds.length > 0) onLogged?.();
       if (failedByKey.size === 0) {
         // All saved — reset to one fresh line and clear the note for the next call.
         setLines([newCallLine(nextKey)]);
@@ -734,11 +780,16 @@ function QuotePicker({
 
 function AdvanceAskSection({
   buyerCounterpartyId,
+  direction,
   refreshKey = 0,
+  onActed,
 }: {
   buyerCounterpartyId: string;
+  direction?: 'in' | 'out';
   /** Changes when an ask is raised elsewhere on the page, so the list reloads. */
   refreshKey?: number;
+  /** Called after an accept, decline or promoted-offer decision. */
+  onActed?: () => void;
 }) {
   const { callApi } = useAuth();
   const [askId, setAskId] = useState('');
@@ -782,12 +833,16 @@ function AdvanceAskSection({
           option,
           quoteIds,
           callNote,
+          ...(direction ? { direction } : {}),
         }),
       );
-      setMessage(`Accepted — order(s): ${result.soIds.join(', ')}.`);
+      setMessage(
+        `Accepted — ${result.soIds.length} order${result.soIds.length === 1 ? '' : 's'} placed.`,
+      );
       setAskId('');
       setQuoteIds([]);
       retryAsks();
+      onActed?.();
     } catch (submitError) {
       setError(
         submitError instanceof ApiError ? submitError.message : 'Could not accept this fill.',
@@ -801,11 +856,18 @@ function AdvanceAskSection({
     setError(null);
     setSubmitting(true);
     try {
-      await callApi((token) => proxyDeclineAsk(token, askId, { buyerCounterpartyId, callNote }));
+      await callApi((token) =>
+        proxyDeclineAsk(token, askId, {
+          buyerCounterpartyId,
+          callNote,
+          ...(direction ? { direction } : {}),
+        }),
+      );
       setMessage('Walked away — free, no strike.');
       setAskId('');
       setQuoteIds([]);
       retryAsks();
+      onActed?.();
     } catch (submitError) {
       setError(submitError instanceof ApiError ? submitError.message : 'Could not decline.');
     } finally {
@@ -820,9 +882,11 @@ function AdvanceAskSection({
         proxyAcceptPromotion(token, soId, {
           buyerCounterpartyId,
           callNote: promotionNote,
+          ...(direction ? { direction } : {}),
         }),
       );
       setPromotionMessage('Accepted the replacement seller.');
+      onActed?.();
     } catch (submitError) {
       setPromotionError(
         submitError instanceof ApiError ? submitError.message : 'Could not accept.',
@@ -837,9 +901,11 @@ function AdvanceAskSection({
         proxyRejectPromotion(token, soId, {
           buyerCounterpartyId,
           callNote: promotionNote,
+          ...(direction ? { direction } : {}),
         }),
       );
       setPromotionMessage('Declined — refunded on the next run.');
+      onActed?.();
     } catch (submitError) {
       setPromotionError(
         submitError instanceof ApiError ? submitError.message : 'Could not decline.',

@@ -3,7 +3,12 @@ import { fireEvent, render, screen, waitFor, within } from '@testing-library/rea
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { useAuth } from '../src/auth/AuthContext';
 import { ToastProvider } from '../src/components/ui/Toast';
-import { getSalesBoardForBuyer, getSalesBuyerFile, createCallLog } from '../src/api/sales';
+import {
+  getSalesBoardForBuyer,
+  getSalesBuyerFile,
+  createCallLog,
+  listCallLogsForBuyer,
+} from '../src/api/sales';
 import { proxyListBuyerAsks, proxyRaiseAsk } from '../src/api/proxy';
 import { SalesCallWorkspacePage } from '../src/desks/sales/SalesCallWorkspacePage';
 
@@ -92,6 +97,7 @@ describe('Call page — "He wants it" (28 Oct)', () => {
       target: { value: 'He wants 4 boxes of the 350 ML.' },
     });
     const asksLoadsBefore = vi.mocked(proxyListBuyerAsks).mock.calls.length;
+    const historyLoadsBefore = vi.mocked(listCallLogsForBuyer).mock.calls.length;
     fireEvent.click(within(dialog).getByRole('button', { name: /add to he asked/i }));
 
     await waitFor(() => expect(proxyRaiseAsk).toHaveBeenCalled());
@@ -100,10 +106,15 @@ describe('Call page — "He wants it" (28 Oct)', () => {
       skuId: 'k1',
       qty: 4,
       conditionRequirement: { expiryBand: 'over12', deliveryBand: '48h' },
+      direction: 'out', // the page's Incoming/Outgoing toggle starts on Outgoing
     });
     expect(createCallLog).not.toHaveBeenCalled();
     await waitFor(() =>
       expect(vi.mocked(proxyListBuyerAsks).mock.calls.length).toBeGreaterThan(asksLoadsBefore),
+    );
+    // The call history reloads, so the new call shows without a page refresh.
+    await waitFor(() =>
+      expect(vi.mocked(listCallLogsForBuyer).mock.calls.length).toBeGreaterThan(historyLoadsBefore),
     );
   });
 });

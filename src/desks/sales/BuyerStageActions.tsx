@@ -33,10 +33,13 @@ import { deliveryBandLabel, expiryBandLabel, formatRupees, moqBandLabel } from '
 export function HeWantsItButton({
   line,
   counterpartyId,
+  direction,
   onDone,
 }: {
   line: BoardForBuyerLine;
   counterpartyId: string;
+  /** Incoming/Outgoing, when raised on the call page — for the call history. */
+  direction?: 'in' | 'out';
   onDone: () => void;
 }) {
   const [open, setOpen] = useState(false);
@@ -53,6 +56,7 @@ export function HeWantsItButton({
         deliveryBand: line.deliveryBand as '48h' | '2-5d',
       },
       callNote,
+      ...(direction ? { direction } : {}),
     });
     return 'Moved to He asked.';
   }, onDone);

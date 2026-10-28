@@ -1,4 +1,4 @@
-import { apiFetch } from './client';
+import { apiFetch, apiFetchPage } from './client';
 import type {
   HsnDto,
   ManufacturerDto,
@@ -90,6 +90,17 @@ export function updateManufacturer(
 
 // New — the Manage desk's own unfiltered product list (distinct from
 // API-022's technical-scoped picker, which BR-111 governs).
+/** 29 Oct — Manage → Products a page at a time, newest first; searchable (product, technical, company). */
+export function getAllProductsPage(
+  accessToken: string,
+  filter: { q?: string; cursor?: string; limit?: number },
+): Promise<{ items: ProductDto[]; nextCursor?: string; total?: number }> {
+  const params = new URLSearchParams({ limit: String(filter.limit ?? 50) });
+  if (filter.q) params.set('q', filter.q);
+  if (filter.cursor) params.set('cursor', filter.cursor);
+  return apiFetchPage(`/admin/products?${params.toString()}`, { accessToken });
+}
+
 export function getAllProducts(accessToken: string, limit = 100): Promise<ProductDto[]> {
   return apiFetch(`/admin/products?limit=${limit}`, { accessToken });
 }

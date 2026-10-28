@@ -20,8 +20,7 @@ import {
   type AbsorptionQueueItem,
   type OnBoardNotQuotedItem,
 } from '../../api/purchase';
-import { listRegistrations } from '../../api/onboarding';
-import type { RegistrationListItem } from '../../api/dto';
+import { countPendingRegistrations } from '../../api/onboarding';
 import { AsyncBoundary } from '../../components/AsyncBoundary';
 import { useAsyncData } from '../../lib/useAsyncData';
 import { useAuth } from '../../auth/AuthContext';
@@ -41,7 +40,8 @@ interface TodaySummary {
   dispatchOverdue: DispatchQueueItem[];
   inspectionsPending: InspectionPendingApplyItem[];
   returnNotesOld: ReturnNoteAgeingItem[];
-  sellersPendingApproval: RegistrationListItem[];
+  /** 29 Oct — how many seller registrations wait (the server's count, not a capped list). */
+  sellersPendingApproval: number;
   absorptionPending: AbsorptionQueueItem[];
   onBoardNotQuoted: OnBoardNotQuotedItem[];
   funnel: FunnelReport | null;
@@ -75,7 +75,7 @@ export function TodayPage() {
       callApi((token) => getDispatchChaseQueue(token)),
       callApi((token) => getInspectionsPendingApply(token)),
       callApi((token) => getReturnNoteAgeing(token)),
-      callApi((token) => listRegistrations(token, 'pending')),
+      callApi((token) => countPendingRegistrations(token, 'seller')),
       callApi((token) => getSupplyMatrixByProduct(token)),
       hasPermission(PERMISSIONS.FUNNEL_READ)
         ? callApi((token) => getFunnelReport(token))
@@ -94,7 +94,7 @@ export function TodayPage() {
       dispatchOverdue: dispatch.filter((d) => d.bucket === 'overdue'),
       inspectionsPending: inspections,
       returnNotesOld: returns.filter((r) => r.daysOld > 21),
-      sellersPendingApproval: registrations.filter((r) => r.kind !== 'buyer'),
+      sellersPendingApproval: registrations,
       absorptionPending: absorption.filter((a) => a.status === 'pending'),
       onBoardNotQuoted,
       funnel,
@@ -109,7 +109,7 @@ export function TodayPage() {
         s.dispatchOverdue.length +
         s.inspectionsPending.length +
         s.returnNotesOld.length +
-        s.sellersPendingApproval.length +
+        s.sellersPendingApproval +
         s.absorptionPending.length +
         s.onBoardNotQuoted.length ===
       0,
@@ -141,7 +141,7 @@ export function TodayPage() {
                   s.dispatchOverdue.length +
                   s.inspectionsPending.length +
                   s.returnNotesOld.length +
-                  s.sellersPendingApproval.length +
+                  s.sellersPendingApproval +
                   s.absorptionPending.length +
                   s.onBoardNotQuoted.length
                 }
@@ -270,12 +270,12 @@ export function TodayPage() {
               </Card>
             )}
 
-            {s.sellersPendingApproval.length > 0 && (
+            {s.sellersPendingApproval > 0 && (
               <Card title="Registered, no area set">
                 <p className="text-sm text-slate-600">
-                  {s.sellersPendingApproval.length} seller registration
-                  {s.sellersPendingApproval.length === 1 ? '' : 's'} waiting on Purchase — no area,
-                  no listing (BR-083).
+                  {s.sellersPendingApproval} seller registration
+                  {s.sellersPendingApproval === 1 ? '' : 's'} waiting on Purchase — no area, no
+                  listing (BR-083).
                 </p>
                 <button
                   className="mt-3 text-sm font-medium text-brand-600 hover:underline"

@@ -10,7 +10,7 @@ import {
   getPoQueue,
   getBilledQueue,
 } from '../../api/purchase';
-import { listRegistrations } from '../../api/onboarding';
+import { countPendingRegistrations } from '../../api/onboarding';
 import { listPurchasePushes } from '../../api/push';
 import { useAuth } from '../../auth/AuthContext';
 
@@ -37,7 +37,7 @@ function useNavCounts(): Partial<NavCounts> {
       callApi((token) => getActiveDemandList(token, false)),
       callApi((token) => getPilesAwaitingDecision(token)),
       callApi((token) => getDispatchChaseQueue(token)),
-      callApi((token) => listRegistrations(token, 'pending')),
+      callApi((token) => countPendingRegistrations(token, 'seller')),
       callApi((token) => getInspectionsPendingApply(token)),
       callApi((token) => getReturnNoteAgeing(token)),
       callApi((token) => getStockQueue(token)),
@@ -72,10 +72,7 @@ function useNavCounts(): Partial<NavCounts> {
             dispatch.status === 'fulfilled'
               ? dispatch.value.filter((d) => d.bucket === 'overdue').length
               : undefined,
-          sellers:
-            registrations.status === 'fulfilled'
-              ? registrations.value.filter((r) => r.kind !== 'buyer').length
-              : undefined,
+          sellers: registrations.status === 'fulfilled' ? registrations.value : undefined,
           recovery:
             inspections.status === 'fulfilled' && returns.status === 'fulfilled'
               ? inspections.value.length + returns.value.filter((r) => r.overdue).length

@@ -17,14 +17,31 @@ export function listRegistrations(
 /** 26 Oct — the Registrations desk: one page at a time, searchable (firm, GSTIN, PAN, mobile). */
 export function listRegistrationsPage(
   accessToken: string,
-  filter: { stage?: string; q?: string; cursor?: string; limit?: number },
-): Promise<{ items: RegistrationListItem[]; nextCursor?: string }> {
+  filter: {
+    stage?: string;
+    q?: string;
+    cursor?: string;
+    limit?: number;
+    /** 29 Oct — only buyers or only sellers. */
+    kind?: 'buyer' | 'seller';
+  },
+): Promise<{ items: RegistrationListItem[]; nextCursor?: string; total?: number }> {
   const params = new URLSearchParams();
   if (filter.stage) params.set('stage', filter.stage);
+  if (filter.kind) params.set('kind', filter.kind);
   if (filter.q) params.set('q', filter.q);
   if (filter.cursor) params.set('cursor', filter.cursor);
   params.set('limit', String(filter.limit ?? 25));
   return apiFetchPage(`/staff/registrations?${params.toString()}`, { accessToken });
+}
+
+/** 29 Oct — how many registrations of one kind are waiting (the desk counts). */
+export async function countPendingRegistrations(
+  accessToken: string,
+  kind: 'buyer' | 'seller',
+): Promise<number> {
+  const page = await listRegistrationsPage(accessToken, { stage: 'pending', kind, limit: 1 });
+  return page.total ?? page.items.length;
 }
 
 // API-012

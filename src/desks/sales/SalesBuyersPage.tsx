@@ -1,15 +1,17 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import type { NavigateFunction } from 'react-router-dom';
 import { FiArrowDownLeft, FiArrowUpRight, FiUserPlus } from 'react-icons/fi';
-import { listSalesBuyers, type BuyerListRow } from '../../api/sales';
-import { listRegistrations } from '../../api/onboarding';
+import { listSalesBuyersPage, type BuyerListFacets, type BuyerListRow } from '../../api/sales';
+import { listRegistrationsPage } from '../../api/onboarding';
+import { useDebounced, usePagedList } from '../../lib/usePagedList';
+import { ListFooter } from '../../components/ListFooter';
+import { Loader } from '../../components/ui/Loader';
+import { ErrorState } from '../../components/ui/ErrorState';
 import { assignBook } from '../../api/admin';
 import type { RegistrationListItem } from '../../api/dto';
 import { useFormSubmit } from '../../lib/useFormSubmit';
-import { AsyncBoundary } from '../../components/AsyncBoundary';
-import { useAsyncData } from '../../lib/useAsyncData';
 import { useAuth } from '../../auth/AuthContext';
 import { Card } from '../../components/ui/Card';
 import { LeadLookup } from '../../components/lead/LeadLookup';
@@ -83,53 +85,82 @@ export function SalesBuyersPage() {
 function BuyerListTab({ tab }: { tab: BookQueueTab }) {
   const { callApi } = useAuth();
   const navigate = useNavigate();
-  // Live filter, as-you-type, no submit button — filters the already-fetched
-  // list client-side; re-fetches only when the tab itself changes.
-  const [q, setQ] = useState('');
+  // 29 Oct — searched, filtered and paged on the server (50 at a time; the
+  // next page loads as you scroll, or "Load more"). It used to load every
+  // buyer and filter in the browser.
+  const [searchText, setSearchText] = useState('');
+  const q = useDebounced(searchText.trim());
+  const [filters, setFilters] = useState({ category: '', districtId: '', assignedTo: '' });
   const [assigning, setAssigning] = useState<{ buyerId: string; firm: string } | null>(null);
-  const loader = useCallback(
-    () => callApi((token) => listSalesBuyers(token, { tab })),
-    [callApi, tab],
+  const loadPage = useCallback(
+    async (cursor?: string) => {
+      const page = await callApi((token) =>
+        listSalesBuyersPage(token, {
+          tab,
+          q: q || undefined,
+          category: filters.category || undefined,
+          districtId: filters.districtId || undefined,
+          assignedTo: filters.assignedTo || undefined,
+          cursor,
+          limit: 50,
+        }),
+      );
+      return { ...page, meta: { facets: page.facets } };
+    },
+    [callApi, tab, q, filters],
   );
-  const { state, retry } = useAsyncData(loader, (items) => items.length === 0, [loader]);
-  // Phase 3 — Category, District and Assigned to filters, drawn from the rows.
-  const [filters, setFilters] = useState({ category: '', district: '', assignedTo: '' });
+  const list = usePagedList<BuyerListRow>(loadPage);
+  // The options stay as first loaded for the tab, so picking one does not empty the others.
+  const [facets, setFacets] = useState<BuyerListFacets | null>(null);
+  useEffect(() => {
+    const next = list.meta?.facets as BuyerListFacets | undefined;
+    if (next) setFacets((current) => current ?? next);
+  }, [list.meta]);
+  const filtering = Boolean(q || filters.category || filters.districtId || filters.assignedTo);
 
   return (
     <div className="flex flex-col gap-4">
       <Input
         label="Search"
         placeholder="Firm, proprietor, mobile, GSTIN, PAN, tehsil…"
-        value={q}
-        onChange={(e) => setQ(e.target.value)}
+        value={searchText}
+        onChange={(e) => setSearchText(e.target.value)}
       />
-      <AsyncBoundary state={state} onRetry={retry} emptyMessage="Nobody here yet.">
-        {(items) => (
-          <>
-            <BuyerFilters items={items} value={filters} onChange={setFilters} />
-            <BuyerTable
-              items={items.filter(
-                (b) =>
-                  (!filters.category || b.tier === filters.category) &&
-                  (!filters.district || b.district === filters.district) &&
-                  (!filters.assignedTo ||
-                    (filters.assignedTo === 'queue'
-                      ? !b.assignedToEmployeeId
-                      : b.assignedToEmployeeId === filters.assignedTo)),
-              )}
-              q={q}
-              navigate={navigate}
-              onAssignToMe={setAssigning}
-            />
-          </>
-        )}
-      </AsyncBoundary>
+      <BuyerFilters facets={facets} tab={tab} value={filters} onChange={setFilters} />
+      {list.status === 'loading' && <Loader />}
+      {list.status === 'error' && (
+        <ErrorState message={list.error ?? 'Could not load.'} onRetry={() => void list.reload()} />
+      )}
+      {list.status === 'ready' && list.items.length === 0 && (
+        <p className="text-sm text-slate-500">
+          {q ? (
+            <>No match for &quot;{q}&quot;.</>
+          ) : filtering ? (
+            'No buyer matches these filters.'
+          ) : (
+            'Nobody here yet.'
+          )}
+        </p>
+      )}
+      {list.status === 'ready' && list.items.length > 0 && (
+        <>
+          <BuyerTable items={list.items} q="" navigate={navigate} onAssignToMe={setAssigning} />
+          <ListFooter
+            shown={list.items.length}
+            total={list.total}
+            hasMore={list.hasMore}
+            loading={list.loadingMore}
+            error={list.error}
+            onMore={() => void list.loadMore()}
+          />
+        </>
+      )}
       <AssignToBookModal
         target={assigning}
         onClose={() => setAssigning(null)}
         onAssigned={() => {
           setAssigning(null);
-          retry();
+          void list.reload();
         }}
       />
     </div>
@@ -206,23 +237,19 @@ function AssignToBookModal({
   );
 }
 
+const CATEGORIES = ['Retailer', 'Dealer', 'Distributor', 'Trader'];
+
 function BuyerFilters({
-  items,
+  facets,
+  tab,
   value,
   onChange,
 }: {
-  items: BuyerListRow[];
-  value: { category: string; district: string; assignedTo: string };
-  onChange: (next: { category: string; district: string; assignedTo: string }) => void;
+  facets: BuyerListFacets | null;
+  tab: BookQueueTab;
+  value: { category: string; districtId: string; assignedTo: string };
+  onChange: (next: { category: string; districtId: string; assignedTo: string }) => void;
 }) {
-  const categories = [...new Set(items.map((b) => b.tier).filter((t): t is string => !!t))].sort();
-  const districts = [
-    ...new Set(items.map((b) => b.district).filter((d): d is string => !!d)),
-  ].sort();
-  const people = new Map<string, string>();
-  for (const b of items) {
-    if (b.assignedToEmployeeId && b.ownerName) people.set(b.assignedToEmployeeId, b.ownerName);
-  }
   return (
     <div className="grid max-w-3xl grid-cols-3 gap-4">
       <Select
@@ -231,7 +258,7 @@ function BuyerFilters({
         onChange={(e) => onChange({ ...value, category: e.target.value })}
       >
         <option value="">All</option>
-        {categories.map((c) => (
+        {CATEGORIES.map((c) => (
           <option key={c} value={c}>
             {c}
           </option>
@@ -239,31 +266,30 @@ function BuyerFilters({
       </Select>
       <Select
         label="District"
-        value={value.district}
-        onChange={(e) => onChange({ ...value, district: e.target.value })}
+        value={value.districtId}
+        onChange={(e) => onChange({ ...value, districtId: e.target.value })}
       >
         <option value="">All</option>
-        {districts.map((d) => (
-          <option key={d} value={d}>
-            {d}
+        {(facets?.districts ?? []).map((d) => (
+          <option key={d.districtId} value={d.districtId}>
+            {d.name}
           </option>
         ))}
       </Select>
-      <Select
-        label="Assigned to"
-        value={value.assignedTo}
-        onChange={(e) => onChange({ ...value, assignedTo: e.target.value })}
-      >
-        <option value="">Anyone</option>
-        <option value="queue">Queue (nobody)</option>
-        {[...people.entries()]
-          .sort((a, b) => a[1].localeCompare(b[1]))
-          .map(([id, name]) => (
-            <option key={id} value={id}>
-              {name}
+      {tab === 'book' && (
+        <Select
+          label="Assigned to"
+          value={value.assignedTo}
+          onChange={(e) => onChange({ ...value, assignedTo: e.target.value })}
+        >
+          <option value="">Anyone</option>
+          {(facets?.assignees ?? []).map((a) => (
+            <option key={a.employeeId} value={a.employeeId}>
+              {a.person}
             </option>
           ))}
-      </Select>
+        </Select>
+      )}
     </div>
   );
 }
@@ -382,23 +408,31 @@ function BuyerTable({
 function WaitingTab() {
   const { callApi } = useAuth();
   const navigate = useNavigate();
-  const loader = useCallback(
-    () => callApi((token) => listRegistrations(token, 'pending')),
+  // 29 Oct — buyers only, from the server, a page at a time (the old call took
+  // the first 25 pending registrations of every kind).
+  const loadPage = useCallback(
+    (cursor?: string) =>
+      callApi((token) =>
+        listRegistrationsPage(token, { stage: 'pending', kind: 'buyer', cursor, limit: 25 }),
+      ),
     [callApi],
   );
-  const { state, retry } = useAsyncData(loader, (items) => items.length === 0, [loader]);
+  const list = usePagedList<RegistrationListItem>(loadPage);
 
   return (
     <Card title="Waiting on approval">
       <p className="mb-4 text-sm text-slate-500">
         Read-only awareness — approving a registration happens on the Registrations desk, not here.
       </p>
-      <AsyncBoundary state={state} onRetry={retry} emptyMessage="Nobody waiting.">
-        {(items: RegistrationListItem[]) => {
-          const buyers = items.filter((r) => r.kind === 'buyer' || r.kind === 'both');
-          return buyers.length === 0 ? (
-            <p className="text-sm text-slate-500">No buyer registrations waiting.</p>
-          ) : (
+      {list.status === 'loading' && <Loader />}
+      {list.status === 'error' && (
+        <ErrorState message={list.error ?? 'Could not load.'} onRetry={() => void list.reload()} />
+      )}
+      {list.status === 'ready' &&
+        (list.items.length === 0 ? (
+          <p className="text-sm text-slate-500">No buyer registrations waiting.</p>
+        ) : (
+          <>
             <Table>
               <thead>
                 <tr>
@@ -409,7 +443,7 @@ function WaitingTab() {
                 </tr>
               </thead>
               <tbody>
-                {buyers.map((r) => (
+                {list.items.map((r) => (
                   <tr key={r.registrationId}>
                     <Td>{r.firm ?? '—'}</Td>
                     <Td className="font-mono text-xs">{r.gstin ?? '—'}</Td>
@@ -418,7 +452,7 @@ function WaitingTab() {
                       <Button
                         size="sm"
                         variant="secondary"
-                        onClick={() => navigate('/registrations')}
+                        onClick={() => navigate(`/registrations?open=${r.registrationId}`)}
                       >
                         Open in Registrations
                       </Button>
@@ -427,9 +461,16 @@ function WaitingTab() {
                 ))}
               </tbody>
             </Table>
-          );
-        }}
-      </AsyncBoundary>
+            <ListFooter
+              shown={list.items.length}
+              total={list.total}
+              hasMore={list.hasMore}
+              loading={list.loadingMore}
+              error={list.error}
+              onMore={() => void list.loadMore()}
+            />
+          </>
+        ))}
     </Card>
   );
 }

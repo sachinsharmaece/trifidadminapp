@@ -3,7 +3,7 @@ import { ApiError, type ErrorCode } from './errors';
 
 interface Envelope<T> {
   data: T;
-  meta: { correlationId: string; nextCursor?: string };
+  meta: { correlationId: string; nextCursor?: string; total?: number } & Record<string, unknown>;
 }
 
 interface ErrorEnvelope {
@@ -46,9 +46,14 @@ export async function apiFetch<T>(path: string, options: RequestOptions = {}): P
 export async function apiFetchPage<T>(
   path: string,
   options: RequestOptions = {},
-): Promise<{ items: T[]; nextCursor?: string }> {
+): Promise<{ items: T[]; nextCursor?: string; total?: number; meta?: Record<string, unknown> }> {
   const envelope = await apiFetchEnvelope<T[]>(path, options);
-  return { items: envelope.data, nextCursor: envelope.meta?.nextCursor };
+  return {
+    items: envelope.data,
+    nextCursor: envelope.meta?.nextCursor,
+    total: envelope.meta?.total,
+    meta: envelope.meta,
+  };
 }
 
 async function apiFetchEnvelope<T>(path: string, options: RequestOptions): Promise<Envelope<T>> {

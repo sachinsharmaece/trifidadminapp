@@ -1,5 +1,5 @@
 import type { AssignableSalesPerson } from './dto';
-import { apiFetch } from './client';
+import { apiFetch, apiFetchPage } from './client';
 
 export interface SalesWorkItem {
   bucket: 'money' | 'promised' | 'he_asked' | 'market';
@@ -332,6 +332,40 @@ export function listSalesBuyers(
   if (filters?.assignedTo) params.set('assignedTo', filters.assignedTo);
   const qs = params.toString();
   return apiFetch(`/staff/sales/buyers${qs ? `?${qs}` : ''}`, { accessToken });
+}
+
+/** 29 Oct — the filter options over a whole Buyers tab (not only the page loaded). */
+export interface BuyerListFacets {
+  districts: Array<{ districtId: string; name: string }>;
+  assignees: Array<{ employeeId: string; person: string }>;
+}
+
+/** 29 Oct — Sales → Buyers a page at a time, searched and filtered on the server. */
+export async function listSalesBuyersPage(
+  accessToken: string,
+  filters: {
+    q?: string;
+    tab?: 'book' | 'queue';
+    category?: string;
+    districtId?: string;
+    assignedTo?: string;
+    cursor?: string;
+    limit?: number;
+  },
+): Promise<{
+  items: BuyerListRow[];
+  nextCursor?: string;
+  total?: number;
+  facets?: BuyerListFacets;
+}> {
+  const params = new URLSearchParams({ limit: String(filters.limit ?? 50) });
+  for (const key of ['q', 'tab', 'category', 'districtId', 'assignedTo', 'cursor'] as const) {
+    if (filters[key]) params.set(key, String(filters[key]));
+  }
+  const page = await apiFetchPage<BuyerListRow>(`/staff/sales/buyers?${params.toString()}`, {
+    accessToken,
+  });
+  return { ...page, facets: page.meta?.facets as BuyerListFacets | undefined };
 }
 
 export interface BuyerProductHistoryRow {

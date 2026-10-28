@@ -115,6 +115,8 @@ export interface PushDetailDto {
     callNote: string | null;
     bankDetailGiven: boolean;
   } | null;
+  /** 28 Oct — the companies ticked on his buyer profile (names only); Complete starts with them ticked. */
+  buyerCompanies: Array<{ manufacturerId: string; name: string }>;
   firmHasBankDetail: boolean;
   needsGstin: boolean;
   canComplete: boolean;

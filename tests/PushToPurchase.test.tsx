@@ -130,6 +130,7 @@ const detail: PushDetailDto = {
   note: 'Seeds',
   receiver: { employeeId: 'l1', person: 'Leela Leader' },
   draft: null,
+  buyerCompanies: [],
   firmHasBankDetail: false,
   needsGstin: true,
   canComplete: false,
@@ -154,6 +155,39 @@ describe('Phase 6 — From Sales, one push', () => {
     expect(
       (screen.getByRole('button', { name: /Approve as seller/ }) as HTMLButtonElement).disabled,
     ).toBe(true);
+  });
+});
+
+describe('28 Oct — the buyer’s companies come with the push', () => {
+  it('a first Complete starts with the companies ticked on his buyer profile', async () => {
+    const { getMastersManufacturers } = await import('../src/api/purchase');
+    vi.mocked(getMastersManufacturers).mockResolvedValue([
+      { manufacturerId: 'm1', name: 'Coromandel', aka: [] },
+      { manufacturerId: 'm2', name: 'Atul', aka: [] },
+    ]);
+    vi.mocked(getPush).mockResolvedValue({
+      ...detail,
+      status: 'pending',
+      canComplete: true,
+      canDecide: false,
+      buyerCompanies: [{ manufacturerId: 'm1', name: 'Coromandel' }],
+    });
+    render(
+      <MemoryRouter initialEntries={['/purchase/from-sales/p1']}>
+        <Routes>
+          <Route path="/purchase/from-sales/:pushId" element={<FromSalesDetailPage />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+    expect(
+      await screen.findByText(/Ticked from his buyer profile \(Coromandel\)/),
+    ).toBeInTheDocument();
+    const coromandel = (await screen.findByText('Coromandel', { selector: 'label' })).querySelector(
+      'input',
+    )!;
+    const atul = screen.getByText('Atul', { selector: 'label' }).querySelector('input')!;
+    expect(coromandel.checked).toBe(true);
+    expect(atul.checked).toBe(false);
   });
 });
 

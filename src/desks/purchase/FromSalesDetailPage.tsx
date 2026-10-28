@@ -167,7 +167,12 @@ function CompleteForm({ push, onSaved }: { push: PushDetailDto; onSaved: () => v
   const [references, setReferences] = useState(
     draft?.references.length ? draft.references : [blankReference, blankReference],
   );
-  const [companyIds, setCompanyIds] = useState<string[]>(draft?.dealershipIds ?? []);
+  // 28 Oct — a first Complete starts with the companies ticked on his buyer
+  // profile; once Purchase has saved its own choice, that choice is kept.
+  const fromBuyer = !draft && push.buyerCompanies.length > 0;
+  const [companyIds, setCompanyIds] = useState<string[]>(
+    draft?.dealershipIds ?? push.buyerCompanies.map((c) => c.manufacturerId),
+  );
   const [bank, setBank] = useState({ accountNumber: '', ifsc: '', accountName: '' });
   const [margPartyCode, setMargPartyCode] = useState(draft?.margPartyCode ?? '');
   const [callNote, setCallNote] = useState(draft?.callNote ?? '');
@@ -331,6 +336,12 @@ function CompleteForm({ push, onSaved }: { push: PushDetailDto; onSaved: () => v
         </div>
         <div className="col-span-2">
           <p className="mb-1 text-sm font-medium text-slate-700">Companies he deals in</p>
+          {fromBuyer && (
+            <p className="mb-2 text-sm text-slate-500">
+              Ticked from his buyer profile ({push.buyerCompanies.map((c) => c.name).join(', ')}) —
+              untick any he doesn&apos;t supply.
+            </p>
+          )}
           <CompanyPicker value={companyIds} onChange={setCompanyIds} />
         </div>
         <div className="col-span-2">

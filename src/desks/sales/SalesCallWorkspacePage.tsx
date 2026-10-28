@@ -87,6 +87,8 @@ export function SalesCallWorkspacePage() {
   const navigate = useNavigate();
   const { callApi } = useAuth();
   const [direction, setDirection] = useState<'in' | 'out'>('out');
+  // Bumped when "He wants it" raises an ask, so "Advance an ask" lists it at once.
+  const [asksVersion, setAsksVersion] = useState(0);
 
   const fileLoader = useCallback(
     () => callApi((token) => getSalesBuyerFile(token, buyerId)),
@@ -117,12 +119,16 @@ export function SalesCallWorkspacePage() {
                 {file.tier && ` · ${file.tier}`}
               </p>
             </div>
-            <BoardForHimSection buyerId={buyerId} />
+            <BoardForHimSection
+              buyerId={buyerId}
+              counterpartyId={file.counterpartyId}
+              onAskRaised={() => setAsksVersion((v) => v + 1)}
+            />
 
             <DirectionToggle direction={direction} onChange={setDirection} />
 
             <LogBuyerCallSection buyerCounterpartyId={file.counterpartyId} />
-            <AdvanceAskSection buyerCounterpartyId={file.counterpartyId} />
+            <AdvanceAskSection buyerCounterpartyId={file.counterpartyId} refreshKey={asksVersion} />
 
             <CallOutcomeSection buyerId={buyerId} direction={direction} />
             <UpdateRequestSection buyerId={buyerId} />
@@ -168,18 +174,27 @@ function DirectionToggle({
  * reaches his tehsil (client item 16). It is never his order history: a buyer
  * who has never ordered sees the same board as one who orders every week.
  */
-function BoardForHimSection({ buyerId }: { buyerId: string }) {
+function BoardForHimSection({
+  buyerId,
+  counterpartyId,
+  onAskRaised,
+}: {
+  buyerId: string;
+  counterpartyId: string;
+  onAskRaised: () => void;
+}) {
   return (
     <Card title="On the board for him">
-      <BoardForHimBody buyerId={buyerId} />
+      <BoardForHimBody buyerId={buyerId} counterpartyId={counterpartyId} onChanged={onAskRaised} />
     </Card>
   );
 }
 
-/** The board's contents without a card around them, so a page can wrap it its own way. */
 /**
- * With `counterpartyId`, "He wants it" raises a real ask (it then shows under He asked, and
- * `onChanged` refetches the page); without it, it only logs his interest as a note.
+ * The board's contents without a card around them, so a page can wrap it its own way.
+ * "He wants it" raises a real ask for this buyer — it then shows under He asked — and
+ * `onChanged` lets the page refetch. (28 Oct: the call page used to leave out
+ * `counterpartyId`, and the button then only logged a note, so nothing reached He asked.)
  */
 export function BoardForHimBody({
   buyerId,
@@ -187,7 +202,7 @@ export function BoardForHimBody({
   onChanged,
 }: {
   buyerId: string;
-  counterpartyId?: string;
+  counterpartyId: string;
   onChanged?: () => void;
 }) {
   const { callApi } = useAuth();
@@ -208,7 +223,6 @@ export function BoardForHimBody({
           {details.map((detail) => (
             <BoardProductBlock
               key={detail.productId}
-              buyerId={buyerId}
               counterpartyId={counterpartyId}
               onChanged={onChanged}
               detail={detail}
@@ -221,39 +235,14 @@ export function BoardForHimBody({
 }
 
 function BoardProductBlock({
-  buyerId,
   counterpartyId,
   onChanged,
   detail,
 }: {
-  buyerId: string;
-  counterpartyId?: string;
+  counterpartyId: string;
   onChanged?: () => void;
   detail: BoardForBuyerProduct;
 }) {
-  const { callApi } = useAuth();
-  const { show } = useToast();
-  const [submittingLine, setSubmittingLine] = useState<string | null>(null);
-
-  async function handleWantsIt(listingLineId: string): Promise<void> {
-    setSubmittingLine(listingLineId);
-    try {
-      await callApi((token) =>
-        createCallLog(token, {
-          buyerId,
-          kind: 'note',
-          note: 'Named interest in this rate.',
-          listingLineId,
-        }),
-      );
-      show('Logged his interest.');
-    } catch {
-      show('Could not log this.');
-    } finally {
-      setSubmittingLine(null);
-    }
-  }
-
   return (
     <div className="border-t border-slate-100 pt-4 first:border-t-0 first:pt-0">
       <h3 className="text-sm font-semibold text-slate-900">{detail.brand}</h3>
@@ -283,22 +272,11 @@ function BoardProductBlock({
                 </Badge>
                 <span className="text-xs text-slate-500">qty {line.qty}</span>
               </div>
-              {counterpartyId ? (
-                <HeWantsItButton
-                  line={line}
-                  counterpartyId={counterpartyId}
-                  onDone={() => onChanged?.()}
-                />
-              ) : (
-                <Button
-                  size="sm"
-                  variant="secondary"
-                  loading={submittingLine === line.listingLineId}
-                  onClick={() => void handleWantsIt(line.listingLineId)}
-                >
-                  He wants it
-                </Button>
-              )}
+              <HeWantsItButton
+                line={line}
+                counterpartyId={counterpartyId}
+                onDone={() => onChanged?.()}
+              />
             </li>
           ))}
         </ul>
@@ -754,7 +732,14 @@ function QuotePicker({
   );
 }
 
-function AdvanceAskSection({ buyerCounterpartyId }: { buyerCounterpartyId: string }) {
+function AdvanceAskSection({
+  buyerCounterpartyId,
+  refreshKey = 0,
+}: {
+  buyerCounterpartyId: string;
+  /** Changes when an ask is raised elsewhere on the page, so the list reloads. */
+  refreshKey?: number;
+}) {
   const { callApi } = useAuth();
   const [askId, setAskId] = useState('');
   const [option, setOption] = useState<'partial' | 'full'>('full');
@@ -771,7 +756,8 @@ function AdvanceAskSection({ buyerCounterpartyId }: { buyerCounterpartyId: strin
 
   const asksLoader = useCallback(
     () => callApi((token) => proxyListBuyerAsks(token, buyerCounterpartyId)),
-    [callApi, buyerCounterpartyId],
+    // refreshKey: reload after "He wants it" raises an ask on this page.
+    [callApi, buyerCounterpartyId, refreshKey],
   );
   const { state: asksState, retry: retryAsks } = useAsyncData(
     asksLoader,

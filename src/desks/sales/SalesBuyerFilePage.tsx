@@ -230,6 +230,71 @@ export function SalesBuyerFilePage() {
                   )}
                 </DropdownCard>
 
+                {/* 29 Oct — listed offers he is on: Purchase → Confirmations, not Demand. */}
+                <DropdownCard
+                  {...sectionProps('waiting')}
+                  title="Waiting on the seller"
+                  count={file.waitingOnSeller.length}
+                >
+                  {file.waitingOnSeller.length === 0 ? (
+                    <p className="text-sm text-slate-500">
+                      Nothing he is on is waiting on a seller.
+                    </p>
+                  ) : (
+                    <Table>
+                      <thead>
+                        <tr>
+                          <Th>Product</Th>
+                          <Th numeric>Boxes</Th>
+                          <Th numeric>His rate</Th>
+                          <Th>Where it is</Th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {file.waitingOnSeller.map((w) => (
+                          <tr key={`${w.kind}-${w.id}`}>
+                            <Td>
+                              <div className="font-medium text-slate-900">
+                                {w.brand}
+                                {w.packLabel ? ` · ${w.packLabel}` : ''}
+                              </div>
+                              <div
+                                className="text-xs text-slate-500"
+                                title={formatDateTime(w.requestedAt)}
+                              >
+                                {timeAgo(w.requestedAt, now)}
+                              </div>
+                            </Td>
+                            <Td numeric>{w.qty}</Td>
+                            <Td numeric>{w.ratePaise != null ? formatRupees(w.ratePaise) : '—'}</Td>
+                            <Td>
+                              {w.kind === 'pile' ? (
+                                <>
+                                  <Badge tone="neutral">Seller to confirm</Badge>
+                                  {w.decideBy && (
+                                    <div className="mt-1 text-xs text-slate-500">
+                                      By {formatDateTime(w.decideBy)}
+                                    </div>
+                                  )}
+                                </>
+                              ) : (
+                                <>
+                                  <Badge tone="neutral">In a pool</Badge>
+                                  {w.pool && (
+                                    <div className="mt-1 text-xs text-slate-500">
+                                      {w.pool.committedBoxes} of {w.pool.moq} boxes in
+                                    </div>
+                                  )}
+                                </>
+                              )}
+                            </Td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </Table>
+                  )}
+                </DropdownCard>
+
                 <DropdownCard
                   {...sectionProps('rate')}
                   title="Rate given"
@@ -537,6 +602,7 @@ type SectionId =
   | 'funnel'
   | 'board'
   | 'asked'
+  | 'waiting'
   | 'rate'
   | 'pending'
   | 'paid'

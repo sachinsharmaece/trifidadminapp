@@ -92,8 +92,8 @@ describe('Log a buyer call — several products in one call', () => {
   it('sends every product under the one call note, with the expected rate only where one was typed', async () => {
     vi.mocked(proxyRaiseAsks).mockResolvedValue({
       results: [
-        { index: 0, askId: 'ask-a' },
-        { index: 1, askId: 'ask-b' },
+        { index: 0, kind: 'pile', pileId: 'pile-a', listingLineId: 'l1' },
+        { index: 1, kind: 'ask', askId: 'ask-b' },
       ],
     });
     render(<LogBuyerCallSection buyerCounterpartyId="cp-1" />);
@@ -120,7 +120,11 @@ describe('Log a buyer call — several products in one call', () => {
         { skuId: 'sku-2', qty: 4, conditionRequirement: { expiryBand: 'over12' } },
       ],
     });
-    expect(await screen.findByText(/Logged 2 asks: ask-a, ask-b/)).toBeInTheDocument();
+    expect(
+      await screen.findByText(
+        /1 on the board — sent to the seller to confirm\. 1 not listed — an ask for Purchase\./,
+      ),
+    ).toBeInTheDocument();
     // Back to a single fresh line, note cleared.
     expect(screen.getAllByLabelText('pack')).toHaveLength(1);
     expect(screen.getByLabelText(/call note/i)).toHaveValue('');
@@ -152,7 +156,7 @@ describe('Log a buyer call — several products in one call', () => {
   it('keeps only the refused line, with its reason, so a retry cannot raise the saved one twice', async () => {
     vi.mocked(proxyRaiseAsks).mockResolvedValue({
       results: [
-        { index: 0, askId: 'ask-a' },
+        { index: 0, kind: 'ask', askId: 'ask-a' },
         { index: 1, error: 'Buyers only.', code: 'FORBIDDEN' },
       ],
     });

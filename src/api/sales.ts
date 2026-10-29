@@ -452,6 +452,22 @@ export interface BuyerFileLiveQuote {
   bindingUntil: string;
 }
 
+/** 29 Oct — a listed offer he is on, waiting on the seller (a pile request, or a pool place). */
+export interface BuyerFileWaitingOnSeller {
+  kind: 'pile' | 'pool';
+  id: string;
+  productId: string | null;
+  brand: string;
+  packLabel: string | null;
+  qty: number;
+  /** His rate on the offer — pile only. */
+  ratePaise: number | null;
+  requestedAt: string;
+  /** Pile only — when the seller's window to confirm ends. */
+  decideBy: string | null;
+  pool: { committedBoxes: number; moq: number; status: string } | null;
+}
+
 export interface BuyerFileOrdersByStage {
   paymentPending: SalesOrderRow[];
   paid: SalesOrderRow[];
@@ -483,6 +499,7 @@ export interface BuyerFileDto {
   funnel: BuyerFunnelStage[];
   productHistory: BuyerProductHistoryRow[];
   openAsks: BuyerFileOpenAsk[];
+  waitingOnSeller: BuyerFileWaitingOnSeller[];
   liveQuotes: BuyerFileLiveQuote[];
   callLogs: CallLogDto[];
   orders: SalesOrderRow[];

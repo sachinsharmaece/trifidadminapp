@@ -211,9 +211,9 @@ function BoardForHimSection({
 
 /**
  * The board's contents without a card around them, so a page can wrap it its own way.
- * "He wants it" raises a real ask for this buyer — it then shows under He asked — and
- * `onChanged` lets the page refetch. (28 Oct: the call page used to leave out
- * `counterpartyId`, and the button then only logged a note, so nothing reached He asked.)
+ * "He wants it" puts this buyer on that listed offer — it then shows under Waiting on the seller
+ * (29 Oct; it used to raise an ask, which sent a listed product to Purchase → Demand) — and
+ * `onChanged` lets the page refetch.
  */
 export function BoardForHimBody({
   buyerId,
@@ -536,7 +536,7 @@ export function LogBuyerCallSection({
   const [lines, setLines] = useState<CallLine[]>(() => [newCallLine(0)]);
   const [nextKey, setNextKey] = useState(1);
   const [callNote, setCallNote] = useState('');
-  const [raised, setRaised] = useState<string[]>([]);
+  const [raised, setRaised] = useState<{ asks: number; offers: number }>({ asks: 0, offers: 0 });
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
@@ -557,7 +557,7 @@ export function LogBuyerCallSection({
   async function handleSubmit(event: FormEvent): Promise<void> {
     event.preventDefault();
     setError(null);
-    setRaised([]);
+    setRaised({ asks: 0, offers: 0 });
     const missing = lines.findIndex((l) => !l.skuId);
     if (missing !== -1) {
       setError(`Product ${missing + 1} needs a product and a pack — or remove it.`);
@@ -588,13 +588,15 @@ export function LogBuyerCallSection({
         }),
       );
       const failedByKey = new Map<number, string>();
-      const askIds: string[] = [];
+      const tally = { asks: 0, offers: 0 };
       for (const r of results) {
-        if ('askId' in r) askIds.push(r.askId);
-        else failedByKey.set(lines[r.index]!.key, r.error);
+        if ('error' in r) failedByKey.set(lines[r.index]!.key, r.error);
+        else if (r.kind === 'ask') tally.asks += 1;
+        else tally.offers += 1;
       }
-      setRaised(askIds);
-      if (askIds.length > 0) onLogged?.();
+      const saved = tally.asks + tally.offers;
+      setRaised(tally);
+      if (saved > 0) onLogged?.();
       if (failedByKey.size === 0) {
         // All saved — reset to one fresh line and clear the note for the next call.
         setLines([newCallLine(nextKey)]);
@@ -609,7 +611,7 @@ export function LogBuyerCallSection({
             .map((l) => ({ ...l, error: failedByKey.get(l.key) })),
         );
         setError(
-          `${askIds.length} of ${results.length} products logged. The rest are below with the reason — fix and log again.`,
+          `${saved} of ${results.length} products logged. The rest are below with the reason — fix and log again.`,
         );
       }
     } catch (submitError) {
@@ -622,9 +624,10 @@ export function LogBuyerCallSection({
   return (
     <Card title="Log a buyer call">
       <p className="mb-4 text-sm text-slate-500">
-        Raises an ask on the buyer&apos;s behalf. A call can name several products: each becomes its
-        own ask, all under the one call note. The expected rate is only what he said he hopes to pay
-        — it stays with Sales and is never shown to a seller or to him (BR-121).
+        A call can name several products, all under the one call note. A product on his board puts
+        him on its cheapest offer for the seller to confirm (Purchase → Confirmations); one that is
+        not listed becomes an ask (Purchase → Demand). The expected rate is only what he said he
+        hopes to pay — it stays with Sales and is never shown to a seller or to him (BR-121).
       </p>
       <form onSubmit={handleSubmit} className="flex w-full flex-col gap-4">
         <div className="max-w-md">
@@ -680,9 +683,12 @@ export function LogBuyerCallSection({
             {error}
           </p>
         )}
-        {raised.length > 0 && (
+        {raised.asks + raised.offers > 0 && (
           <p className="text-sm text-success-600">
-            Logged {raised.length === 1 ? 'as ask' : `${raised.length} asks`}: {raised.join(', ')}.
+            Logged.{' '}
+            {raised.offers > 0 && `${raised.offers} on the board — sent to the seller to confirm. `}
+            {raised.asks > 0 &&
+              `${raised.asks} not listed — ${raised.asks === 1 ? 'an ask' : 'asks'} for Purchase.`}
           </p>
         )}
         <Button type="submit" loading={submitting} icon={<FiPhoneCall />}>

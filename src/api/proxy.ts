@@ -40,11 +40,43 @@ export type ProxyRaiseAskLine = Omit<
   expectedRatePaise?: number;
 };
 
-/** One entry per submitted line, by position — an ask id if it was raised, an error if it wasn't. */
-export type ProxyRaiseAsksLineResult =
-  { index: number; askId: string } | { index: number; error: string; code: string | null };
+/**
+ * 29 Oct — "He wants it" on a listed offer: a pile request on it (Purchase → Confirmations), or
+ * the pool for it when he wants fewer than its minimum order.
+ */
+export type ProxyWantsItResult =
+  | { kind: 'pile'; pileId: string; listingLineId: string }
+  | { kind: 'pool'; poolId: string; listingLineId: string };
 
-/** One call naming several products: one ask per line, all under the same call note. */
+export function proxyWantsIt(
+  accessToken: string,
+  listingLineId: string,
+  input: {
+    buyerCounterpartyId: string;
+    qty: number;
+    callNote: string;
+    direction?: 'in' | 'out';
+  },
+): Promise<ProxyWantsItResult> {
+  return apiFetch(`/staff/proxy/buyer/listing-lines/${listingLineId}/wants-it`, {
+    method: 'POST',
+    body: input,
+    accessToken,
+    idempotencyKey: idempotencyKey(),
+  });
+}
+
+/**
+ * One entry per submitted line, by position. 29 Oct — a product on his board goes on the
+ * cheapest offer (`pile` / `pool`, Purchase → Confirmations); one that is not becomes an
+ * `ask` (Purchase → Demand); or an error if the line was refused.
+ */
+export type ProxyRaiseAsksLineResult =
+  | { index: number; kind: 'ask'; askId: string }
+  | ({ index: number } & ProxyWantsItResult)
+  | { index: number; error: string; code: string | null };
+
+/** One call naming several products, all under the same call note. */
 export function proxyRaiseAsks(
   accessToken: string,
   input: {

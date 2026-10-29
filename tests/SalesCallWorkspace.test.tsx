@@ -9,7 +9,7 @@ import {
   createCallLog,
   listCallLogsForBuyer,
 } from '../src/api/sales';
-import { proxyListBuyerAsks, proxyRaiseAsk } from '../src/api/proxy';
+import { proxyListBuyerAsks, proxyWantsIt } from '../src/api/proxy';
 import { SalesCallWorkspacePage } from '../src/desks/sales/SalesCallWorkspacePage';
 
 vi.mock('../src/auth/AuthContext', () => ({ useAuth: vi.fn() }));
@@ -24,6 +24,7 @@ vi.mock('../src/api/proxy', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../src/api/proxy')>()),
   proxyListBuyerAsks: vi.fn(),
   proxyRaiseAsk: vi.fn(),
+  proxyWantsIt: vi.fn(),
   proxyRaiseAsks: vi.fn(),
 }));
 // The call-line rows search the catalogue; not under test here.
@@ -69,9 +70,9 @@ beforeEach(() => {
     },
   ] as never);
   vi.mocked(proxyListBuyerAsks).mockReset().mockResolvedValue([]);
-  vi.mocked(proxyRaiseAsk)
+  vi.mocked(proxyWantsIt)
     .mockReset()
-    .mockResolvedValue({ askId: 'a1' } as never);
+    .mockResolvedValue({ kind: 'pile', pileId: 'p1', listingLineId: 'l1' });
   vi.mocked(createCallLog).mockReset();
 });
 
@@ -87,10 +88,11 @@ function renderPage() {
   );
 }
 
-describe('Call page — "He wants it" (28 Oct)', () => {
-  it('raises a real ask for this buyer, not just a note, and reloads "Advance an ask"', async () => {
+describe('Call page — "He wants it" (28 Oct; 29 Oct — a listed offer, so a pile, not an ask)', () => {
+  it('puts this buyer on that offer, not just a note, and reloads the page', async () => {
     renderPage();
-    fireEvent.click(await screen.findByRole('button', { name: 'He wants it' }));
+    // The first render in a full run pays the cold start; give the board time to load.
+    fireEvent.click(await screen.findByRole('button', { name: 'He wants it' }, { timeout: 5000 }));
     const dialog = await screen.findByRole('dialog');
     fireEvent.change(within(dialog).getByLabelText(/^Boxes he wants/), { target: { value: '4' } });
     fireEvent.change(within(dialog).getByLabelText(/^Call note/), {
@@ -98,16 +100,16 @@ describe('Call page — "He wants it" (28 Oct)', () => {
     });
     const asksLoadsBefore = vi.mocked(proxyListBuyerAsks).mock.calls.length;
     const historyLoadsBefore = vi.mocked(listCallLogsForBuyer).mock.calls.length;
-    fireEvent.click(within(dialog).getByRole('button', { name: /add to he asked/i }));
+    fireEvent.click(within(dialog).getByRole('button', { name: /put him on this offer/i }));
 
-    await waitFor(() => expect(proxyRaiseAsk).toHaveBeenCalled());
-    expect(vi.mocked(proxyRaiseAsk).mock.calls[0]![1]).toMatchObject({
+    await waitFor(() => expect(proxyWantsIt).toHaveBeenCalled());
+    expect(vi.mocked(proxyWantsIt).mock.calls[0]![1]).toBe('l1');
+    expect(vi.mocked(proxyWantsIt).mock.calls[0]![2]).toMatchObject({
       buyerCounterpartyId: 'c1',
-      skuId: 'k1',
       qty: 4,
-      conditionRequirement: { expiryBand: 'over12', deliveryBand: '48h' },
       direction: 'out', // the page's Incoming/Outgoing toggle starts on Outgoing
     });
+    expect(await screen.findByText(/Sent to the seller to confirm/)).toBeInTheDocument();
     expect(createCallLog).not.toHaveBeenCalled();
     await waitFor(() =>
       expect(vi.mocked(proxyListBuyerAsks).mock.calls.length).toBeGreaterThan(asksLoadsBefore),

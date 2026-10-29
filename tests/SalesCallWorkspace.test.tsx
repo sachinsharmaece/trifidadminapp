@@ -115,10 +115,13 @@ describe('Call page — "He wants it" (28 Oct; 29 Oct — a listed offer, so a p
     );
   });
 
-  it('has no "Advance an ask on a call" card (29 Oct — removed)', async () => {
+  it('has no "Advance an ask on a call" or "What the call produced" card (29 Oct — removed)', async () => {
     renderPage();
     await screen.findByRole('button', { name: 'He wants it' }, { timeout: 5000 });
     expect(screen.queryByText('Advance an ask on a call')).toBeNull();
     expect(screen.queryByText(/Promoted-fallback decision/)).toBeNull();
+    expect(screen.queryByText('What the call produced')).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Save the call' })).toBeNull();
+    expect(screen.getByText('Call history')).toBeInTheDocument();
   });
 });

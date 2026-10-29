@@ -13,7 +13,6 @@ import {
   type BuyerFileDto,
   type BoardForBuyerProduct,
   type CallLogDto,
-  type CallOutcome,
   type CallLogUpdateKind,
 } from '../../api/sales';
 import { ApiError } from '../../api/errors';
@@ -28,18 +27,6 @@ import { Input, Select, Textarea } from '../../components/ui/Input';
 import { Button } from '../../components/ui/Button';
 import { deliveryBandLabel, expiryBandLabel, formatRupees, moqBandLabel } from '../../lib/labels';
 import { formatDateTime } from '../../lib/dates';
-
-const OUTCOMES: CallOutcome[] = [
-  'placed_an_order',
-  'asked_for_a_rate',
-  'wants_something_we_dont_stock',
-  'rate_too_high',
-  'already_holds_stock',
-  'buys_direct_from_company',
-  'not_now_call_later',
-  'no_answer',
-  'wrong_number',
-];
 
 const UPDATE_KINDS: CallLogUpdateKind[] = [
   'mobile',
@@ -126,7 +113,7 @@ export function SalesCallWorkspacePage() {
               onLogged={onCallLogged}
             />
 
-            <CallOutcomeSection buyerId={buyerId} direction={direction} refreshKey={callsVersion} />
+            <CallHistorySection buyerId={buyerId} refreshKey={callsVersion} />
             <UpdateRequestSection buyerId={buyerId} />
           </div>
         )}
@@ -295,24 +282,19 @@ function BoardProductBlock({
   );
 }
 
-/** "What the call produced" (a fresh call log) plus this buyer's call history below it. */
-function CallOutcomeSection({
+/**
+ * This buyer's call history. 29 Oct — the "What the call produced" form above it is gone: every
+ * call action on this page (He wants it, Log a buyer call) already writes its own row here.
+ */
+function CallHistorySection({
   buyerId,
-  direction,
   refreshKey = 0,
 }: {
   buyerId: string;
-  direction: 'in' | 'out';
   /** Changes after a call action elsewhere on the page, so the history reloads. */
   refreshKey?: number;
 }) {
   const { callApi } = useAuth();
-  const { show } = useToast();
-  const [outcome, setOutcome] = useState<CallOutcome>(OUTCOMES[0]);
-  const [note, setNote] = useState('');
-  const [error, setError] = useState<string | null>(null);
-  const [submitting, setSubmitting] = useState(false);
-
   const historyLoader = useCallback(
     () => callApi((token) => listCallLogsForBuyer(token, buyerId)),
     [callApi, buyerId, refreshKey],
@@ -323,89 +305,37 @@ function CallOutcomeSection({
     [historyLoader],
   );
 
-  async function handleSave(event: FormEvent): Promise<void> {
-    event.preventDefault();
-    setError(null);
-    setSubmitting(true);
-    try {
-      await callApi((token) =>
-        createCallLog(token, { buyerId, direction, kind: 'call', outcome, note }),
-      );
-      setNote('');
-      show('Call saved.');
-      retryHistory();
-    } catch (submitError) {
-      setError(submitError instanceof ApiError ? submitError.message : 'Could not save the call.');
-    } finally {
-      setSubmitting(false);
-    }
-  }
-
   return (
-    <>
-      <Card title="What the call produced">
-        <form onSubmit={handleSave} className="flex max-w-md flex-col gap-4">
-          <Select
-            id="co-outcome"
-            label="Outcome"
-            value={outcome}
-            onChange={(e) => setOutcome(e.target.value as CallOutcome)}
-          >
-            {OUTCOMES.map((o) => (
-              <option key={o} value={o}>
-                {humanizeCapitalized(o)}
-              </option>
-            ))}
-          </Select>
-          <Textarea
-            id="co-note"
-            label="Note"
-            value={note}
-            onChange={(e) => setNote(e.target.value)}
-            required
-          />
-          {error && (
-            <p role="alert" className="text-sm text-danger-500">
-              {error}
-            </p>
-          )}
-          <Button type="submit" loading={submitting}>
-            Save the call
-          </Button>
-        </form>
-      </Card>
-
-      <Card title="Call history">
-        <AsyncBoundary
-          state={historyState}
-          onRetry={retryHistory}
-          emptyMessage="No calls logged yet."
-        >
-          {(items: CallLogDto[]) => (
-            <Table>
-              <thead>
-                <tr>
-                  <Th>When</Th>
-                  <Th>Way</Th>
-                  <Th>Outcome</Th>
-                  <Th>Note</Th>
+    <Card title="Call history">
+      <AsyncBoundary
+        state={historyState}
+        onRetry={retryHistory}
+        emptyMessage="No calls logged yet."
+      >
+        {(items: CallLogDto[]) => (
+          <Table>
+            <thead>
+              <tr>
+                <Th>When</Th>
+                <Th>Way</Th>
+                <Th>Outcome</Th>
+                <Th>Note</Th>
+              </tr>
+            </thead>
+            <tbody>
+              {items.map((c) => (
+                <tr key={c.callLogId}>
+                  <Td>{formatDateTime(c.at)}</Td>
+                  <Td>{c.direction === 'in' ? '↓' : c.direction === 'out' ? '↑' : '—'}</Td>
+                  <Td>{c.outcome ? humanize(c.outcome) : '—'}</Td>
+                  <Td>{c.note}</Td>
                 </tr>
-              </thead>
-              <tbody>
-                {items.map((c) => (
-                  <tr key={c.callLogId}>
-                    <Td>{formatDateTime(c.at)}</Td>
-                    <Td>{c.direction === 'in' ? '↓' : c.direction === 'out' ? '↑' : '—'}</Td>
-                    <Td>{c.outcome ? humanize(c.outcome) : '—'}</Td>
-                    <Td>{c.note}</Td>
-                  </tr>
-                ))}
-              </tbody>
-            </Table>
-          )}
-        </AsyncBoundary>
-      </Card>
-    </>
+              ))}
+            </tbody>
+          </Table>
+        )}
+      </AsyncBoundary>
+    </Card>
   );
 }
 

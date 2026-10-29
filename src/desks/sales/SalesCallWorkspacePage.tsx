@@ -1,17 +1,8 @@
 import { useCallback, useState } from 'react';
 import type { FormEvent } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { FiArrowLeft, FiCheck, FiX, FiPhoneCall, FiPlus } from 'react-icons/fi';
-import {
-  proxyRaiseAsks,
-  proxyAcceptAskFill,
-  proxyDeclineAsk,
-  proxyAcceptPromotion,
-  proxyRejectPromotion,
-  proxyListBuyerAsks,
-  type ProxyAskItem,
-  type ProxyAskQuote,
-} from '../../api/proxy';
+import { FiArrowLeft, FiPhoneCall, FiPlus } from 'react-icons/fi';
+import { proxyRaiseAsks } from '../../api/proxy';
 import { HeWantsItButton } from './BuyerStageActions';
 import { CallLineFields } from './CallLineFields';
 import {
@@ -69,9 +60,8 @@ function humanizeCapitalized(value: string): string {
 
 /**
  * The call workspace for one specific buyer — reached from his buyer file
- * (`/sales/call/:buyerId`). `LogBuyerCallSection` and `AdvanceAskSection`
- * are relocated as-is from the old flat `SalesDeskPage` (kept unchanged
- * below); this pass adds buyer-header context, the "on the board for him"
+ * (`/sales/call/:buyerId`). `LogBuyerCallSection` is relocated from the old
+ * flat `SalesDeskPage`; this pass adds buyer-header context, the "on the board for him"
  * panel, a call-outcome form + history, and an update-request form around
  * them.
  *
@@ -87,8 +77,8 @@ export function SalesCallWorkspacePage() {
   const navigate = useNavigate();
   const { callApi } = useAuth();
   const [direction, setDirection] = useState<'in' | 'out'>('out');
-  // Bumped after any call action (raising, advancing or declining an ask, a
-  // promoted-offer decision), so "Advance an ask" and the call history reload.
+  // Bumped after any call action, so the call history reloads. (29 Oct — the "Advance an ask on
+  // a call" card is gone: rates are given and confirmed from the buyer file's sections.)
   const [callsVersion, setCallsVersion] = useState(0);
   const onCallLogged = useCallback(() => setCallsVersion((v) => v + 1), []);
 
@@ -134,12 +124,6 @@ export function SalesCallWorkspacePage() {
               buyerCounterpartyId={file.counterpartyId}
               direction={direction}
               onLogged={onCallLogged}
-            />
-            <AdvanceAskSection
-              buyerCounterpartyId={file.counterpartyId}
-              direction={direction}
-              refreshKey={callsVersion}
-              onActed={onCallLogged}
             />
 
             <CallOutcomeSection buyerId={buyerId} direction={direction} refreshKey={callsVersion} />
@@ -695,339 +679,6 @@ export function LogBuyerCallSection({
           {lines.length > 1 ? `Log call (${lines.length} products)` : 'Log call'}
         </Button>
       </form>
-    </Card>
-  );
-}
-
-/**
- * Staff-assisted enquiries — advancing an ask on a call (API-042 accept-fill
- * / API-043 walk-away), and the WF-11 promoted-fallback decision (API-071)
- * a buyer might also decide over the phone.
- */
-/**
- * `AskPicker` / `QuotePicker` — B-17's other half. Same shape as
- * `enquiryPickers.tsx`'s pickers, kept local because they need the buyer
- * already on this page rather than picking one themselves: list the
- * buyer's open asks via the same read `GET /asks` uses (`listMyAsks`), then
- * for the chosen ask list its own live quotes — no comma-separated IDs.
- */
-function AskPicker({
-  buyerCounterpartyId,
-  asks,
-  value,
-  onChange,
-}: {
-  buyerCounterpartyId: string;
-  asks: ProxyAskItem[];
-  value: string;
-  onChange: (askId: string) => void;
-}) {
-  const advanceable = asks.filter((a) => a.state === 'open' || a.state === 'quoted');
-  return (
-    <Select
-      id="aa-ask"
-      label="Ask"
-      value={value}
-      onChange={(e) => onChange(e.target.value)}
-      disabled={!buyerCounterpartyId}
-      required
-    >
-      <option value="">Choose one of his open asks…</option>
-      {advanceable.map((a) => (
-        <option key={a.askId} value={a.askId}>
-          {a.qty} boxes · {a.quotes.length} live quote{a.quotes.length === 1 ? '' : 's'} · {a.state}
-        </option>
-      ))}
-    </Select>
-  );
-}
-
-function QuotePicker({
-  quotes,
-  selected,
-  onChange,
-}: {
-  quotes: ProxyAskQuote[];
-  selected: string[];
-  onChange: (quoteIds: string[]) => void;
-}) {
-  const live = quotes.filter((q) => q.status === 'live');
-  if (live.length === 0) {
-    return <p className="text-sm text-slate-500">No live quotes on this ask yet.</p>;
-  }
-  function toggle(quoteId: string): void {
-    onChange(
-      selected.includes(quoteId) ? selected.filter((id) => id !== quoteId) : [...selected, quoteId],
-    );
-  }
-  return (
-    <div className="flex flex-col gap-2">
-      <span className="text-sm font-medium text-slate-700">Quote(s) the buyer accepted</span>
-      {live.map((q) => (
-        <label
-          key={q.quoteId}
-          className="flex items-center gap-2 rounded-md border border-slate-200 p-2 text-sm"
-        >
-          <input
-            type="checkbox"
-            checked={selected.includes(q.quoteId)}
-            onChange={() => toggle(q.quoteId)}
-          />
-          <span className="font-semibold text-slate-900">
-            {q.ratePaiseForIndore != null ? formatRupees(q.ratePaiseForIndore) : 'no rate'}
-          </span>
-          <span className="text-slate-500">qty {q.qtyAvailable}</span>
-          <span className="text-slate-500">{q.daysToIndore}d to Indore</span>
-        </label>
-      ))}
-    </div>
-  );
-}
-
-function AdvanceAskSection({
-  buyerCounterpartyId,
-  direction,
-  refreshKey = 0,
-  onActed,
-}: {
-  buyerCounterpartyId: string;
-  direction?: 'in' | 'out';
-  /** Changes when an ask is raised elsewhere on the page, so the list reloads. */
-  refreshKey?: number;
-  /** Called after an accept, decline or promoted-offer decision. */
-  onActed?: () => void;
-}) {
-  const { callApi } = useAuth();
-  const [askId, setAskId] = useState('');
-  const [option, setOption] = useState<'partial' | 'full'>('full');
-  const [quoteIds, setQuoteIds] = useState<string[]>([]);
-  const [callNote, setCallNote] = useState('');
-  const [error, setError] = useState<string | null>(null);
-  const [message, setMessage] = useState<string | null>(null);
-  const [submitting, setSubmitting] = useState(false);
-
-  const [soId, setSoId] = useState('');
-  const [promotionNote, setPromotionNote] = useState('');
-  const [promotionError, setPromotionError] = useState<string | null>(null);
-  const [promotionMessage, setPromotionMessage] = useState<string | null>(null);
-
-  const asksLoader = useCallback(
-    () => callApi((token) => proxyListBuyerAsks(token, buyerCounterpartyId)),
-    // refreshKey: reload after "He wants it" raises an ask on this page.
-    [callApi, buyerCounterpartyId, refreshKey],
-  );
-  const { state: asksState, retry: retryAsks } = useAsyncData(
-    asksLoader,
-    (items) => items.length === 0,
-    [asksLoader],
-  );
-  const asks = asksState.status === 'success' ? asksState.data : [];
-  const selectedAsk = asks.find((a) => a.askId === askId);
-
-  function handleAskChange(nextAskId: string): void {
-    setAskId(nextAskId);
-    setQuoteIds([]);
-  }
-
-  async function handleAccept(): Promise<void> {
-    setError(null);
-    setSubmitting(true);
-    try {
-      const result = await callApi((token) =>
-        proxyAcceptAskFill(token, askId, {
-          buyerCounterpartyId,
-          option,
-          quoteIds,
-          callNote,
-          ...(direction ? { direction } : {}),
-        }),
-      );
-      setMessage(
-        `Accepted — ${result.soIds.length} order${result.soIds.length === 1 ? '' : 's'} placed.`,
-      );
-      setAskId('');
-      setQuoteIds([]);
-      retryAsks();
-      onActed?.();
-    } catch (submitError) {
-      setError(
-        submitError instanceof ApiError ? submitError.message : 'Could not accept this fill.',
-      );
-    } finally {
-      setSubmitting(false);
-    }
-  }
-
-  async function handleDecline(): Promise<void> {
-    setError(null);
-    setSubmitting(true);
-    try {
-      await callApi((token) =>
-        proxyDeclineAsk(token, askId, {
-          buyerCounterpartyId,
-          callNote,
-          ...(direction ? { direction } : {}),
-        }),
-      );
-      setMessage('Walked away — free, no strike.');
-      setAskId('');
-      setQuoteIds([]);
-      retryAsks();
-      onActed?.();
-    } catch (submitError) {
-      setError(submitError instanceof ApiError ? submitError.message : 'Could not decline.');
-    } finally {
-      setSubmitting(false);
-    }
-  }
-
-  async function handlePromotionAccept(): Promise<void> {
-    setPromotionError(null);
-    try {
-      await callApi((token) =>
-        proxyAcceptPromotion(token, soId, {
-          buyerCounterpartyId,
-          callNote: promotionNote,
-          ...(direction ? { direction } : {}),
-        }),
-      );
-      setPromotionMessage('Accepted the replacement seller.');
-      onActed?.();
-    } catch (submitError) {
-      setPromotionError(
-        submitError instanceof ApiError ? submitError.message : 'Could not accept.',
-      );
-    }
-  }
-
-  async function handlePromotionReject(): Promise<void> {
-    setPromotionError(null);
-    try {
-      await callApi((token) =>
-        proxyRejectPromotion(token, soId, {
-          buyerCounterpartyId,
-          callNote: promotionNote,
-          ...(direction ? { direction } : {}),
-        }),
-      );
-      setPromotionMessage('Declined — refunded on the next run.');
-      onActed?.();
-    } catch (submitError) {
-      setPromotionError(
-        submitError instanceof ApiError ? submitError.message : 'Could not decline.',
-      );
-    }
-  }
-
-  return (
-    <Card title="Advance an ask on a call">
-      <p className="mb-4 text-sm text-slate-500">
-        Confirming a rate over the phone and accepting a fill are the same action in this system
-        (API-042) — pick the quote(s) the buyer accepted below. Walking away is free and never a
-        strike (API-043).
-      </p>
-      <AsyncBoundary state={asksState} onRetry={retryAsks} emptyMessage="He has no open asks.">
-        {() => (
-          <div className="flex max-w-md flex-col gap-4">
-            <AskPicker
-              buyerCounterpartyId={buyerCounterpartyId}
-              asks={asks}
-              value={askId}
-              onChange={handleAskChange}
-            />
-            <Input
-              id="aa-buyer"
-              label="Buyer counterparty ID"
-              value={buyerCounterpartyId}
-              disabled
-            />
-            <Select
-              id="aa-option"
-              label="Option"
-              value={option}
-              onChange={(e) => setOption(e.target.value as typeof option)}
-            >
-              <option value="full">Full — the partial plus the balance</option>
-              <option value="partial">Partial — the cheap portion alone</option>
-            </Select>
-            {selectedAsk && (
-              <QuotePicker quotes={selectedAsk.quotes} selected={quoteIds} onChange={setQuoteIds} />
-            )}
-            <Textarea
-              id="aa-note"
-              label="Call note"
-              value={callNote}
-              onChange={(e) => setCallNote(e.target.value)}
-              required
-            />
-            {error && (
-              <p role="alert" className="text-sm text-danger-500">
-                {error}
-              </p>
-            )}
-            {message && <p className="text-sm text-success-600">{message}</p>}
-            <div className="flex gap-2">
-              <Button
-                loading={submitting}
-                disabled={!askId || !buyerCounterpartyId || !callNote || quoteIds.length === 0}
-                onClick={() => void handleAccept()}
-                icon={<FiCheck />}
-              >
-                Accept fill
-              </Button>
-              <Button
-                variant="secondary"
-                loading={submitting}
-                disabled={!askId || !buyerCounterpartyId || !callNote}
-                onClick={() => void handleDecline()}
-                icon={<FiX />}
-              >
-                Walk away
-              </Button>
-            </div>
-          </div>
-        )}
-      </AsyncBoundary>
-
-      <div className="mt-6 flex max-w-md flex-col gap-4 border-t border-slate-200 pt-4">
-        <h3 className="text-sm font-semibold text-slate-900">Promoted-fallback decision (WF-11)</h3>
-        <Input
-          id="aa-so"
-          label="Order (SO) ID"
-          value={soId}
-          onChange={(e) => setSoId(e.target.value)}
-        />
-        <Textarea
-          id="aa-promo-note"
-          label="Call note"
-          value={promotionNote}
-          onChange={(e) => setPromotionNote(e.target.value)}
-        />
-        {promotionError && (
-          <p role="alert" className="text-sm text-danger-500">
-            {promotionError}
-          </p>
-        )}
-        {promotionMessage && <p className="text-sm text-success-600">{promotionMessage}</p>}
-        <div className="flex gap-2">
-          <Button
-            variant="secondary"
-            disabled={!soId || !buyerCounterpartyId || !promotionNote}
-            onClick={() => void handlePromotionAccept()}
-            icon={<FiCheck />}
-          >
-            Accept replacement
-          </Button>
-          <Button
-            variant="secondary"
-            disabled={!soId || !buyerCounterpartyId || !promotionNote}
-            onClick={() => void handlePromotionReject()}
-            icon={<FiX />}
-          >
-            Decline
-          </Button>
-        </div>
-      </div>
     </Card>
   );
 }

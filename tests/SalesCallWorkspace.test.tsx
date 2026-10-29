@@ -9,7 +9,7 @@ import {
   createCallLog,
   listCallLogsForBuyer,
 } from '../src/api/sales';
-import { proxyListBuyerAsks, proxyWantsIt } from '../src/api/proxy';
+import { proxyWantsIt } from '../src/api/proxy';
 import { SalesCallWorkspacePage } from '../src/desks/sales/SalesCallWorkspacePage';
 
 vi.mock('../src/auth/AuthContext', () => ({ useAuth: vi.fn() }));
@@ -69,7 +69,6 @@ beforeEach(() => {
       ],
     },
   ] as never);
-  vi.mocked(proxyListBuyerAsks).mockReset().mockResolvedValue([]);
   vi.mocked(proxyWantsIt)
     .mockReset()
     .mockResolvedValue({ kind: 'pile', pileId: 'p1', listingLineId: 'l1' });
@@ -98,7 +97,6 @@ describe('Call page — "He wants it" (28 Oct; 29 Oct — a listed offer, so a p
     fireEvent.change(within(dialog).getByLabelText(/^Call note/), {
       target: { value: 'He wants 4 boxes of the 350 ML.' },
     });
-    const asksLoadsBefore = vi.mocked(proxyListBuyerAsks).mock.calls.length;
     const historyLoadsBefore = vi.mocked(listCallLogsForBuyer).mock.calls.length;
     fireEvent.click(within(dialog).getByRole('button', { name: /put him on this offer/i }));
 
@@ -111,12 +109,16 @@ describe('Call page — "He wants it" (28 Oct; 29 Oct — a listed offer, so a p
     });
     expect(await screen.findByText(/Sent to the seller to confirm/)).toBeInTheDocument();
     expect(createCallLog).not.toHaveBeenCalled();
-    await waitFor(() =>
-      expect(vi.mocked(proxyListBuyerAsks).mock.calls.length).toBeGreaterThan(asksLoadsBefore),
-    );
     // The call history reloads, so the new call shows without a page refresh.
     await waitFor(() =>
       expect(vi.mocked(listCallLogsForBuyer).mock.calls.length).toBeGreaterThan(historyLoadsBefore),
     );
+  });
+
+  it('has no "Advance an ask on a call" card (29 Oct — removed)', async () => {
+    renderPage();
+    await screen.findByRole('button', { name: 'He wants it' }, { timeout: 5000 });
+    expect(screen.queryByText('Advance an ask on a call')).toBeNull();
+    expect(screen.queryByText(/Promoted-fallback decision/)).toBeNull();
   });
 });

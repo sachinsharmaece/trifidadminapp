@@ -34,7 +34,13 @@ beforeEach(() => {
   });
   vi.mocked(getMarketPulse).mockResolvedValue([]);
   vi.mocked(getUpcomingReceipts).mockResolvedValue([]);
-  const item = (refId: string, buyerId: string, buyerFirm: string, productName: string, extra = {}) => ({
+  const item = (
+    refId: string,
+    buyerId: string,
+    buyerFirm: string,
+    productName: string,
+    extra = {},
+  ) => ({
     bucket: 'he_asked' as const,
     refType: 'quote' as const,
     refId,

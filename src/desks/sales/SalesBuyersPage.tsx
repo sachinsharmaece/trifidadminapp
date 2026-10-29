@@ -3,7 +3,12 @@ import type { FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import type { NavigateFunction } from 'react-router-dom';
 import { FiArrowDownLeft, FiArrowUpRight, FiUserPlus } from 'react-icons/fi';
-import { listSalesBuyersPage, type BuyerListFacets, type BuyerListRow } from '../../api/sales';
+import {
+  listSalesBuyersPage,
+  type BuyerListFacets,
+  type BuyerListRow,
+  type BuyerListSort,
+} from '../../api/sales';
 import { listRegistrationsPage } from '../../api/onboarding';
 import { useDebounced, usePagedList } from '../../lib/usePagedList';
 import { ListFooter } from '../../components/ListFooter';
@@ -90,7 +95,13 @@ function BuyerListTab({ tab }: { tab: BookQueueTab }) {
   // buyer and filter in the browser.
   const [searchText, setSearchText] = useState('');
   const q = useDebounced(searchText.trim());
-  const [filters, setFilters] = useState({ category: '', districtId: '', assignedTo: '' });
+  const [filters, setFilters] = useState<BuyerFilterValue>({
+    category: '',
+    districtId: '',
+    assignedTo: '',
+    sort: 'firm',
+    dir: 'asc',
+  });
   const [assigning, setAssigning] = useState<{ buyerId: string; firm: string } | null>(null);
   const loadPage = useCallback(
     async (cursor?: string) => {
@@ -101,6 +112,8 @@ function BuyerListTab({ tab }: { tab: BookQueueTab }) {
           category: filters.category || undefined,
           districtId: filters.districtId || undefined,
           assignedTo: filters.assignedTo || undefined,
+          sort: filters.sort,
+          dir: filters.dir,
           cursor,
           limit: 50,
         }),
@@ -239,6 +252,52 @@ function AssignToBookModal({
 
 const CATEGORIES = ['Retailer', 'Dealer', 'Distributor', 'Trader'];
 
+interface BuyerFilterValue {
+  category: string;
+  districtId: string;
+  assignedTo: string;
+  sort: BuyerListSort;
+  dir: 'asc' | 'desc';
+}
+
+/**
+ * 29 Oct — what the list can be sorted by (on the server, so every page follows it), with the
+ * words for each direction and the direction a fresh pick starts in.
+ */
+const SORTS: Array<{
+  value: BuyerListSort;
+  label: string;
+  asc: string;
+  desc: string;
+  start: 'asc' | 'desc';
+}> = [
+  { value: 'firm', label: 'Firm name', asc: 'A → Z', desc: 'Z → A', start: 'asc' },
+  { value: 'tehsil', label: 'Tehsil', asc: 'A → Z', desc: 'Z → A', start: 'asc' },
+  { value: 'district', label: 'District', asc: 'A → Z', desc: 'Z → A', start: 'asc' },
+  {
+    value: 'registered',
+    label: 'Date registered',
+    asc: 'Oldest first',
+    desc: 'Newest first',
+    start: 'desc',
+  },
+  { value: 'orders', label: 'Orders', asc: 'Fewest first', desc: 'Most first', start: 'desc' },
+  {
+    value: 'lastOrder',
+    label: 'Last order',
+    asc: 'Oldest first',
+    desc: 'Newest first',
+    start: 'desc',
+  },
+  {
+    value: 'rateViews',
+    label: 'Rate views',
+    asc: 'Fewest first',
+    desc: 'Most first',
+    start: 'desc',
+  },
+];
+
 function BuyerFilters({
   facets,
   tab,
@@ -247,11 +306,12 @@ function BuyerFilters({
 }: {
   facets: BuyerListFacets | null;
   tab: BookQueueTab;
-  value: { category: string; districtId: string; assignedTo: string };
-  onChange: (next: { category: string; districtId: string; assignedTo: string }) => void;
+  value: BuyerFilterValue;
+  onChange: (next: BuyerFilterValue) => void;
 }) {
+  const sort = SORTS.find((s) => s.value === value.sort) ?? SORTS[0]!;
   return (
-    <div className="grid max-w-3xl grid-cols-3 gap-4">
+    <div className="grid max-w-5xl grid-cols-2 gap-4 md:grid-cols-5">
       <Select
         label="Category"
         value={value.category}
@@ -290,6 +350,28 @@ function BuyerFilters({
           ))}
         </Select>
       )}
+      <Select
+        label="Sort by"
+        value={value.sort}
+        onChange={(e) => {
+          const next = SORTS.find((s) => s.value === e.target.value) ?? SORTS[0]!;
+          onChange({ ...value, sort: next.value, dir: next.start });
+        }}
+      >
+        {SORTS.map((s) => (
+          <option key={s.value} value={s.value}>
+            {s.label}
+          </option>
+        ))}
+      </Select>
+      <Select
+        label="Order"
+        value={value.dir}
+        onChange={(e) => onChange({ ...value, dir: e.target.value as 'asc' | 'desc' })}
+      >
+        <option value="asc">{sort.asc}</option>
+        <option value="desc">{sort.desc}</option>
+      </Select>
     </div>
   );
 }

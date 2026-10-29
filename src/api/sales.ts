@@ -341,6 +341,10 @@ export interface BuyerListFacets {
 }
 
 /** 29 Oct — Sales → Buyers a page at a time, searched and filtered on the server. */
+/** 29 Oct — what the Buyers list can be sorted by; the server defaults to firm A→Z. */
+export type BuyerListSort =
+  'firm' | 'tehsil' | 'district' | 'registered' | 'orders' | 'lastOrder' | 'rateViews';
+
 export async function listSalesBuyersPage(
   accessToken: string,
   filters: {
@@ -349,6 +353,8 @@ export async function listSalesBuyersPage(
     category?: string;
     districtId?: string;
     assignedTo?: string;
+    sort?: BuyerListSort;
+    dir?: 'asc' | 'desc';
     cursor?: string;
     limit?: number;
   },
@@ -359,7 +365,16 @@ export async function listSalesBuyersPage(
   facets?: BuyerListFacets;
 }> {
   const params = new URLSearchParams({ limit: String(filters.limit ?? 50) });
-  for (const key of ['q', 'tab', 'category', 'districtId', 'assignedTo', 'cursor'] as const) {
+  for (const key of [
+    'q',
+    'tab',
+    'category',
+    'districtId',
+    'assignedTo',
+    'sort',
+    'dir',
+    'cursor',
+  ] as const) {
     if (filters[key]) params.set(key, String(filters[key]));
   }
   const page = await apiFetchPage<BuyerListRow>(`/staff/sales/buyers?${params.toString()}`, {

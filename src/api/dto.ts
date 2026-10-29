@@ -146,6 +146,9 @@ export interface ProductDto {
   active?: boolean;
   state?: 'draft' | 'live';
   createdBy?: string | null;
+  /** 29 Oct — only on the deleted list. */
+  deletedAt?: string;
+  deletedByName?: string | null;
 }
 
 export interface SkuDto {

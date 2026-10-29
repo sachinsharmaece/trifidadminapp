@@ -93,10 +93,12 @@ export function updateManufacturer(
 /** 29 Oct — Manage → Products a page at a time, newest first; searchable (product, technical, company). */
 export function getAllProductsPage(
   accessToken: string,
-  filter: { q?: string; cursor?: string; limit?: number },
+  filter: { q?: string; cursor?: string; limit?: number; deleted?: boolean },
 ): Promise<{ items: ProductDto[]; nextCursor?: string; total?: number }> {
   const params = new URLSearchParams({ limit: String(filter.limit ?? 50) });
   if (filter.q) params.set('q', filter.q);
+  // 29 Oct — only the soft-deleted products, newest deleted first.
+  if (filter.deleted) params.set('deleted', 'true');
   if (filter.cursor) params.set('cursor', filter.cursor);
   return apiFetchPage(`/admin/products?${params.toString()}`, { accessToken });
 }
@@ -155,6 +157,35 @@ export function createHsn(
   idempotencyKey: string,
 ): Promise<{ hsnId: string }> {
   return apiFetch('/admin/hsn', { method: 'POST', body: input, accessToken, idempotencyKey });
+}
+
+/**
+ * 29 Oct — soft delete (BR-370). Refused with `PRODUCT_IN_USE` while anything live points at it;
+ * the error's `meta.reasons` lists what.
+ */
+export function deleteProduct(
+  accessToken: string,
+  productId: string,
+  idempotencyKey: string,
+): Promise<{ productId: string }> {
+  return apiFetch(`/admin/products/${productId}`, {
+    method: 'DELETE',
+    accessToken,
+    idempotencyKey,
+  });
+}
+
+/** Back in every list, inactive — tick Active on it to sell it again. */
+export function restoreProduct(
+  accessToken: string,
+  productId: string,
+  idempotencyKey: string,
+): Promise<{ productId: string }> {
+  return apiFetch(`/admin/products/${productId}/restore`, {
+    method: 'POST',
+    accessToken,
+    idempotencyKey,
+  });
 }
 
 // API-024 PATCH — was built server-side but had no client function yet.

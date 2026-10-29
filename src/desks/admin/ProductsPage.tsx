@@ -1,7 +1,8 @@
 import { useCallback, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FiPlus, FiEye } from 'react-icons/fi';
-import { getAllProductsPage, updateProduct } from '../../api/catalog';
+import { FiPlus, FiEye, FiRotateCcw } from 'react-icons/fi';
+import { getAllProductsPage, restoreProduct, updateProduct } from '../../api/catalog';
+import { formatDateTime } from '../../lib/dates';
 import { ApiError } from '../../api/errors';
 import { newIdempotencyKey } from '../../lib/idempotency';
 import { useToast } from '../../components/ui/Toast';
@@ -31,9 +32,12 @@ export function ProductsPage() {
   const navigate = useNavigate();
   const [searchText, setSearchText] = useState('');
   const q = useDebounced(searchText.trim());
+  // 29 Oct — the soft-deleted products instead, each with Restore (BR-370).
+  const [showDeleted, setShowDeleted] = useState(false);
   const loadPage = useCallback(
-    (cursor?: string) => callApi((token) => getAllProductsPage(token, { q, cursor, limit: 50 })),
-    [callApi, q],
+    (cursor?: string) =>
+      callApi((token) => getAllProductsPage(token, { q, cursor, limit: 50, deleted: showDeleted })),
+    [callApi, q, showDeleted],
   );
   const list = usePagedList<ProductDto>(loadPage);
   const retry = () => void list.reload();
@@ -49,6 +53,17 @@ export function ProductsPage() {
     }
   }
 
+  async function restore(product: ProductDto): Promise<void> {
+    try {
+      const key = newIdempotencyKey();
+      await callApi((token) => restoreProduct(token, product.productId, key));
+      show(`${product.brand} restored — inactive. Edit it and tick Active to sell it again.`);
+      retry();
+    } catch (error) {
+      show(error instanceof ApiError ? error.message : 'Could not restore it. Try again.');
+    }
+  }
+
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -61,6 +76,14 @@ export function ProductsPage() {
             value={searchText}
             onChange={setSearchText}
           />
+          <label className="flex items-center gap-2 text-sm text-slate-700">
+            <input
+              type="checkbox"
+              checked={showDeleted}
+              onChange={(e) => setShowDeleted(e.target.checked)}
+            />
+            Show deleted products
+          </label>
           <Button icon={<FiPlus />} onClick={() => navigate('/manage/products/new')}>
             Create product
           </Button>
@@ -74,9 +97,65 @@ export function ProductsPage() {
           <ErrorState message={list.error ?? 'Could not load products.'} onRetry={retry} />
         )}
         {list.status === 'ready' && list.items.length === 0 && (
-          <EmptyState message={q ? `No product matches “${q}”.` : 'No products yet.'} />
+          <EmptyState
+            message={
+              q
+                ? `No ${showDeleted ? 'deleted ' : ''}product matches “${q}”.`
+                : showDeleted
+                  ? 'No deleted products.'
+                  : 'No products yet.'
+            }
+          />
         )}
-        {list.status === 'ready' && list.items.length > 0 && (
+        {list.status === 'ready' && list.items.length > 0 && showDeleted && (
+          <>
+            <Table>
+              <thead>
+                <tr>
+                  <Th>Product</Th>
+                  <Th>Technical</Th>
+                  <Th>Manufacturer</Th>
+                  <Th>Deleted</Th>
+                  <Th />
+                </tr>
+              </thead>
+              <tbody>
+                {list.items.map((product) => (
+                  <tr key={product.productId}>
+                    <Td>{product.brand}</Td>
+                    <Td>{product.technical}</Td>
+                    <Td>{product.manufacturerName ?? '—'}</Td>
+                    <Td>
+                      {product.deletedAt ? formatDateTime(product.deletedAt) : '—'}
+                      {product.deletedByName && (
+                        <div className="text-xs text-slate-500">by {product.deletedByName}</div>
+                      )}
+                    </Td>
+                    <Td>
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        icon={<FiRotateCcw />}
+                        onClick={() => void restore(product)}
+                      >
+                        Restore
+                      </Button>
+                    </Td>
+                  </tr>
+                ))}
+              </tbody>
+            </Table>
+            <ListFooter
+              shown={list.items.length}
+              total={list.total}
+              hasMore={list.hasMore}
+              loading={list.loadingMore}
+              error={list.error}
+              onMore={() => void list.loadMore()}
+            />
+          </>
+        )}
+        {list.status === 'ready' && list.items.length > 0 && !showDeleted && (
           <>
             <Table>
               <thead>

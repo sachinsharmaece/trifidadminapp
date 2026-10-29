@@ -24,6 +24,8 @@ export type ErrorCode =
   | 'VALIDATION_FAILED'
   // Phase 3 — a save that needs a person's confirm first; meta.warnings says what.
   | 'CONFIRMATION_REQUIRED'
+  // 29 Oct — a product something live still points at; meta.reasons says what.
+  | 'PRODUCT_IN_USE'
   | 'INTERNAL_ERROR'
   | 'NETWORK_ERROR'; // client-only: fetch itself failed, no response came back
 

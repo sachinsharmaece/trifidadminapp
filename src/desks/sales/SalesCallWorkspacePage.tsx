@@ -1,7 +1,7 @@
 import { useCallback, useState } from 'react';
 import type { FormEvent } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { FiArrowLeft, FiPhoneCall, FiPlus } from 'react-icons/fi';
+import { FiArrowLeft, FiChevronDown, FiPhoneCall, FiPlus } from 'react-icons/fi';
 import { proxyRaiseAsks } from '../../api/proxy';
 import { HeWantsItButton } from './BuyerStageActions';
 import { CallLineFields } from './CallLineFields';
@@ -220,6 +220,7 @@ export function BoardForHimBody({
               direction={direction}
               onChanged={onChanged}
               detail={detail}
+              startOpen={details.length === 1}
             />
           ))}
         </div>
@@ -228,24 +229,57 @@ export function BoardForHimBody({
   );
 }
 
+/**
+ * One product on his board. 29 Oct — its rates fold under the product name, which says how many
+ * there are and the lowest, so a long board reads as a short list; it starts closed unless it is
+ * the only product.
+ */
 function BoardProductBlock({
   counterpartyId,
   direction,
   onChanged,
   detail,
+  startOpen = false,
 }: {
   counterpartyId: string;
   direction?: 'in' | 'out';
   onChanged?: () => void;
   detail: BoardForBuyerProduct;
+  startOpen?: boolean;
 }) {
+  const [open, setOpen] = useState(startOpen);
+  const count = detail.ladder.length;
+  const rates = detail.ladder.flatMap((l) => (l.ratePaise != null ? [l.ratePaise] : []));
+  const lowest = rates.length > 0 ? Math.min(...rates) : null;
+  const summary =
+    count === 0
+      ? 'No rates on the board'
+      : `${count} ${count === 1 ? 'rate' : 'rates'} available` +
+        (lowest != null ? ` · from ${formatRupees(lowest)}` : '');
+
   return (
     <div className="border-t border-slate-100 pt-4 first:border-t-0 first:pt-0">
-      <h3 className="text-sm font-semibold text-slate-900">{detail.brand}</h3>
-      <p className="text-xs text-slate-500">{detail.technicalName}</p>
-      {detail.ladder.length === 0 ? (
-        <p className="mt-2 text-sm text-slate-500">Nothing on the board for this product.</p>
-      ) : (
+      <button
+        type="button"
+        aria-expanded={count > 0 ? open : undefined}
+        disabled={count === 0}
+        onClick={() => setOpen((o) => !o)}
+        className="flex w-full items-center justify-between gap-3 text-left disabled:cursor-default"
+      >
+        <span>
+          <span className="block text-sm font-semibold text-slate-900">{detail.brand}</span>
+          <span className="block text-xs text-slate-500">{detail.technicalName}</span>
+        </span>
+        <span className="flex items-center gap-2 text-sm text-slate-600">
+          {summary}
+          {count > 0 && (
+            <FiChevronDown
+              className={`text-slate-500 transition-transform ${open ? 'rotate-180' : ''}`}
+            />
+          )}
+        </span>
+      </button>
+      {count === 0 || !open ? null : (
         <ul className="mt-2 flex flex-col gap-2">
           {detail.ladder.map((line) => (
             <li

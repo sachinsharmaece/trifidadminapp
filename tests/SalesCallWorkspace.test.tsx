@@ -125,3 +125,54 @@ describe('Call page — "He wants it" (28 Oct; 29 Oct — a listed offer, so a p
     expect(screen.getByText('Call history')).toBeInTheDocument();
   });
 });
+
+describe('Call page — board products fold under a rate count (29 Oct)', () => {
+  const line = (id: string, ratePaise: number) => ({
+    listingLineId: id,
+    skuId: 'k1',
+    ratePaise,
+    packLabel: '350 ML',
+    expiryBand: 'over12',
+    moqBand: 'none',
+    deliveryBand: '48h',
+    qty: 15,
+  });
+
+  it('shows "N rates available · from ₹…" and hides the rates until the product is opened', async () => {
+    vi.mocked(getSalesBoardForBuyer).mockResolvedValue([
+      {
+        productId: 'p1',
+        brand: 'dhanutop super',
+        technicalName: 'pendamethilean 38%',
+        ladder: [
+          line('l1', 29344),
+          line('l2', 28745),
+          line('l3', 29942),
+          line('l4', 35931),
+          line('l5', 37129),
+        ],
+      },
+      {
+        productId: 'p2',
+        brand: 'DEMO ImidaPro',
+        technicalName: 'Imidacloprid 17.8% SL',
+        ladder: [line('l6', 33536)],
+      },
+    ] as never);
+    renderPage();
+
+    const dhanutop = await screen.findByRole(
+      'button',
+      { name: /dhanutop super.*5 rates available · from ₹287\.45/ },
+      { timeout: 5000 },
+    );
+    const imida = screen.getByRole('button', { name: /DEMO ImidaPro.*1 rate available · from ₹335\.36/ });
+    expect(dhanutop).toHaveAttribute('aria-expanded', 'false');
+    expect(imida).toHaveAttribute('aria-expanded', 'false');
+    expect(screen.queryByRole('button', { name: 'He wants it' })).toBeNull();
+
+    fireEvent.click(dhanutop);
+    expect(dhanutop).toHaveAttribute('aria-expanded', 'true');
+    expect(screen.getAllByRole('button', { name: 'He wants it' })).toHaveLength(5);
+  });
+});

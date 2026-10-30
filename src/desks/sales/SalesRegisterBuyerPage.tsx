@@ -52,8 +52,8 @@ const FIELDS = [
 
 /**
  * Phase 3 — Register a buyer, on a call. Every field is checked (it used to
- * be "only the mobile"), the PAN comes from the GSTIN, at least one of the
- * two is needed, and there is **no OTP** (DEC-056): the staff member ticks
+ * be "only the mobile"), the PAN comes from the GSTIN, both may be left
+ * blank (DEC-068), and there is **no OTP** (DEC-056): the staff member ticks
  * that the proprietor agreed. A mobile another firm uses, or a PAN inside
  * another buyer's GSTIN, comes back as a warning to tick and save again.
  */
@@ -117,9 +117,6 @@ export function SalesRegisterBuyerPage() {
     const found: Record<string, string> = {};
     if (!isValidMobile(mobile)) found.mobile = 'Enter a valid 10-digit mobile number.';
     if (!firm.trim()) found.firm = 'Enter the firm name.';
-    if (!identity.gstin.trim() && !identity.pan.trim()) {
-      found.gstin = 'Enter the GSTIN — or the PAN, if he has no GSTIN.';
-    }
     if (!category) found.category = 'Pick the category.';
     if (location.address.trim().length < 5) found['location.address'] = 'Enter the address.';
     if (!location.tehsilId) found['location.tehsilId'] = 'Pick the tehsil from the list.';

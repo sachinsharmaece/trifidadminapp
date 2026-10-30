@@ -96,14 +96,16 @@ describe('Register a buyer (Phase 3)', () => {
     expect(pan.disabled).toBe(true);
   });
 
-  it('with neither GSTIN nor PAN, says so once and sends nothing', async () => {
+  it('with neither GSTIN nor PAN, still sends (DEC-068)', async () => {
+    vi.mocked(staffRegisterBuyer).mockResolvedValueOnce({
+      registrationId: 'r1',
+      accountNameWarning: null,
+      loginMobile: true,
+    });
     renderPage();
     await fillValid();
     fireEvent.click(screen.getByRole('button', { name: 'Register buyer' }));
-    expect(
-      screen.getByText('Enter the GSTIN — or the PAN, if he has no GSTIN.'),
-    ).toBeInTheDocument();
-    expect(staffRegisterBuyer).not.toHaveBeenCalled();
+    await waitFor(() => expect(staffRegisterBuyer).toHaveBeenCalled());
   });
 
   it('a shared-mobile warning asks for a tick, and the same save goes through with it', async () => {

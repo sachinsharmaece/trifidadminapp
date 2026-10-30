@@ -130,6 +130,25 @@ describe('Log a buyer call — several products in one call', () => {
     expect(screen.getByLabelText(/call note/i)).toHaveValue('');
   });
 
+  it('counts a line added to an ask he already had open apart from new asks (30 Oct, BR-371)', async () => {
+    vi.mocked(proxyRaiseAsks).mockResolvedValue({
+      results: [
+        { index: 0, kind: 'ask', askId: 'ask-a', merged: false },
+        { index: 1, kind: 'ask', askId: 'ask-a', merged: true },
+      ],
+    });
+    render(<LogBuyerCallSection buyerCounterpartyId="cp-1" />);
+    fireEvent.click(screen.getByRole('button', { name: /add another product/i }));
+    pickPacks('sku-1', 'sku-1');
+    setNote('Same pack twice.');
+    fireEvent.click(screen.getByRole('button', { name: /log call \(2 products\)/i }));
+    expect(
+      await screen.findByText(
+        /1 not listed — an ask for Purchase\. 1 added to an ask he already had open\./,
+      ),
+    ).toBeInTheDocument();
+  });
+
   it('refuses a zero or negative expected rate without calling the server', () => {
     render(<LogBuyerCallSection buyerCounterpartyId="cp-1" />);
     pickPacks('sku-1');

@@ -72,7 +72,8 @@ export function proxyWantsIt(
  * `ask` (Purchase → Demand); or an error if the line was refused.
  */
 export type ProxyRaiseAsksLineResult =
-  | { index: number; kind: 'ask'; askId: string }
+  // merged — 30 Oct: added to an ask he already had open, not a new one (BR-371).
+  | { index: number; kind: 'ask'; askId: string; merged?: boolean }
   | ({ index: number } & ProxyWantsItResult)
   | { index: number; error: string; code: string | null };
 

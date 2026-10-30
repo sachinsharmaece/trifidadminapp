@@ -484,7 +484,7 @@ export function LogBuyerCallSection({
   const [lines, setLines] = useState<CallLine[]>(() => [newCallLine(0)]);
   const [nextKey, setNextKey] = useState(1);
   const [callNote, setCallNote] = useState('');
-  const [raised, setRaised] = useState<{ asks: number; offers: number }>({ asks: 0, offers: 0 });
+  const [raised, setRaised] = useState({ asks: 0, offers: 0, added: 0 });
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
@@ -505,7 +505,7 @@ export function LogBuyerCallSection({
   async function handleSubmit(event: FormEvent): Promise<void> {
     event.preventDefault();
     setError(null);
-    setRaised({ asks: 0, offers: 0 });
+    setRaised({ asks: 0, offers: 0, added: 0 });
     const missing = lines.findIndex((l) => !l.skuId);
     if (missing !== -1) {
       setError(`Product ${missing + 1} needs a product and a pack — or remove it.`);
@@ -536,13 +536,16 @@ export function LogBuyerCallSection({
         }),
       );
       const failedByKey = new Map<number, string>();
-      const tally = { asks: 0, offers: 0 };
+      const tally = { asks: 0, offers: 0, added: 0 };
       for (const r of results) {
         if ('error' in r) failedByKey.set(lines[r.index]!.key, r.error);
-        else if (r.kind === 'ask') tally.asks += 1;
-        else tally.offers += 1;
+        else if (r.kind === 'ask') {
+          // 30 Oct — boxes added to an ask he already had open (BR-371) is not a new ask.
+          if (r.merged) tally.added += 1;
+          else tally.asks += 1;
+        } else tally.offers += 1;
       }
-      const saved = tally.asks + tally.offers;
+      const saved = tally.asks + tally.offers + tally.added;
       setRaised(tally);
       if (saved > 0) onLogged?.();
       if (failedByKey.size === 0) {
@@ -631,12 +634,14 @@ export function LogBuyerCallSection({
             {error}
           </p>
         )}
-        {raised.asks + raised.offers > 0 && (
+        {raised.asks + raised.offers + raised.added > 0 && (
           <p className="text-sm text-success-600">
             Logged.{' '}
             {raised.offers > 0 && `${raised.offers} on the board — sent to the seller to confirm. `}
             {raised.asks > 0 &&
-              `${raised.asks} not listed — ${raised.asks === 1 ? 'an ask' : 'asks'} for Purchase.`}
+              `${raised.asks} not listed — ${raised.asks === 1 ? 'an ask' : 'asks'} for Purchase. `}
+            {raised.added > 0 &&
+              `${raised.added} added to ${raised.added === 1 ? 'an ask' : 'asks'} he already had open.`}
           </p>
         )}
         <Button type="submit" loading={submitting} icon={<FiPhoneCall />}>

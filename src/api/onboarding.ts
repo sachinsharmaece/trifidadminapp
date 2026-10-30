@@ -183,10 +183,11 @@ export function staffRegisterSeller(
     firm: string;
     gstin: string;
     ownerName: string;
-    licenceNo: string;
-    references: Array<{ firm: string; phone: string; relationship: string; whatTheySaid: string }>;
+    // DEC-069 — optional on the staff form; what is given is still checked.
+    licenceNo?: string;
+    references?: Array<{ firm: string; phone: string; relationship: string; whatTheySaid: string }>;
     dealerships?: Array<{ manufacturerId: string }>;
-    bankDetail: { accountNumber: string; ifsc: string; accountName: string };
+    bankDetail?: { accountNumber: string; ifsc: string; accountName: string };
     consent: { noticeVersion: string; marketingOptIn: boolean };
     callNote: string;
     // Phase 4 — his own location, Marg code, who he is assigned to (null =
@@ -255,7 +256,7 @@ export function updateSellerProfile(
     ownerName: string;
     contactMobile: string;
     gstin: string;
-    licenceNo: string;
+    licenceNo?: string;
     location: BuyerLocationInput;
     margPartyCode?: string;
   },

@@ -43,12 +43,24 @@ const FIELDS = [
   'proprietorAgreed',
 ] as const;
 
+/** DEC-069 (30 Oct) — on the staff form these can be left for later. */
+const OPTIONAL = new Set([
+  'licenceNo',
+  'bankDetail.accountNumber',
+  'bankDetail.ifsc',
+  'bankDetail.accountName',
+  'references.0.firm',
+  'references.0.phone',
+  'references.1.firm',
+  'references.1.phone',
+]);
+
 /**
  * For a dealer the desk found itself, rather than one who registered on his
  * own. Phase 4 — his own location (mandatory), Assigned to (a Purchase
  * person; a Sales Leader is his own team's Purchase Executive), Marg party
  * code, and **no OTP** (DEC-056): the proprietor-agreed tick instead. GSTIN
- * stays mandatory for a seller. Bank, referees and companies are unchanged.
+ * stays mandatory for a seller. 30 Oct (DEC-069) — licence, bank detail and referees optional.
  */
 export function AddSellerPage() {
   const { callApi } = useAuth();
@@ -128,6 +140,15 @@ export function AddSellerPage() {
     }
     setLocalErrors(found);
     if (Object.keys(found).length > 0) return;
+    // DEC-069 — licence, bank detail and referees are optional here: send only what was typed.
+    // A referee or bank detail that is only half filled still goes, so the server says what is missing.
+    const references = [
+      { firm: refFirm1, phone: refPhone1 },
+      { firm: refFirm2, phone: refPhone2 },
+    ]
+      .filter((r) => r.firm.trim() || r.phone.trim())
+      .map((r) => ({ ...r, relationship: 'Supplier', whatTheySaid: 'Reliable' }));
+    const hasBank = Boolean(accountNumber.trim() || ifsc.trim() || accountName.trim());
     void save.submit((key) =>
       callApi((token) =>
         staffRegisterSeller(
@@ -137,25 +158,12 @@ export function AddSellerPage() {
             firm,
             gstin: gstin.toUpperCase(),
             ownerName,
-            licenceNo,
-            references: [
-              {
-                firm: refFirm1,
-                phone: refPhone1,
-                relationship: 'Supplier',
-                whatTheySaid: 'Reliable',
-              },
-              {
-                firm: refFirm2,
-                phone: refPhone2,
-                relationship: 'Supplier',
-                whatTheySaid: 'Reliable',
-              },
-            ],
+            ...(licenceNo.trim() ? { licenceNo: licenceNo.trim() } : {}),
+            ...(references.length > 0 ? { references } : {}),
             ...(dealershipIds.length > 0
               ? { dealerships: dealershipIds.map((manufacturerId) => ({ manufacturerId })) }
               : {}),
-            bankDetail: { accountNumber, ifsc, accountName },
+            ...(hasBank ? { bankDetail: { accountNumber, ifsc, accountName } } : {}),
             consent: { noticeVersion: 'v1', marketingOptIn: false },
             callNote,
             location: {
@@ -190,7 +198,7 @@ export function AddSellerPage() {
         clear(field);
       }}
       error={errors[field]}
-      required
+      required={!OPTIONAL.has(field)}
       {...extra}
     />
   );
@@ -203,8 +211,9 @@ export function AddSellerPage() {
       <DevNote screen="purchase_add_seller" />
       <Card title="Add a seller">
         <p className="mb-4 text-sm text-slate-500">
-          GSTIN stays mandatory for a seller — TriFid buys on a GST invoice — plus BR-250&apos;s two
-          named referees.
+          GSTIN stays mandatory for a seller — TriFid buys on a GST invoice. Licence, bank detail
+          and referees can be left for later; without bank detail he cannot be paid until it is
+          added (DEC-069).
         </p>
         <form onSubmit={handleSubmit} noValidate className="grid max-w-3xl grid-cols-2 gap-4">
           {text('Mobile', mobile, setMobile, 'mobile', { inputMode: 'tel', maxLength: 14 })}

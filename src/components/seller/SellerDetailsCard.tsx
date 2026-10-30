@@ -162,7 +162,7 @@ function EditSellerModal({
             ownerName,
             contactMobile: normalizeMobile(contactMobile),
             gstin: gstin.toUpperCase(),
-            licenceNo,
+            licenceNo: licenceNo.trim() || undefined, // DEC-069 — optional.
             location: {
               address: location.address,
               pincode: location.pincode || undefined,
@@ -217,7 +217,6 @@ function EditSellerModal({
         />
         <Input
           label="Insecticide licence no."
-          required
           value={licenceNo}
           onChange={(ev) => setLicenceNo(ev.target.value)}
           error={e.licenceNo}

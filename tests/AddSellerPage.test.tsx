@@ -69,6 +69,12 @@ beforeEach(() => {
   });
 });
 
+/** Whether the field's label carries the red required star. */
+function starred(label: RegExp): boolean {
+  const input = screen.getByLabelText(label);
+  return document.querySelector(`label[for="${input.id}"]`)!.textContent!.includes('*');
+}
+
 describe('Add a seller (Phase 4)', () => {
   it('has no OTP text, needs the location and the proprietor tick, and sends location, assignee and a key', async () => {
     vi.mocked(staffRegisterSeller).mockResolvedValue({
@@ -105,6 +111,51 @@ describe('Add a seller (Phase 4)', () => {
       proprietorAgreed: true,
     });
     expect(key).toEqual(expect.any(String));
+    // DEC-069 — licence, bank detail and referees left empty are simply not sent.
+    expect(input).not.toHaveProperty('licenceNo');
+    expect(input).not.toHaveProperty('bankDetail');
+    expect(input).not.toHaveProperty('references');
     expect(await screen.findByText(/Seller registered/)).toBeInTheDocument();
+  });
+
+  it('marks licence, bank and referees optional, and sends only the referee that was typed (DEC-069)', async () => {
+    vi.mocked(staffRegisterSeller).mockResolvedValue({
+      registrationId: 'r1',
+      accountNameWarning: null,
+    });
+    render(
+      <MemoryRouter>
+        <AddSellerPage />
+      </MemoryRouter>,
+    );
+    for (const label of [
+      /^Insecticide licence/,
+      /^Bank account number/,
+      /^IFSC/,
+      /^Account name/,
+      /^Referee 1 — firm/,
+      /^Referee 2 — phone/,
+    ]) {
+      expect(starred(label)).toBe(false);
+    }
+    expect(starred(/^Firm/)).toBe(true);
+
+    fireEvent.change(screen.getByLabelText(/^Address/), {
+      target: { value: '5 Mandi Road, Mahidpur' },
+    });
+    fireEvent.change(screen.getByLabelText(/^Pincode/), { target: { value: '456443' } });
+    await waitFor(() => expect(screen.getByLabelText(/^Tehsil/)).toHaveValue('Mahidpur'));
+    fireEvent.change(screen.getByLabelText(/^Referee 1 — firm/), { target: { value: 'Ref One' } });
+    fireEvent.change(screen.getByLabelText(/^Referee 1 — phone/), {
+      target: { value: '9000000001' },
+    });
+    fireEvent.click(screen.getByLabelText(/proprietor agreed/));
+    fireEvent.click(screen.getByRole('button', { name: 'Register seller' }));
+
+    await waitFor(() => expect(staffRegisterSeller).toHaveBeenCalled());
+    const [, input] = vi.mocked(staffRegisterSeller).mock.calls[0]!;
+    expect(input.references).toEqual([
+      { firm: 'Ref One', phone: '9000000001', relationship: 'Supplier', whatTheySaid: 'Reliable' },
+    ]);
   });
 });

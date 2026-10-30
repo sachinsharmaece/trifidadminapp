@@ -114,6 +114,9 @@ describe('Manage → Products — soft delete (29 Oct)', () => {
     expect(alert).toHaveTextContent('Roundup is still in use');
     expect(alert).toHaveTextContent('1 live listing');
     expect(alert).toHaveTextContent('2 open asks');
+    // 30 Oct — whom to ask, and what Active really does now.
+    expect(alert).toHaveTextContent('Ask the seller to pause a live listing');
+    expect(alert).toHaveTextContent('its listings drop off every board');
     expect(screen.queryByText('Products list')).toBeNull();
   });
 

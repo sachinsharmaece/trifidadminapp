@@ -260,7 +260,11 @@ function DeleteProductModal({
                   ))}
                 </ul>
                 <p className="mt-2 text-slate-600">
-                  Close these first, or untick Active (Edit) to stop selling it.
+                  Ask the seller to pause a live listing, and let the rest finish, then delete it.
+                </p>
+                <p className="mt-1 text-slate-600">
+                  To stop selling it now, untick Active (Edit) — its listings drop off every board
+                  at once.
                 </p>
               </>
             )}

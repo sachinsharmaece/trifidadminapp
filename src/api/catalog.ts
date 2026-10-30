@@ -91,14 +91,26 @@ export function updateManufacturer(
 // New — the Manage desk's own unfiltered product list (distinct from
 // API-022's technical-scoped picker, which BR-111 governs).
 /** 29 Oct — Manage → Products a page at a time, newest first; searchable (product, technical, company). */
+/** 30 Oct — what Manage → Products can be sorted by; the server defaults to product name A→Z. */
+export type ProductListSort = 'brand' | 'technical' | 'manufacturer' | 'created';
+
 export function getAllProductsPage(
   accessToken: string,
-  filter: { q?: string; cursor?: string; limit?: number; deleted?: boolean },
+  filter: {
+    q?: string;
+    cursor?: string;
+    limit?: number;
+    deleted?: boolean;
+    sort?: ProductListSort;
+    dir?: 'asc' | 'desc';
+  },
 ): Promise<{ items: ProductDto[]; nextCursor?: string; total?: number }> {
   const params = new URLSearchParams({ limit: String(filter.limit ?? 50) });
   if (filter.q) params.set('q', filter.q);
   // 29 Oct — only the soft-deleted products, newest deleted first.
   if (filter.deleted) params.set('deleted', 'true');
+  if (filter.sort) params.set('sort', filter.sort);
+  if (filter.dir) params.set('dir', filter.dir);
   if (filter.cursor) params.set('cursor', filter.cursor);
   return apiFetchPage(`/admin/products?${params.toString()}`, { accessToken });
 }

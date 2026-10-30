@@ -1,7 +1,13 @@
 import { useCallback, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FiPlus, FiEye, FiRotateCcw } from 'react-icons/fi';
-import { getAllProductsPage, restoreProduct, updateProduct } from '../../api/catalog';
+import {
+  getAllProductsPage,
+  restoreProduct,
+  updateProduct,
+  type ProductListSort,
+} from '../../api/catalog';
+import { Select } from '../../components/ui/Input';
 import { formatDateTime } from '../../lib/dates';
 import { ApiError } from '../../api/errors';
 import { newIdempotencyKey } from '../../lib/idempotency';
@@ -20,9 +26,29 @@ import { Badge } from '../../components/ui/Badge';
 import { Button } from '../../components/ui/Button';
 import type { ProductDto } from '../../api/dto';
 
+/** 30 Oct — the words for each direction, and the direction a fresh pick starts in. */
+const SORTS: Array<{
+  value: ProductListSort;
+  label: string;
+  asc: string;
+  desc: string;
+  start: 'asc' | 'desc';
+}> = [
+  { value: 'brand', label: 'Product name', asc: 'A → Z', desc: 'Z → A', start: 'asc' },
+  { value: 'technical', label: 'Technical', asc: 'A → Z', desc: 'Z → A', start: 'asc' },
+  { value: 'manufacturer', label: 'Company', asc: 'A → Z', desc: 'Z → A', start: 'asc' },
+  {
+    value: 'created',
+    label: 'Date added',
+    asc: 'Oldest first',
+    desc: 'Newest first',
+    start: 'desc',
+  },
+];
+
 /**
  * Manage → Products. The catalog-management list — every product, not scoped
- * to one technical. 29 Oct: newest first, 50 at a time (the next page loads as
+ * to one technical. 29 Oct: 50 at a time (the next page loads as
  * you scroll, or "Load more"), searched on the server — it used to show only
  * the first 100.
  */
@@ -34,10 +60,25 @@ export function ProductsPage() {
   const q = useDebounced(searchText.trim());
   // 29 Oct — the soft-deleted products instead, each with Restore (BR-370).
   const [showDeleted, setShowDeleted] = useState(false);
+  // 30 Oct — sorted on the server, so every page follows it; product name A→Z to start.
+  const [order, setOrder] = useState<{ sort: ProductListSort; dir: 'asc' | 'desc' }>({
+    sort: 'brand',
+    dir: 'asc',
+  });
+  const sortOption = SORTS.find((s) => s.value === order.sort) ?? SORTS[0]!;
   const loadPage = useCallback(
     (cursor?: string) =>
-      callApi((token) => getAllProductsPage(token, { q, cursor, limit: 50, deleted: showDeleted })),
-    [callApi, q, showDeleted],
+      callApi((token) =>
+        getAllProductsPage(token, {
+          q,
+          cursor,
+          limit: 50,
+          deleted: showDeleted,
+          // The deleted list keeps its own order: newest deleted first.
+          ...(showDeleted ? {} : order),
+        }),
+      ),
+    [callApi, q, showDeleted, order],
   );
   const list = usePagedList<ProductDto>(loadPage);
   const retry = () => void list.reload();
@@ -90,6 +131,32 @@ export function ProductsPage() {
         </div>
       </div>
       <DevNote screen="admin_products" />
+      {!showDeleted && (
+        <div className="grid max-w-md grid-cols-2 gap-4">
+          <Select
+            label="Sort by"
+            value={order.sort}
+            onChange={(e) => {
+              const next = SORTS.find((s) => s.value === e.target.value) ?? SORTS[0]!;
+              setOrder({ sort: next.value, dir: next.start });
+            }}
+          >
+            {SORTS.map((s) => (
+              <option key={s.value} value={s.value}>
+                {s.label}
+              </option>
+            ))}
+          </Select>
+          <Select
+            label="Order"
+            value={order.dir}
+            onChange={(e) => setOrder({ ...order, dir: e.target.value as 'asc' | 'desc' })}
+          >
+            <option value="asc">{sortOption.asc}</option>
+            <option value="desc">{sortOption.desc}</option>
+          </Select>
+        </div>
+      )}
 
       <Card>
         {list.status === 'loading' && <Loader />}

@@ -138,4 +138,31 @@ describe('Manage → Products — soft delete (29 Oct)', () => {
     expect(vi.mocked(restoreProduct).mock.calls[0]![1]).toBe('p9');
     expect(await screen.findByText(/Old Brand restored — inactive/)).toBeInTheDocument();
   });
+
+  it('asks for product name A→Z first, then whatever Sort by / Order say (30 Oct)', async () => {
+    render(
+      <ToastProvider>
+        <MemoryRouter>
+          <ProductsPage />
+        </MemoryRouter>
+      </ToastProvider>,
+    );
+    const last = () => vi.mocked(getAllProductsPage).mock.calls.at(-1)![1];
+    await waitFor(() => expect(getAllProductsPage).toHaveBeenCalled());
+    expect(last()).toMatchObject({ sort: 'brand', dir: 'asc' });
+
+    fireEvent.change(screen.getByLabelText('Order'), { target: { value: 'desc' } });
+    await waitFor(() => expect(last()).toMatchObject({ sort: 'brand', dir: 'desc' }));
+    expect(screen.getByRole('option', { name: 'Z → A' })).toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText('Sort by'), { target: { value: 'created' } });
+    await waitFor(() => expect(last()).toMatchObject({ sort: 'created', dir: 'desc' }));
+    expect(screen.getByRole('option', { name: 'Newest first' })).toBeInTheDocument();
+
+    // The deleted list keeps its own order and hides the sort controls.
+    fireEvent.click(screen.getByLabelText('Show deleted products'));
+    await waitFor(() => expect(last()).toMatchObject({ deleted: true }));
+    expect(last()).not.toHaveProperty('sort');
+    expect(screen.queryByLabelText('Sort by')).toBeNull();
+  });
 });

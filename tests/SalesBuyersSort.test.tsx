@@ -58,4 +58,58 @@ describe('Sales → Buyers — sort (29 Oct)', () => {
     fireEvent.change(screen.getByLabelText('Sort by'), { target: { value: 'tehsil' } });
     await waitFor(() => expect(lastCall()).toMatchObject({ sort: 'tehsil', dir: 'asc' }));
   });
+
+  it('shows when each buyer was last called and by whom, and sorts on it (30 Oct)', async () => {
+    const row = (
+      buyerId: string,
+      firm: string,
+      lastCalledAt: string | null,
+      by: string | null,
+    ) => ({
+      buyerId,
+      firm,
+      gstin: null,
+      pan: null,
+      tehsil: null,
+      district: null,
+      tier: 'Retailer',
+      assignedToEmployeeId: null,
+      orderCount: 0,
+      lastOrderAt: null,
+      lastCalledAt,
+      lastCalledBy: by,
+      rateViews: 0,
+      ownerName: null,
+      contactName: null,
+      mobile: null,
+    });
+    vi.mocked(listSalesBuyersPage).mockResolvedValue({
+      items: [
+        row(
+          'b1',
+          'Called Agro',
+          new Date(Date.now() - 10 * 86_400_000).toISOString(),
+          'nikita goyal',
+        ),
+        row('b2', 'Silent Traders', null, null),
+      ],
+      total: 2,
+      facets: { districts: [], assignees: [] },
+    });
+    render(
+      <MemoryRouter>
+        <SalesBuyersPage />
+      </MemoryRouter>,
+    );
+    expect(await screen.findByText('10 days ago')).toBeInTheDocument();
+    expect(screen.getByText('by nikita goyal')).toBeInTheDocument();
+    expect(screen.getByRole('columnheader', { name: 'Last called' })).toBeInTheDocument();
+    const silent = screen.getByText('Silent Traders').closest('tr')!;
+    // "never" for last order and for last called.
+    expect(silent.textContent!.match(/never/g)).toHaveLength(2);
+
+    fireEvent.change(screen.getByLabelText('Sort by'), { target: { value: 'lastCalled' } });
+    await waitFor(() => expect(lastCall()).toMatchObject({ sort: 'lastCalled', dir: 'asc' }));
+    expect(screen.getByRole('option', { name: 'Longest ago first' })).toBeInTheDocument();
+  });
 });

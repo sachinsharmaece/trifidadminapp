@@ -25,7 +25,8 @@ import { Badge } from '../../components/ui/Badge';
 import { Input, Select, Textarea } from '../../components/ui/Input';
 import { Button } from '../../components/ui/Button';
 import { Modal } from '../../components/ui/Modal';
-import { formatDate } from '../../lib/dates';
+import { formatDate, formatDateTime } from '../../lib/dates';
+import { timeAgo, useMinuteClock } from '../../lib/timeAgo';
 
 type BookQueueTab = 'book' | 'queue';
 type Tab = BookQueueTab | 'waiting';
@@ -289,6 +290,14 @@ const SORTS: Array<{
     desc: 'Newest first',
     start: 'desc',
   },
+  // 30 Oct — oldest first is a call list: never called, then longest ago.
+  {
+    value: 'lastCalled',
+    label: 'Last called',
+    asc: 'Longest ago first',
+    desc: 'Most recent first',
+    start: 'asc',
+  },
   {
     value: 'rateViews',
     label: 'Rate views',
@@ -387,6 +396,7 @@ function BuyerTable({
   navigate: NavigateFunction;
   onAssignToMe: (target: { buyerId: string; firm: string }) => void;
 }) {
+  const now = useMinuteClock();
   const filtered = useMemo(() => {
     const needle = q.trim().toLowerCase();
     if (!needle) return items;
@@ -415,6 +425,7 @@ function BuyerTable({
           <Th>Category</Th>
           <Th numeric>Orders</Th>
           <Th>Last order</Th>
+          <Th>Last called</Th>
           <Th numeric>Rate views</Th>
           <Th>Assigned to</Th>
           <Th />
@@ -446,6 +457,18 @@ function BuyerTable({
             </Td>
             <Td numeric>{b.orderCount}</Td>
             <Td>{b.lastOrderAt ? formatDate(b.lastOrderAt) : 'never'}</Td>
+            <Td>
+              {b.lastCalledAt ? (
+                <span title={formatDateTime(b.lastCalledAt)}>
+                  {timeAgo(b.lastCalledAt, now)}
+                  {b.lastCalledBy && (
+                    <span className="block text-xs text-slate-500">by {b.lastCalledBy}</span>
+                  )}
+                </span>
+              ) : (
+                'never'
+              )}
+            </Td>
             <Td numeric className={b.rateViews >= 25 ? 'font-semibold text-danger-500' : undefined}>
               {b.rateViews}
             </Td>

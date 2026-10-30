@@ -307,6 +307,9 @@ export interface BuyerListRow {
   assignedToEmployeeId: string | null;
   orderCount: number;
   lastOrderAt: string | null;
+  /** 30 Oct — his last call or update request (not a note), and who made it; null = never. */
+  lastCalledAt: string | null;
+  lastCalledBy: string | null;
   rateViews: number;
   ownerName: string | null; // Sales employee whose book he is in.
   contactName: string | null; // The firm's own owner.
@@ -343,7 +346,14 @@ export interface BuyerListFacets {
 /** 29 Oct — Sales → Buyers a page at a time, searched and filtered on the server. */
 /** 29 Oct — what the Buyers list can be sorted by; the server defaults to firm A→Z. */
 export type BuyerListSort =
-  'firm' | 'tehsil' | 'district' | 'registered' | 'orders' | 'lastOrder' | 'rateViews';
+  | 'firm'
+  | 'tehsil'
+  | 'district'
+  | 'registered'
+  | 'orders'
+  | 'lastOrder'
+  | 'lastCalled'
+  | 'rateViews';
 
 export async function listSalesBuyersPage(
   accessToken: string,

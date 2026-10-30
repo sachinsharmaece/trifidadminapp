@@ -80,16 +80,19 @@ import { FounderDeskPage } from '../desks/founder/FounderDeskPage';
 // import { EnquiriesPage } from '../desks/enquiries/EnquiriesPage';
 // import { EnquiryDetailPage } from '../desks/enquiries/EnquiryDetailPage';
 import { PERMISSIONS } from '../lib/permissions';
+import { HomeRedirect } from '../auth/homePath';
 
 export function App() {
   return (
     <AuthProvider>
       <Routes>
         <Route path="/login" element={<LoginPage />} />
+        {/* 30 Oct — after sign-in: his own desk (homePath.tsx). */}
+        <Route path="/home" element={<HomeRedirect />} />
         <Route
           path="/"
           element={
-            <RequireAuth permission={PERMISSIONS.EMPLOYEE_READ}>
+            <RequireAuth permission={PERMISSIONS.EMPLOYEE_READ} redirectHomeIfDenied>
               <AppShell>
                 <TeamPage />
               </AppShell>

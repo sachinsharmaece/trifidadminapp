@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import type { FormEvent } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from './AuthContext';
 import { ApiError } from '../api/errors';
 import { Button } from '../components/ui/Button';
@@ -39,6 +39,11 @@ function describeLoginError(error: unknown): string {
 export function LoginPage() {
   const { login, verifyMfa, sessionExpiredNotice } = useAuth();
   const navigate = useNavigate();
+  // 30 Oct — after an expired session, back to the page he was on; otherwise (a fresh sign-in,
+  // or after someone signed out on this tab) his own desk via /home.
+  const from = (useLocation().state as { from?: string } | null)?.from;
+  const afterSignIn =
+    sessionExpiredNotice && from && from !== '/' && !from.startsWith('/login') ? from : '/home';
 
   const [step, setStep] = useState<Step>('credentials');
   const [email, setEmail] = useState('');
@@ -58,7 +63,7 @@ export function LoginPage() {
         setMfaToken(result.mfaToken);
         setStep('mfa');
       } else {
-        navigate('/');
+        navigate(afterSignIn, { replace: true });
       }
     } catch (submitError) {
       setError(describeLoginError(submitError));
@@ -74,7 +79,7 @@ export function LoginPage() {
     setSubmitting(true);
     try {
       await verifyMfa(mfaToken, code);
-      navigate('/');
+      navigate(afterSignIn, { replace: true });
     } catch (submitError) {
       setError(describeLoginError(submitError));
     } finally {

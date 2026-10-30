@@ -2,13 +2,16 @@ import { useCallback, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { FiFlag } from 'react-icons/fi';
 import {
-  getActiveDemandList,
+  getActiveDemandByProduct,
   getAskSellerStates,
   postAskChase,
   postNonOrderReason,
   type ActiveDemandItem,
   type AskSellerStateItem,
+  type DemandProductGroup,
 } from '../../api/purchase';
+import { deliveryBandLabel, expiryBandLabel } from '../../lib/labels';
+import { timeAgo } from '../../lib/timeAgo';
 import { AsyncBoundary } from '../../components/AsyncBoundary';
 import { useAsyncData } from '../../lib/useAsyncData';
 import { useAuth } from '../../auth/AuthContext';
@@ -37,7 +40,7 @@ export function DemandPage() {
   const { callApi } = useAuth();
   const [noSellerOnly, setNoSellerOnly] = useState(false);
   const loader = useCallback(
-    () => callApi((token) => getActiveDemandList(token, noSellerOnly)),
+    () => callApi((token) => getActiveDemandByProduct(token, noSellerOnly)),
     [callApi, noSellerOnly],
   );
   const { state, retry } = useAsyncData(loader, (items) => items.length === 0, [loader]);
@@ -47,10 +50,10 @@ export function DemandPage() {
       <DevNote screen="purchase_demand" />
       <Card title="Active demand">
         <p className="mb-4 text-sm text-slate-500">
-          BR-272 — how many sellers are quoted, active, dormant or dark against each open ask. No
-          buyer identity, and open interest here is boxes only, never a rupee figure (BR-069) — a
-          seller's own rate still shows when you open a row (BR-066), that&apos;s not what BR-069
-          governs.
+          One row per product — open it for each ask on it (pack, conditions, boxes), and an ask for
+          its sellers. BR-272 — how many sellers are quoted, active, dormant or dark. No buyer
+          identity, and open interest here is boxes only, never a rupee figure (BR-069) — a seller's
+          own rate still shows when you open a row (BR-066), that&apos;s not what BR-069 governs.
         </p>
         <label className="mb-4 flex items-center gap-2 text-sm text-slate-700">
           <input
@@ -62,11 +65,11 @@ export function DemandPage() {
           No-seller only (BR-270 — an opportunity, not a leak)
         </label>
         <AsyncBoundary state={state} onRetry={retry} emptyMessage="Nothing open right now.">
-          {(items: ActiveDemandItem[]) => (
+          {(groups: DemandProductGroup[]) => (
             <Table className="mb-4">
               <thead>
                 <tr>
-                  <Th>Ask</Th>
+                  <Th>Product</Th>
                   <Th numeric>Boxes</Th>
                   <Th numeric>Quoted</Th>
                   <Th numeric>Listed</Th>
@@ -77,8 +80,12 @@ export function DemandPage() {
                 </tr>
               </thead>
               <tbody>
-                {items.map((item) => (
-                  <DemandRow key={item.askId} item={item} onRecorded={retry} />
+                {groups.map((group) => (
+                  <ProductDemandRows
+                    key={group.productId ?? group.asks[0]!.askId}
+                    group={group}
+                    onRecorded={retry}
+                  />
                 ))}
               </tbody>
             </Table>
@@ -89,22 +96,37 @@ export function DemandPage() {
   );
 }
 
-function DemandRow({ item, onRecorded }: { item: ActiveDemandItem; onRecorded: () => void }) {
+/**
+ * 30 Oct — one row per product (BR-371): its boxes and asks added up, each seller counted once
+ * across them. It opens to its asks — each still its own row with Chase / Raise quote, since a
+ * quote answers one ask. A product with a single ask opens straight to it.
+ */
+function ProductDemandRows({
+  group,
+  onRecorded,
+}: {
+  group: DemandProductGroup;
+  onRecorded: () => void;
+}) {
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
+  const single = group.askCount === 1;
   return (
     <>
-      <tr className="cursor-pointer" onClick={() => setOpen((v) => !v)}>
+      <tr className="cursor-pointer" onClick={() => setOpen((v) => !v)} aria-expanded={open}>
         <Td>
           {open ? '▾ ' : '▸ '}
-          {item.brand} · {item.technical}
+          {group.brand} · {group.technical}
+          <span className="ml-2 text-xs text-slate-500">
+            {group.askCount} {single ? 'ask' : 'asks'}
+          </span>
         </Td>
-        <Td numeric>{item.qty}</Td>
-        <Td numeric>{item.sellerCounts.quoted}</Td>
-        <Td numeric>{item.sellerCounts.active}</Td>
-        <Td numeric>{item.sellerCounts.dormant}</Td>
+        <Td numeric>{group.totalBoxes}</Td>
+        <Td numeric>{group.sellerCounts.quoted}</Td>
+        <Td numeric>{group.sellerCounts.active}</Td>
+        <Td numeric>{group.sellerCounts.dormant}</Td>
         <Td>
-          {item.noSeller && (
+          {group.noSeller && (
             <div className="flex items-center gap-2">
               <Badge tone="warn">
                 <FiFlag className="inline" /> No seller
@@ -114,7 +136,7 @@ function DemandRow({ item, onRecorded }: { item: ActiveDemandItem; onRecorded: (
                 size="sm"
                 onClick={(e) => {
                   e.stopPropagation();
-                  navigate(`/purchase/matrix?q=${encodeURIComponent(item.technical)}`);
+                  navigate(`/purchase/matrix?q=${encodeURIComponent(group.technical)}`);
                 }}
               >
                 Who could carry it →
@@ -122,6 +144,53 @@ function DemandRow({ item, onRecorded }: { item: ActiveDemandItem; onRecorded: (
             </div>
           )}
         </Td>
+        <Td />
+        <Td />
+      </tr>
+      {open &&
+        group.asks.map((item) => (
+          <AskRows key={item.askId} item={item} startOpen={single} onRecorded={onRecorded} />
+        ))}
+    </>
+  );
+}
+
+/** "100 GM · over 12 months · within 48 hours" — what this ask is for. */
+function askLabel(item: ActiveDemandItem): string {
+  return [
+    item.packLabel ?? 'All packs',
+    expiryBandLabel(item.expiryBand),
+    item.deliveryBand ? deliveryBandLabel(item.deliveryBand) : null,
+  ]
+    .filter(Boolean)
+    .join(' · ');
+}
+
+function AskRows({
+  item,
+  startOpen,
+  onRecorded,
+}: {
+  item: ActiveDemandItem;
+  startOpen: boolean;
+  onRecorded: () => void;
+}) {
+  const [open, setOpen] = useState(startOpen);
+  return (
+    <>
+      <tr className="cursor-pointer bg-slate-50" onClick={() => setOpen((v) => !v)}>
+        <Td>
+          <span className="pl-6 text-sm text-slate-700">
+            {open ? '▾ ' : '▸ '}
+            {askLabel(item)}
+            <span className="ml-2 text-xs text-slate-500">asked {timeAgo(item.createdAt)}</span>
+          </span>
+        </Td>
+        <Td numeric>{item.qty}</Td>
+        <Td numeric>{item.sellerCounts.quoted}</Td>
+        <Td numeric>{item.sellerCounts.active}</Td>
+        <Td numeric>{item.sellerCounts.dormant}</Td>
+        <Td>{item.noSeller && <Badge tone="warn">No seller</Badge>}</Td>
         <Td onClick={(e) => e.stopPropagation()}>
           {SHOW_NON_ORDER_REASON && (
             <NonOrderReasonForm askId={item.askId} onRecorded={onRecorded} />

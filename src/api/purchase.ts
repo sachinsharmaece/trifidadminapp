@@ -11,6 +11,31 @@ export interface ActiveDemandItem {
   brand: string;
   technical: string;
   manufacturerName: string;
+  /** 30 Oct — what the ask is for; `packLabel` null = all packs. */
+  packLabel: string | null;
+  expiryBand: string;
+  deliveryBand: string | null;
+}
+
+/** 30 Oct — one product, its asks under it (BR-371); each seller counted once across them. */
+export interface DemandProductGroup {
+  productId: string | null;
+  brand: string;
+  technical: string;
+  manufacturerName: string;
+  askCount: number;
+  totalBoxes: number;
+  sellerCounts: { quoted: number; active: number; dormant: number; dark: number };
+  noSeller: boolean;
+  asks: ActiveDemandItem[];
+}
+
+export function getActiveDemandByProduct(
+  accessToken: string,
+  noSellerOnly?: boolean,
+): Promise<DemandProductGroup[]> {
+  const query = noSellerOnly ? '&noSeller=true' : '';
+  return apiFetch(`/staff/purchase/demand?by=product${query}`, { accessToken });
 }
 
 export function getActiveDemandList(

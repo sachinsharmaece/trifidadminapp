@@ -14,6 +14,7 @@ import { Card } from '../../components/ui/Card';
 import { Table, Th, Td } from '../../components/ui/Table';
 import { Input } from '../../components/ui/Input';
 import { Button } from '../../components/ui/Button';
+import { formatDateTime } from '../../lib/dates';
 
 // Row order = product class, column order = client tier, as the client's sheet lays it out.
 const CLASSES = ['High', 'Medium', 'Low'] as const;
@@ -110,7 +111,9 @@ function MatrixEditor({
     setEffectiveFrom(localNowValue());
   }, [cells]);
 
-  const changedKeys = Object.keys(drafts).filter((key) => (drafts[key] ?? '') !== (saved[key] ?? ''));
+  const changedKeys = Object.keys(drafts).filter(
+    (key) => (drafts[key] ?? '') !== (saved[key] ?? ''),
+  );
   const unsetCount = CLASSES.length * TIERS.length - Object.keys(saved).length;
 
   // BR-042 — Class High thinnest, Class Low widest. A soft warning, never a block.
@@ -124,7 +127,8 @@ function MatrixEditor({
   function validate(): string | null {
     for (const key of changedKeys) {
       const text = drafts[key] ?? '';
-      if (text.trim() === '') return `${key.replace('/', ' / ')} was set before and can't be cleared.`;
+      if (text.trim() === '')
+        return `${key.replace('/', ' / ')} was set before and can't be cleared.`;
       const fraction = toFraction(text);
       if (fraction === null || fraction < 0 || fraction > 1) {
         return `${key.replace('/', ' / ')} must be a percentage between 0 and 100.`;
@@ -248,7 +252,10 @@ function MatrixEditor({
               disabled={changedKeys.length === 0}
               icon={<FiSave />}
             >
-              Save {changedKeys.length > 0 ? `${changedKeys.length} change${changedKeys.length === 1 ? '' : 's'}` : 'changes'}
+              Save{' '}
+              {changedKeys.length > 0
+                ? `${changedKeys.length} change${changedKeys.length === 1 ? '' : 's'}`
+                : 'changes'}
             </Button>
           </div>
         )}
@@ -283,7 +290,7 @@ function HistoryCard({ history }: { history: MarginMatrixHistoryRowDto[] }) {
             {history.map((row) => (
               <tr key={row.marginMatrixId}>
                 <Td>
-                  {new Date(row.effectiveFrom).toLocaleString()}
+                  {formatDateTime(row.effectiveFrom)}
                   {new Date(row.effectiveFrom).getTime() > now && (
                     <span className="ml-2 rounded bg-amber-100 px-1.5 py-0.5 text-xs text-amber-800">
                       Scheduled
@@ -293,7 +300,7 @@ function HistoryCard({ history }: { history: MarginMatrixHistoryRowDto[] }) {
                 <Td>{row.class}</Td>
                 <Td>{row.tier}</Td>
                 <Td numeric>{toPercentText(row.pct)}%</Td>
-                <Td>{new Date(row.createdAt).toLocaleString()}</Td>
+                <Td>{formatDateTime(row.createdAt)}</Td>
               </tr>
             ))}
           </tbody>

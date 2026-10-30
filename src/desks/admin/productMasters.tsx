@@ -9,7 +9,7 @@ import {
   getTechnicalMasters,
 } from '../../api/catalog';
 import type { PackUnit } from '../../api/catalog';
-import { ApiError } from '../../api/errors';
+import { useFormSubmit } from '../../lib/useFormSubmit';
 import type { HsnDto, ManufacturerDto, ProductCategory, TechnicalDto } from '../../api/dto';
 import { useAuth } from '../../auth/AuthContext';
 import { useAsyncData } from '../../lib/useAsyncData';
@@ -120,10 +120,6 @@ export function MasterPicker({
   );
 }
 
-function fieldMessage(error: unknown, fallback: string): string {
-  return error instanceof ApiError ? error.message : fallback;
-}
-
 /** One-field "add" modal shared by technical and manufacturer. */
 function AddNameModal({
   open,
@@ -138,27 +134,25 @@ function AddNameModal({
   title: string;
   fieldLabel: string;
   initial: string;
-  save: (name: string) => Promise<string>;
+  save: (name: string, idempotencyKey: string) => Promise<string>;
   onClose: () => void;
   onSaved: (id: string, name: string) => void;
 }) {
   const [name, setName] = useState(initial);
-  const [error, setError] = useState<string | null>(null);
-  const [submitting, setSubmitting] = useState(false);
+  // The form kit: one Idempotency-Key per attempt, a double click ignored.
+  const form = useFormSubmit<string>({
+    fields: ['name'],
+    success: `${fieldLabel} added.`,
+    toastOnSuccess: true,
+    fallbackError: `Could not add this ${fieldLabel.toLowerCase()}.`,
+    onSuccess: (id) => onSaved(id, name.trim()),
+  });
+  const error = form.fieldErrors.name ?? form.formError;
 
-  async function handleSubmit(event: FormEvent): Promise<void> {
+  function handleSubmit(event: FormEvent): void {
     event.preventDefault();
     event.stopPropagation(); // This form sits inside a portal but React still bubbles to the product form.
-    setError(null);
-    setSubmitting(true);
-    try {
-      const id = await save(name.trim());
-      onSaved(id, name.trim());
-    } catch (submitError) {
-      setError(fieldMessage(submitError, `Could not add this ${fieldLabel.toLowerCase()}.`));
-    } finally {
-      setSubmitting(false);
-    }
+    void form.submit((key) => save(name.trim(), key));
   }
 
   return (
@@ -173,7 +167,7 @@ function AddNameModal({
           autoFocus
         />
         <div className="flex gap-2">
-          <Button type="submit" loading={submitting} disabled={!name.trim()}>
+          <Button type="submit" loading={form.submitting} disabled={!name.trim()}>
             Add
           </Button>
           <Button type="button" variant="secondary" onClick={onClose}>
@@ -199,7 +193,7 @@ export function AddTechnicalModal(props: {
       title="Add technical"
       fieldLabel="Technical"
       initial={props.initial}
-      save={async (name) => (await callApi((t) => createTechnical(t, name))).technicalId}
+      save={async (name, key) => (await callApi((t) => createTechnical(t, name, key))).technicalId}
       onClose={props.onClose}
       onSaved={(_id, name) => props.onSaved(name)}
     />
@@ -220,7 +214,9 @@ export function AddManufacturerModal(props: {
       title="Add manufacturer"
       fieldLabel="Manufacturer"
       initial={props.initial}
-      save={async (name) => (await callApi((t) => createManufacturer(t, name))).manufacturerId}
+      save={async (name, key) =>
+        (await callApi((t) => createManufacturer(t, name, key))).manufacturerId
+      }
       onClose={props.onClose}
       onSaved={props.onSaved}
     />
@@ -237,34 +233,31 @@ export function AddHsnModal(props: {
   const [code, setCode] = useState(/^\d+$/.test(props.initial) ? props.initial : '');
   const [description, setDescription] = useState('');
   const [taxPercent, setTaxPercent] = useState('');
-  const [errors, setErrors] = useState<Record<string, string>>({});
-  const [submitting, setSubmitting] = useState(false);
+  const form = useFormSubmit<unknown>({
+    fields: ['code', 'description', 'taxPercent'],
+    success: 'HSN added.',
+    toastOnSuccess: true,
+    fallbackError: 'Could not add this HSN.',
+    onSuccess: () => props.onSaved({ code: code.trim(), taxPercent: Number(taxPercent) }),
+  });
+  const errors = form.fieldErrors;
 
-  async function handleSubmit(event: FormEvent): Promise<void> {
+  function handleSubmit(event: FormEvent): void {
     event.preventDefault();
     event.stopPropagation();
-    setErrors({});
-    setSubmitting(true);
-    try {
-      await callApi((t) =>
-        createHsn(t, {
-          code: code.trim(),
-          description: description.trim() || undefined,
-          taxPercent: Number(taxPercent),
-        }),
-      );
-      props.onSaved({ code: code.trim(), taxPercent: Number(taxPercent) });
-    } catch (submitError) {
-      if (submitError instanceof ApiError) {
-        setErrors(
-          submitError.fieldErrors ?? { [submitError.field ?? 'code']: submitError.message },
-        );
-      } else {
-        setErrors({ code: 'Could not add this HSN.' });
-      }
-    } finally {
-      setSubmitting(false);
-    }
+    void form.submit((key) =>
+      callApi((t) =>
+        createHsn(
+          t,
+          {
+            code: code.trim(),
+            description: description.trim() || undefined,
+            taxPercent: Number(taxPercent),
+          },
+          key,
+        ),
+      ),
+    );
   }
 
   return (
@@ -275,7 +268,7 @@ export function AddHsnModal(props: {
           hint="6 or 8 digits."
           value={code}
           onChange={(e) => setCode(e.target.value)}
-          error={errors.code}
+          error={errors.code ?? form.formError ?? undefined}
           required
           autoFocus
         />
@@ -297,7 +290,11 @@ export function AddHsnModal(props: {
           required
         />
         <div className="flex gap-2">
-          <Button type="submit" loading={submitting} disabled={!code.trim() || taxPercent === ''}>
+          <Button
+            type="submit"
+            loading={form.submitting}
+            disabled={!code.trim() || taxPercent === ''}
+          >
             Add
           </Button>
           <Button type="button" variant="secondary" onClick={props.onClose}>

@@ -1,4 +1,5 @@
-import { apiFetch } from './client';
+import type { AssignableSalesPerson } from './dto';
+import { apiFetch, apiFetchPage } from './client';
 
 export interface SalesWorkItem {
   bucket: 'money' | 'promised' | 'he_asked' | 'market';
@@ -296,10 +297,19 @@ export interface BuyerListRow {
   buyerId: string;
   firm: string;
   gstin: string | null;
+  /** Phase 3 — shown as "Unregistered · PAN" when there is no GSTIN. */
+  pan: string | null;
   tehsil: string | null;
+  district: string | null;
+  /** The category: Retailer / Dealer / Distributor / Trader. */
   tier: string | null;
+  /** null = the Queue. */
+  assignedToEmployeeId: string | null;
   orderCount: number;
   lastOrderAt: string | null;
+  /** 30 Oct — his last call or update request (not a note), and who made it; null = never. */
+  lastCalledAt: string | null;
+  lastCalledBy: string | null;
   rateViews: number;
   ownerName: string | null; // Sales employee whose book he is in.
   contactName: string | null; // The firm's own owner.
@@ -308,13 +318,79 @@ export interface BuyerListRow {
 
 export function listSalesBuyers(
   accessToken: string,
-  filters?: { q?: string; tab?: 'book' | 'queue' },
+  filters?: {
+    q?: string;
+    tab?: 'book' | 'queue';
+    category?: string;
+    districtId?: string;
+    /** An employee id, or `queue`. */
+    assignedTo?: string;
+  },
 ): Promise<BuyerListRow[]> {
   const params = new URLSearchParams();
   if (filters?.q) params.set('q', filters.q);
   if (filters?.tab) params.set('tab', filters.tab);
+  if (filters?.category) params.set('category', filters.category);
+  if (filters?.districtId) params.set('districtId', filters.districtId);
+  if (filters?.assignedTo) params.set('assignedTo', filters.assignedTo);
   const qs = params.toString();
   return apiFetch(`/staff/sales/buyers${qs ? `?${qs}` : ''}`, { accessToken });
+}
+
+/** 29 Oct — the filter options over a whole Buyers tab (not only the page loaded). */
+export interface BuyerListFacets {
+  districts: Array<{ districtId: string; name: string }>;
+  assignees: Array<{ employeeId: string; person: string }>;
+}
+
+/** 29 Oct — Sales → Buyers a page at a time, searched and filtered on the server. */
+/** 29 Oct — what the Buyers list can be sorted by; the server defaults to firm A→Z. */
+export type BuyerListSort =
+  | 'firm'
+  | 'tehsil'
+  | 'district'
+  | 'registered'
+  | 'orders'
+  | 'lastOrder'
+  | 'lastCalled'
+  | 'rateViews';
+
+export async function listSalesBuyersPage(
+  accessToken: string,
+  filters: {
+    q?: string;
+    tab?: 'book' | 'queue';
+    category?: string;
+    districtId?: string;
+    assignedTo?: string;
+    sort?: BuyerListSort;
+    dir?: 'asc' | 'desc';
+    cursor?: string;
+    limit?: number;
+  },
+): Promise<{
+  items: BuyerListRow[];
+  nextCursor?: string;
+  total?: number;
+  facets?: BuyerListFacets;
+}> {
+  const params = new URLSearchParams({ limit: String(filters.limit ?? 50) });
+  for (const key of [
+    'q',
+    'tab',
+    'category',
+    'districtId',
+    'assignedTo',
+    'sort',
+    'dir',
+    'cursor',
+  ] as const) {
+    if (filters[key]) params.set(key, String(filters[key]));
+  }
+  const page = await apiFetchPage<BuyerListRow>(`/staff/sales/buyers?${params.toString()}`, {
+    accessToken,
+  });
+  return { ...page, facets: page.meta?.facets as BuyerListFacets | undefined };
 }
 
 export interface BuyerProductHistoryRow {
@@ -401,6 +477,22 @@ export interface BuyerFileLiveQuote {
   bindingUntil: string;
 }
 
+/** 29 Oct — a listed offer he is on, waiting on the seller (a pile request, or a pool place). */
+export interface BuyerFileWaitingOnSeller {
+  kind: 'pile' | 'pool';
+  id: string;
+  productId: string | null;
+  brand: string;
+  packLabel: string | null;
+  qty: number;
+  /** His rate on the offer — pile only. */
+  ratePaise: number | null;
+  requestedAt: string;
+  /** Pile only — when the seller's window to confirm ends. */
+  decideBy: string | null;
+  pool: { committedBoxes: number; moq: number; status: string } | null;
+}
+
 export interface BuyerFileOrdersByStage {
   paymentPending: SalesOrderRow[];
   paid: SalesOrderRow[];
@@ -432,6 +524,7 @@ export interface BuyerFileDto {
   funnel: BuyerFunnelStage[];
   productHistory: BuyerProductHistoryRow[];
   openAsks: BuyerFileOpenAsk[];
+  waitingOnSeller: BuyerFileWaitingOnSeller[];
   liveQuotes: BuyerFileLiveQuote[];
   callLogs: CallLogDto[];
   orders: SalesOrderRow[];
@@ -658,4 +751,9 @@ export function cancelUnpaidOrder(
     body: input,
     accessToken,
   });
+}
+
+/** Phase 3 — who the caller may assign a buyer to (himself; his team; Admin: all Sales). */
+export function getAssignableSalesPeople(accessToken: string): Promise<AssignableSalesPerson[]> {
+  return apiFetch('/staff/sales/assignees', { accessToken });
 }

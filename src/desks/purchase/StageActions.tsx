@@ -212,7 +212,12 @@ export function SellerDispatchedButton({
               value={busNo}
               onChange={(e) => setBusNo(e.target.value)}
             />
-            <Input label="Driver" required value={driver} onChange={(e) => setDriver(e.target.value)} />
+            <Input
+              label="Driver"
+              required
+              value={driver}
+              onChange={(e) => setDriver(e.target.value)}
+            />
             <Input
               label="Driver mobile"
               required
@@ -286,7 +291,11 @@ export function ApplyInspectionButton({
       <Button size="sm" variant="secondary" onClick={() => setOpen(true)}>
         Apply inspection
       </Button>
-      <Modal open={open} title={`Apply the inspection on ${row.poNo}`} onClose={() => setOpen(false)}>
+      <Modal
+        open={open}
+        title={`Apply the inspection on ${row.poNo}`}
+        onClose={() => setOpen(false)}
+      >
         <div className="flex flex-col gap-4">
           <p className="text-sm text-slate-600">
             The dock has recorded its finding. Applying it books the seller’s bill on the accepted

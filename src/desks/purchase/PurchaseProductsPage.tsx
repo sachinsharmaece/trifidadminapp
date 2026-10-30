@@ -1,3 +1,5 @@
+import { useShownList } from '../../lib/usePagedList';
+import { ListFooter, ListSearch } from '../../components/ListFooter';
 import { useCallback, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -23,10 +25,11 @@ import { Button } from '../../components/ui/Button';
 import { Input, Select } from '../../components/ui/Input';
 import { DevNote } from '../../components/dev/DevNote';
 import { isExactNameMatch, isNearMatch } from '../../lib/fuzzyMatch';
+import { formatDate } from '../../lib/dates';
 
 const NEW_TECHNICAL = '__new_technical';
 
-type MasterProductLite =Awaited<ReturnType<typeof getMastersProducts>>[number];
+type MasterProductLite = Awaited<ReturnType<typeof getMastersProducts>>[number];
 
 export function PurchaseProductsPage() {
   const [tab, setTab] = useState<'analysis' | 'master'>('analysis');
@@ -56,7 +59,6 @@ export function PurchaseProductsPage() {
 
 function AnalysisTab() {
   const { callApi } = useAuth();
-  const navigate = useNavigate();
   const funnelLoader = useCallback(() => callApi((token) => getProductFunnelAll(token)), [callApi]);
   const funnel = useAsyncData(funnelLoader, (items) => items.length === 0, [funnelLoader]);
   const productsLoader = useCallback(
@@ -79,19 +81,6 @@ function AnalysisTab() {
     return map;
   }, [products.state]);
 
-  const totals = useMemo(() => {
-    if (funnel.state.status !== 'success') return null;
-    return funnel.state.data.reduce(
-      (acc, r) => ({
-        inq: acc.inq + r.inq,
-        quoted: acc.quoted + r.quoted,
-        ordered: acc.ordered + r.ordered,
-        openBoxes: acc.openBoxes + r.openBoxes,
-      }),
-      { inq: 0, quoted: 0, ordered: 0, openBoxes: 0 },
-    );
-  }, [funnel.state]);
-
   return (
     <Card title="What came in, what we answered, what converted">
       <p className="mb-4 text-sm text-slate-500">
@@ -100,77 +89,7 @@ function AnalysisTab() {
         compares with a seller rate.
       </p>
       <AsyncBoundary state={funnel.state} onRetry={funnel.retry} emptyMessage="No data yet.">
-        {(rows: ProductFunnelRow[]) => (
-          <Table>
-            <thead>
-              <tr>
-                <Th>Product</Th>
-                <Th numeric>Inquiries</Th>
-                <Th numeric>Quoted</Th>
-                <Th numeric>Ordered</Th>
-                <Th numeric>Fill</Th>
-                <Th numeric>Open, boxes</Th>
-                <Th numeric>Sellers</Th>
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((r) => {
-                const p = productById.get(r.productId);
-                return (
-                  <tr
-                    key={r.productId}
-                    className="cursor-pointer hover:bg-slate-50"
-                    onClick={() => navigate(`/purchase/products/${r.productId}`)}
-                  >
-                    <Td className="font-medium text-brand-600">
-                      {p?.brand ?? r.productId.slice(-6)}
-                      {p && (
-                        <div className="text-xs text-slate-500">
-                          {p.technical} · {p.manufacturerName}
-                        </div>
-                      )}
-                    </Td>
-                    <Td numeric>{r.inq}</Td>
-                    <Td numeric>
-                      {r.quoted}
-                      <div className="text-xs text-slate-500">{r.inq - r.quoted} never quoted</div>
-                    </Td>
-                    <Td numeric className="font-semibold">
-                      {r.ordered}
-                    </Td>
-                    <Td numeric>{r.fillPct === null ? '—' : `${r.fillPct}%`}</Td>
-                    <Td numeric>{r.openBoxes}</Td>
-                    <Td
-                      numeric
-                      className={
-                        r.sellerCount === 0
-                          ? 'text-danger-500'
-                          : r.sellerCount === 1
-                            ? 'text-warning-600'
-                            : ''
-                      }
-                    >
-                      {r.sellerCount}
-                    </Td>
-                  </tr>
-                );
-              })}
-              {totals && (
-                <tr className="border-t-2 border-slate-900 font-semibold">
-                  <Td>Total</Td>
-                  <Td numeric>{totals.inq}</Td>
-                  <Td numeric>{totals.quoted}</Td>
-                  <Td numeric>{totals.ordered}</Td>
-                  <Td numeric>
-                    {totals.inq ? `${Math.round((totals.ordered / totals.inq) * 1000) / 10}%` : '—'}
-                  </Td>
-                  <Td numeric>{totals.openBoxes}</Td>
-                  <Td />
-                </tr>
-              )}
-            </tbody>
-          </Table>
-        )}
+        {(rows: ProductFunnelRow[]) => <FunnelTable rows={rows} productById={productById} />}
       </AsyncBoundary>
       <p className="mt-4 text-sm text-slate-500">
         Read the last two columns together — a low fill with one seller is a supply problem; a low
@@ -227,9 +146,7 @@ function MasterTab() {
                       <Badge tone="warn">{d.kind}</Badge>
                     </Td>
                     <Td className="font-medium">{d.name}</Td>
-                    <Td className="text-xs text-slate-500">
-                      {new Date(d.createdAt).toLocaleDateString()}
-                    </Td>
+                    <Td className="text-xs text-slate-500">{formatDate(d.createdAt)}</Td>
                   </tr>
                 ))}
               </tbody>
@@ -347,9 +264,9 @@ function NewMastersCard({
   const [hsn, setHsn] = useState('3808');
   const [packProductId, setPackProductId] = useState('');
   const [packLabel, setPackLabel] = useState('');
-  const [packSize, setPackSize] = useState(1);
+  const [packSize, setPackSize] = useState('');
   const [baseUnit, setBaseUnit] = useState<'LTR' | 'KG' | 'PC'>('LTR');
-  const [unitsPerBox, setUnitsPerBox] = useState(1);
+  const [unitsPerBox, setUnitsPerBox] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [message, setMessage] = useState<string | null>(null);
@@ -595,7 +512,7 @@ function NewMastersCard({
               label="Pack size"
               type="number"
               value={packSize}
-              onChange={(e) => setPackSize(Number(e.target.value))}
+              onChange={(e) => setPackSize(e.target.value)}
               error={fieldErrors.packSize}
             />
             <Input
@@ -603,7 +520,7 @@ function NewMastersCard({
               label="Units/box"
               type="number"
               value={unitsPerBox}
-              onChange={(e) => setUnitsPerBox(Number(e.target.value))}
+              onChange={(e) => setUnitsPerBox(e.target.value)}
               error={fieldErrors.unitsPerBox}
             />
           </div>
@@ -619,9 +536,9 @@ function NewMastersCard({
                 postDraftSku(token, {
                   productId: packProductId,
                   packLabel,
-                  packSize,
+                  packSize: Number(packSize),
                   baseUnit,
-                  unitsPerBox,
+                  unitsPerBox: Number(unitsPerBox),
                 }),
               )
                 .then(() => {
@@ -639,5 +556,142 @@ function NewMastersCard({
       {error && <p className="mt-3 text-sm text-danger-500">{error}</p>}
       {message && <p className="mt-3 text-sm text-success-600">{message}</p>}
     </Card>
+  );
+}
+
+/**
+ * 29 Oct — the funnel loads in full (it is worked out over every product), so
+ * it is searched here and shown 50 rows at a time, with the next 50 as you
+ * scroll or click "Load more". The total row covers every matching product,
+ * not only those shown.
+ */
+function FunnelTable({
+  rows,
+  productById,
+}: {
+  rows: ProductFunnelRow[];
+  productById: Map<string, { brand: string; technical: string; manufacturerName: string }>;
+}) {
+  const navigate = useNavigate();
+  const [searchText, setSearchText] = useState('');
+  const needle = searchText.trim().toLowerCase();
+  const matching = useMemo(
+    () =>
+      needle
+        ? rows.filter((r) => {
+            const p = productById.get(r.productId);
+            return [p?.brand, p?.technical, p?.manufacturerName].some((f) =>
+              f?.toLowerCase().includes(needle),
+            );
+          })
+        : rows,
+    [rows, productById, needle],
+  );
+  const shown = useShownList(matching, 50, needle);
+  const totals = useMemo(
+    () =>
+      matching.reduce(
+        (acc, r) => ({
+          inq: acc.inq + r.inq,
+          quoted: acc.quoted + r.quoted,
+          ordered: acc.ordered + r.ordered,
+          openBoxes: acc.openBoxes + r.openBoxes,
+        }),
+        { inq: 0, quoted: 0, ordered: 0, openBoxes: 0 },
+      ),
+    [matching],
+  );
+
+  return (
+    <>
+      <div className="mb-4 flex justify-end">
+        <ListSearch
+          id="purchase-products-search"
+          label="Search products"
+          placeholder="Search product, technical or company"
+          value={searchText}
+          onChange={setSearchText}
+        />
+      </div>
+      {matching.length === 0 ? (
+        <p className="text-sm text-slate-500">No product matches “{searchText.trim()}”.</p>
+      ) : (
+        <>
+          <Table>
+            <thead>
+              <tr>
+                <Th>Product</Th>
+                <Th numeric>Inquiries</Th>
+                <Th numeric>Quoted</Th>
+                <Th numeric>Ordered</Th>
+                <Th numeric>Fill</Th>
+                <Th numeric>Open, boxes</Th>
+                <Th numeric>Sellers</Th>
+              </tr>
+            </thead>
+            <tbody>
+              {shown.visible.map((r) => {
+                const p = productById.get(r.productId);
+                return (
+                  <tr
+                    key={r.productId}
+                    className="cursor-pointer hover:bg-slate-50"
+                    onClick={() => navigate(`/purchase/products/${r.productId}`)}
+                  >
+                    <Td className="font-medium text-brand-600">
+                      {p?.brand ?? 'Unknown product'}
+                      {p && (
+                        <div className="text-xs text-slate-500">
+                          {p.technical} · {p.manufacturerName}
+                        </div>
+                      )}
+                    </Td>
+                    <Td numeric>{r.inq}</Td>
+                    <Td numeric>
+                      {r.quoted}
+                      <div className="text-xs text-slate-500">{r.inq - r.quoted} never quoted</div>
+                    </Td>
+                    <Td numeric className="font-semibold">
+                      {r.ordered}
+                    </Td>
+                    <Td numeric>{r.fillPct === null ? '—' : `${r.fillPct}%`}</Td>
+                    <Td numeric>{r.openBoxes}</Td>
+                    <Td
+                      numeric
+                      className={
+                        r.sellerCount === 0
+                          ? 'text-danger-500'
+                          : r.sellerCount === 1
+                            ? 'text-warning-600'
+                            : ''
+                      }
+                    >
+                      {r.sellerCount}
+                    </Td>
+                  </tr>
+                );
+              })}
+              <tr className="border-t-2 border-slate-900 font-semibold">
+                <Td>Total{needle ? ' (matching)' : ''}</Td>
+                <Td numeric>{totals.inq}</Td>
+                <Td numeric>{totals.quoted}</Td>
+                <Td numeric>{totals.ordered}</Td>
+                <Td numeric>
+                  {totals.inq ? `${Math.round((totals.ordered / totals.inq) * 1000) / 10}%` : '—'}
+                </Td>
+                <Td numeric>{totals.openBoxes}</Td>
+                <Td />
+              </tr>
+            </tbody>
+          </Table>
+          <ListFooter
+            shown={shown.visible.length}
+            total={shown.total}
+            hasMore={shown.hasMore}
+            onMore={shown.showMore}
+          />
+        </>
+      )}
+    </>
   );
 }

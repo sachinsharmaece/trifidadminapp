@@ -1,3 +1,4 @@
+import { newIdempotencyKey } from '../../lib/idempotency';
 import { useCallback, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { FiArrowLeft } from 'react-icons/fi';
@@ -56,7 +57,11 @@ export function AddCatalogueEntryPage() {
     setSubmitting(true);
     try {
       await callApi((token) =>
-        postSellerCatalogueEntry(token, { sellerId: sellerId!, productId, skuIds: selectedSkuIds }),
+        postSellerCatalogueEntry(
+          token,
+          { sellerId: sellerId!, productId, skuIds: selectedSkuIds },
+          newIdempotencyKey(),
+        ),
       );
       setSaved(true);
     } catch (submitError) {

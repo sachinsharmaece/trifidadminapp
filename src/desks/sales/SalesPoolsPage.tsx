@@ -9,6 +9,7 @@ import { Table, Th, Td } from '../../components/ui/Table';
 import { Badge, type BadgeTone } from '../../components/ui/Badge';
 import { Button } from '../../components/ui/Button';
 import { poolConditionLabel } from '../../lib/labels';
+import { formatDate } from '../../lib/dates';
 
 function statusTone(status: string): BadgeTone {
   switch (status) {
@@ -74,9 +75,7 @@ export function SalesPoolsPage() {
                   <p className="text-sm text-slate-500">
                     {pool.committedQty} of {pool.moq} committed · {pool.bindingQty} binding ·{' '}
                     {pool.commitments.length} parties
-                    {pool.payDeadline && (
-                      <> · pay by {new Date(pool.payDeadline).toLocaleDateString()}</>
-                    )}
+                    {pool.payDeadline && <> · pay by {formatDate(pool.payDeadline)}</>}
                   </p>
                   <Table>
                     <thead>

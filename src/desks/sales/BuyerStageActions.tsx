@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { ActionModal, ActionRefused, errorText, useAction } from '../../components/ActionModal';
-import { proxyAcceptAskFill, proxyDeclineAsk, proxyRaiseAsk } from '../../api/proxy';
+import { proxyAcceptAskFill, proxyDeclineAsk, proxyWantsIt } from '../../api/proxy';
 import {
   cancelUnpaidOrder,
   dispatchOrder,
@@ -29,32 +29,37 @@ import { deliveryBandLabel, expiryBandLabel, formatRupees, moqBandLabel } from '
  * endpoint the normal flow uses; the page refetches and the row appears in its new section.
  */
 
-/** On the board → He asked. */
+/**
+ * On the board → Waiting on the seller. 29 Oct — the line is a listed offer, so he is put on it
+ * (a pile request the seller confirms on Purchase → Confirmations), or into its pool when he
+ * wants fewer than its minimum order. It is never an ask: an ask is only for what is not listed.
+ */
 export function HeWantsItButton({
   line,
   counterpartyId,
+  direction,
   onDone,
 }: {
   line: BoardForBuyerLine;
   counterpartyId: string;
+  /** Incoming/Outgoing, when raised on the call page — for the call history. */
+  direction?: 'in' | 'out';
   onDone: () => void;
 }) {
   const [open, setOpen] = useState(false);
-  const [qty, setQty] = useState('1');
+  const [qty, setQty] = useState('');
   const parsedQty = Number(qty);
   const qtyOk = Number.isInteger(parsedQty) && parsedQty >= 1;
   const submit = useAction(async (token, callNote) => {
-    await proxyRaiseAsk(token, {
+    const placed = await proxyWantsIt(token, line.listingLineId, {
       buyerCounterpartyId: counterpartyId,
-      skuId: line.skuId,
       qty: parsedQty,
-      conditionRequirement: {
-        expiryBand: line.expiryBand as 'over12' | 'under12',
-        deliveryBand: line.deliveryBand as '48h' | '2-5d',
-      },
       callNote,
+      ...(direction ? { direction } : {}),
     });
-    return 'Moved to He asked.';
+    return placed.kind === 'pool'
+      ? 'Added to the pool for this offer.'
+      : 'Sent to the seller to confirm — under Waiting on the seller.';
   }, onDone);
   return (
     <>
@@ -64,7 +69,7 @@ export function HeWantsItButton({
       <ActionModal
         open={open}
         title="He wants it"
-        submitLabel="Add to He asked"
+        submitLabel="Put him on this offer"
         canSubmit={qtyOk}
         onClose={() => setOpen(false)}
         onSubmit={submit}
@@ -72,6 +77,13 @@ export function HeWantsItButton({
         <p className="text-sm text-slate-600">
           {line.packLabel} at {formatRupees(line.ratePaise)} — {expiryBandLabel(line.expiryBand)},{' '}
           {deliveryBandLabel(line.deliveryBand)}.
+        </p>
+        <p className="text-xs text-slate-500">
+          It goes to the seller to confirm (Purchase → Confirmations)
+          {line.moqBand !== '1'
+            ? ', or into the pool if he wants fewer than its minimum order'
+            : ''}
+          . Delivery is to his delivery location, or his registered address.
         </p>
         <Input
           label="Boxes he wants"
@@ -161,7 +173,8 @@ export function GiveRateButton({
         setLines([...matching].sort((a, b) => quotedFirst(a) - quotedFirst(b)));
       })
       .catch((caught: unknown) => setLoadError(errorText(caught)));
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- `quotedLineIds` is rebuilt each render.
+    // `quotedLineIds` is left out of the deps on purpose: it is rebuilt each render.
+    // (No react-hooks lint plugin is installed here, so no disable comment.)
   }, [open, callApi, buyerId, ask.productId, ask.skuId]);
 
   const submit = useAction(async (token, callNote) => {

@@ -1,4 +1,4 @@
-import { apiFetch } from './client';
+import { apiFetch, apiFetchPage } from './client';
 import type {
   HsnDto,
   ManufacturerDto,
@@ -64,9 +64,15 @@ export function getAllManufacturers(accessToken: string): Promise<ManufacturerDt
 export function createManufacturer(
   accessToken: string,
   name: string,
+  idempotencyKey: string,
   aka?: string[],
 ): Promise<{ manufacturerId: string }> {
-  return apiFetch('/admin/manufacturers', { method: 'POST', body: { name, aka }, accessToken });
+  return apiFetch('/admin/manufacturers', {
+    method: 'POST',
+    body: { name, aka },
+    accessToken,
+    idempotencyKey,
+  });
 }
 
 // Purchase-desk v2 — Admin's rename/confirm action (the draft → live PATCH).
@@ -84,6 +90,31 @@ export function updateManufacturer(
 
 // New — the Manage desk's own unfiltered product list (distinct from
 // API-022's technical-scoped picker, which BR-111 governs).
+/** 29 Oct — Manage → Products a page at a time, newest first; searchable (product, technical, company). */
+/** 30 Oct — what Manage → Products can be sorted by; the server defaults to product name A→Z. */
+export type ProductListSort = 'brand' | 'technical' | 'manufacturer' | 'created';
+
+export function getAllProductsPage(
+  accessToken: string,
+  filter: {
+    q?: string;
+    cursor?: string;
+    limit?: number;
+    deleted?: boolean;
+    sort?: ProductListSort;
+    dir?: 'asc' | 'desc';
+  },
+): Promise<{ items: ProductDto[]; nextCursor?: string; total?: number }> {
+  const params = new URLSearchParams({ limit: String(filter.limit ?? 50) });
+  if (filter.q) params.set('q', filter.q);
+  // 29 Oct — only the soft-deleted products, newest deleted first.
+  if (filter.deleted) params.set('deleted', 'true');
+  if (filter.sort) params.set('sort', filter.sort);
+  if (filter.dir) params.set('dir', filter.dir);
+  if (filter.cursor) params.set('cursor', filter.cursor);
+  return apiFetchPage(`/admin/products?${params.toString()}`, { accessToken });
+}
+
 export function getAllProducts(accessToken: string, limit = 100): Promise<ProductDto[]> {
   return apiFetch(`/admin/products?limit=${limit}`, { accessToken });
 }
@@ -105,8 +136,9 @@ export function createProduct(
     class?: 'High' | 'Medium' | 'Low';
     packs?: ProductPackInput[];
   },
+  idempotencyKey: string,
 ): Promise<{ productId: string; skuIds: string[] }> {
-  return apiFetch('/admin/products', { method: 'POST', body: input, accessToken });
+  return apiFetch('/admin/products', { method: 'POST', body: input, accessToken, idempotencyKey });
 }
 
 // Technical and HSN masters — the product form's pickers.
@@ -117,8 +149,14 @@ export function getTechnicalMasters(accessToken: string): Promise<TechnicalDto[]
 export function createTechnical(
   accessToken: string,
   name: string,
+  idempotencyKey: string,
 ): Promise<{ technicalId: string }> {
-  return apiFetch('/admin/technicals', { method: 'POST', body: { name }, accessToken });
+  return apiFetch('/admin/technicals', {
+    method: 'POST',
+    body: { name },
+    accessToken,
+    idempotencyKey,
+  });
 }
 
 export function getHsnMasters(accessToken: string): Promise<HsnDto[]> {
@@ -128,8 +166,38 @@ export function getHsnMasters(accessToken: string): Promise<HsnDto[]> {
 export function createHsn(
   accessToken: string,
   input: { code: string; description?: string; taxPercent: number },
+  idempotencyKey: string,
 ): Promise<{ hsnId: string }> {
-  return apiFetch('/admin/hsn', { method: 'POST', body: input, accessToken });
+  return apiFetch('/admin/hsn', { method: 'POST', body: input, accessToken, idempotencyKey });
+}
+
+/**
+ * 29 Oct — soft delete (BR-370). Refused with `PRODUCT_IN_USE` while anything live points at it;
+ * the error's `meta.reasons` lists what.
+ */
+export function deleteProduct(
+  accessToken: string,
+  productId: string,
+  idempotencyKey: string,
+): Promise<{ productId: string }> {
+  return apiFetch(`/admin/products/${productId}`, {
+    method: 'DELETE',
+    accessToken,
+    idempotencyKey,
+  });
+}
+
+/** Back in every list, inactive — tick Active on it to sell it again. */
+export function restoreProduct(
+  accessToken: string,
+  productId: string,
+  idempotencyKey: string,
+): Promise<{ productId: string }> {
+  return apiFetch(`/admin/products/${productId}/restore`, {
+    method: 'POST',
+    accessToken,
+    idempotencyKey,
+  });
 }
 
 // API-024 PATCH — was built server-side but had no client function yet.
@@ -147,8 +215,14 @@ export function updateProduct(
     active: boolean;
     state: 'live';
   }>,
+  idempotencyKey: string,
 ): Promise<{ productId: string }> {
-  return apiFetch(`/admin/products/${productId}`, { method: 'PATCH', body: input, accessToken });
+  return apiFetch(`/admin/products/${productId}`, {
+    method: 'PATCH',
+    body: input,
+    accessToken,
+    idempotencyKey,
+  });
 }
 
 // API-025
@@ -163,8 +237,14 @@ export function importSkus(
   accessToken: string,
   productId: string,
   rows: SkuImportRowInput[],
+  idempotencyKey: string,
 ): Promise<SkuImportRowResult[]> {
-  return apiFetch('/admin/skus/import', { method: 'POST', body: { productId, rows }, accessToken });
+  return apiFetch('/admin/skus/import', {
+    method: 'POST',
+    body: { productId, rows },
+    accessToken,
+    idempotencyKey,
+  });
 }
 
 // New — the Manage desk's own SKU edit. `baseUnit` is deliberately not an
@@ -174,11 +254,44 @@ export function updateSku(
   skuId: string,
   input: Partial<{
     packLabel: string;
+    /** With `unit`, in that unit (500 for 500 ML); the unit itself cannot change. */
     packSize: number;
+    unit: PackUnit;
     unitsPerBox: number;
     active: boolean;
     state: 'live';
   }>,
+  idempotencyKey: string,
 ): Promise<{ skuId: string; baseUnitsPerBox: number }> {
-  return apiFetch(`/admin/skus/${skuId}`, { method: 'PATCH', body: input, accessToken });
+  return apiFetch(`/admin/skus/${skuId}`, {
+    method: 'PATCH',
+    body: input,
+    accessToken,
+    idempotencyKey,
+  });
+}
+
+/** 24 Oct — the Manage desk's own pack list: every pack, inactive and draft too, read in its own unit. */
+export interface AdminSkuDto extends SkuDto {
+  unit: PackUnit;
+  displaySize: number;
+}
+
+export function getAdminSkus(accessToken: string, productId: string): Promise<AdminSkuDto[]> {
+  return apiFetch(`/admin/products/${productId}/skus`, { accessToken });
+}
+
+/** 24 Oct — "Add pack" on an existing product, typed as on create. */
+export function addProductPacks(
+  accessToken: string,
+  productId: string,
+  packs: ProductPackInput[],
+  idempotencyKey: string,
+): Promise<{ skuIds: string[] }> {
+  return apiFetch(`/admin/products/${productId}/packs`, {
+    method: 'POST',
+    body: { packs },
+    accessToken,
+    idempotencyKey,
+  });
 }

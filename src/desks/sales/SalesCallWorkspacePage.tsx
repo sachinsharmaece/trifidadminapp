@@ -1,17 +1,8 @@
 import { useCallback, useState } from 'react';
 import type { FormEvent } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { FiArrowLeft, FiCheck, FiX, FiPhoneCall, FiPlus } from 'react-icons/fi';
-import {
-  proxyRaiseAsks,
-  proxyAcceptAskFill,
-  proxyDeclineAsk,
-  proxyAcceptPromotion,
-  proxyRejectPromotion,
-  proxyListBuyerAsks,
-  type ProxyAskItem,
-  type ProxyAskQuote,
-} from '../../api/proxy';
+import { FiArrowLeft, FiChevronDown, FiPhoneCall, FiPlus } from 'react-icons/fi';
+import { proxyRaiseAsks } from '../../api/proxy';
 import { HeWantsItButton } from './BuyerStageActions';
 import { CallLineFields } from './CallLineFields';
 import {
@@ -22,7 +13,6 @@ import {
   type BuyerFileDto,
   type BoardForBuyerProduct,
   type CallLogDto,
-  type CallOutcome,
   type CallLogUpdateKind,
 } from '../../api/sales';
 import { ApiError } from '../../api/errors';
@@ -36,18 +26,7 @@ import { Badge } from '../../components/ui/Badge';
 import { Input, Select, Textarea } from '../../components/ui/Input';
 import { Button } from '../../components/ui/Button';
 import { deliveryBandLabel, expiryBandLabel, formatRupees, moqBandLabel } from '../../lib/labels';
-
-const OUTCOMES: CallOutcome[] = [
-  'placed_an_order',
-  'asked_for_a_rate',
-  'wants_something_we_dont_stock',
-  'rate_too_high',
-  'already_holds_stock',
-  'buys_direct_from_company',
-  'not_now_call_later',
-  'no_answer',
-  'wrong_number',
-];
+import { formatDateTime } from '../../lib/dates';
 
 const UPDATE_KINDS: CallLogUpdateKind[] = [
   'mobile',
@@ -68,9 +47,8 @@ function humanizeCapitalized(value: string): string {
 
 /**
  * The call workspace for one specific buyer — reached from his buyer file
- * (`/sales/call/:buyerId`). `LogBuyerCallSection` and `AdvanceAskSection`
- * are relocated as-is from the old flat `SalesDeskPage` (kept unchanged
- * below); this pass adds buyer-header context, the "on the board for him"
+ * (`/sales/call/:buyerId`). `LogBuyerCallSection` is relocated from the old
+ * flat `SalesDeskPage`; this pass adds buyer-header context, the "on the board for him"
  * panel, a call-outcome form + history, and an update-request form around
  * them.
  *
@@ -86,6 +64,10 @@ export function SalesCallWorkspacePage() {
   const navigate = useNavigate();
   const { callApi } = useAuth();
   const [direction, setDirection] = useState<'in' | 'out'>('out');
+  // Bumped after any call action, so the call history reloads. (29 Oct — the "Advance an ask on
+  // a call" card is gone: rates are given and confirmed from the buyer file's sections.)
+  const [callsVersion, setCallsVersion] = useState(0);
+  const onCallLogged = useCallback(() => setCallsVersion((v) => v + 1), []);
 
   const fileLoader = useCallback(
     () => callApi((token) => getSalesBuyerFile(token, buyerId)),
@@ -116,14 +98,22 @@ export function SalesCallWorkspacePage() {
                 {file.tier && ` · ${file.tier}`}
               </p>
             </div>
-            <BoardForHimSection buyerId={buyerId} />
+            <BoardForHimSection
+              buyerId={buyerId}
+              counterpartyId={file.counterpartyId}
+              direction={direction}
+              onAskRaised={onCallLogged}
+            />
 
             <DirectionToggle direction={direction} onChange={setDirection} />
 
-            <LogBuyerCallSection buyerCounterpartyId={file.counterpartyId} />
-            <AdvanceAskSection buyerCounterpartyId={file.counterpartyId} />
+            <LogBuyerCallSection
+              buyerCounterpartyId={file.counterpartyId}
+              direction={direction}
+              onLogged={onCallLogged}
+            />
 
-            <CallOutcomeSection buyerId={buyerId} direction={direction} />
+            <CallHistorySection buyerId={buyerId} refreshKey={callsVersion} />
             <UpdateRequestSection buyerId={buyerId} />
           </div>
         )}
@@ -167,26 +157,45 @@ function DirectionToggle({
  * reaches his tehsil (client item 16). It is never his order history: a buyer
  * who has never ordered sees the same board as one who orders every week.
  */
-function BoardForHimSection({ buyerId }: { buyerId: string }) {
+function BoardForHimSection({
+  buyerId,
+  counterpartyId,
+  direction,
+  onAskRaised,
+}: {
+  buyerId: string;
+  counterpartyId: string;
+  direction: 'in' | 'out';
+  onAskRaised: () => void;
+}) {
   return (
     <Card title="On the board for him">
-      <BoardForHimBody buyerId={buyerId} />
+      <BoardForHimBody
+        buyerId={buyerId}
+        counterpartyId={counterpartyId}
+        direction={direction}
+        onChanged={onAskRaised}
+      />
     </Card>
   );
 }
 
-/** The board's contents without a card around them, so a page can wrap it its own way. */
 /**
- * With `counterpartyId`, "He wants it" raises a real ask (it then shows under He asked, and
- * `onChanged` refetches the page); without it, it only logs his interest as a note.
+ * The board's contents without a card around them, so a page can wrap it its own way.
+ * "He wants it" puts this buyer on that listed offer — it then shows under Waiting on the seller
+ * (29 Oct; it used to raise an ask, which sent a listed product to Purchase → Demand) — and
+ * `onChanged` lets the page refetch.
  */
 export function BoardForHimBody({
   buyerId,
   counterpartyId,
+  direction,
   onChanged,
 }: {
   buyerId: string;
-  counterpartyId?: string;
+  counterpartyId: string;
+  /** Incoming/Outgoing on the call page; the buyer file has no call in progress. */
+  direction?: 'in' | 'out';
   onChanged?: () => void;
 }) {
   const { callApi } = useAuth();
@@ -207,10 +216,11 @@ export function BoardForHimBody({
           {details.map((detail) => (
             <BoardProductBlock
               key={detail.productId}
-              buyerId={buyerId}
               counterpartyId={counterpartyId}
+              direction={direction}
               onChanged={onChanged}
               detail={detail}
+              startOpen={details.length === 1}
             />
           ))}
         </div>
@@ -219,47 +229,57 @@ export function BoardForHimBody({
   );
 }
 
+/**
+ * One product on his board. 29 Oct — its rates fold under the product name, which says how many
+ * there are and the lowest, so a long board reads as a short list; it starts closed unless it is
+ * the only product.
+ */
 function BoardProductBlock({
-  buyerId,
   counterpartyId,
+  direction,
   onChanged,
   detail,
+  startOpen = false,
 }: {
-  buyerId: string;
-  counterpartyId?: string;
+  counterpartyId: string;
+  direction?: 'in' | 'out';
   onChanged?: () => void;
   detail: BoardForBuyerProduct;
+  startOpen?: boolean;
 }) {
-  const { callApi } = useAuth();
-  const { show } = useToast();
-  const [submittingLine, setSubmittingLine] = useState<string | null>(null);
-
-  async function handleWantsIt(listingLineId: string): Promise<void> {
-    setSubmittingLine(listingLineId);
-    try {
-      await callApi((token) =>
-        createCallLog(token, {
-          buyerId,
-          kind: 'note',
-          note: 'Named interest in this rate.',
-          listingLineId,
-        }),
-      );
-      show('Logged his interest.');
-    } catch {
-      show('Could not log this.');
-    } finally {
-      setSubmittingLine(null);
-    }
-  }
+  const [open, setOpen] = useState(startOpen);
+  const count = detail.ladder.length;
+  const rates = detail.ladder.flatMap((l) => (l.ratePaise != null ? [l.ratePaise] : []));
+  const lowest = rates.length > 0 ? Math.min(...rates) : null;
+  const summary =
+    count === 0
+      ? 'No rates on the board'
+      : `${count} ${count === 1 ? 'rate' : 'rates'} available` +
+        (lowest != null ? ` · from ${formatRupees(lowest)}` : '');
 
   return (
     <div className="border-t border-slate-100 pt-4 first:border-t-0 first:pt-0">
-      <h3 className="text-sm font-semibold text-slate-900">{detail.brand}</h3>
-      <p className="text-xs text-slate-500">{detail.technicalName}</p>
-      {detail.ladder.length === 0 ? (
-        <p className="mt-2 text-sm text-slate-500">Nothing on the board for this product.</p>
-      ) : (
+      <button
+        type="button"
+        aria-expanded={count > 0 ? open : undefined}
+        disabled={count === 0}
+        onClick={() => setOpen((o) => !o)}
+        className="flex w-full items-center justify-between gap-3 text-left disabled:cursor-default"
+      >
+        <span>
+          <span className="block text-sm font-semibold text-slate-900">{detail.brand}</span>
+          <span className="block text-xs text-slate-500">{detail.technicalName}</span>
+        </span>
+        <span className="flex items-center gap-2 text-sm text-slate-600">
+          {summary}
+          {count > 0 && (
+            <FiChevronDown
+              className={`text-slate-500 transition-transform ${open ? 'rotate-180' : ''}`}
+            />
+          )}
+        </span>
+      </button>
+      {count === 0 || !open ? null : (
         <ul className="mt-2 flex flex-col gap-2">
           {detail.ladder.map((line) => (
             <li
@@ -282,22 +302,12 @@ function BoardProductBlock({
                 </Badge>
                 <span className="text-xs text-slate-500">qty {line.qty}</span>
               </div>
-              {counterpartyId ? (
-                <HeWantsItButton
-                  line={line}
-                  counterpartyId={counterpartyId}
-                  onDone={() => onChanged?.()}
-                />
-              ) : (
-                <Button
-                  size="sm"
-                  variant="secondary"
-                  loading={submittingLine === line.listingLineId}
-                  onClick={() => void handleWantsIt(line.listingLineId)}
-                >
-                  He wants it
-                </Button>
-              )}
+              <HeWantsItButton
+                line={line}
+                counterpartyId={counterpartyId}
+                direction={direction}
+                onDone={() => onChanged?.()}
+              />
             </li>
           ))}
         </ul>
@@ -306,18 +316,22 @@ function BoardProductBlock({
   );
 }
 
-/** "What the call produced" (a fresh call log) plus this buyer's call history below it. */
-function CallOutcomeSection({ buyerId, direction }: { buyerId: string; direction: 'in' | 'out' }) {
+/**
+ * This buyer's call history. 29 Oct — the "What the call produced" form above it is gone: every
+ * call action on this page (He wants it, Log a buyer call) already writes its own row here.
+ */
+function CallHistorySection({
+  buyerId,
+  refreshKey = 0,
+}: {
+  buyerId: string;
+  /** Changes after a call action elsewhere on the page, so the history reloads. */
+  refreshKey?: number;
+}) {
   const { callApi } = useAuth();
-  const { show } = useToast();
-  const [outcome, setOutcome] = useState<CallOutcome>(OUTCOMES[0]);
-  const [note, setNote] = useState('');
-  const [error, setError] = useState<string | null>(null);
-  const [submitting, setSubmitting] = useState(false);
-
   const historyLoader = useCallback(
     () => callApi((token) => listCallLogsForBuyer(token, buyerId)),
-    [callApi, buyerId],
+    [callApi, buyerId, refreshKey],
   );
   const { state: historyState, retry: retryHistory } = useAsyncData(
     historyLoader,
@@ -325,89 +339,37 @@ function CallOutcomeSection({ buyerId, direction }: { buyerId: string; direction
     [historyLoader],
   );
 
-  async function handleSave(event: FormEvent): Promise<void> {
-    event.preventDefault();
-    setError(null);
-    setSubmitting(true);
-    try {
-      await callApi((token) =>
-        createCallLog(token, { buyerId, direction, kind: 'call', outcome, note }),
-      );
-      setNote('');
-      show('Call saved.');
-      retryHistory();
-    } catch (submitError) {
-      setError(submitError instanceof ApiError ? submitError.message : 'Could not save the call.');
-    } finally {
-      setSubmitting(false);
-    }
-  }
-
   return (
-    <>
-      <Card title="What the call produced">
-        <form onSubmit={handleSave} className="flex max-w-md flex-col gap-4">
-          <Select
-            id="co-outcome"
-            label="Outcome"
-            value={outcome}
-            onChange={(e) => setOutcome(e.target.value as CallOutcome)}
-          >
-            {OUTCOMES.map((o) => (
-              <option key={o} value={o}>
-                {humanizeCapitalized(o)}
-              </option>
-            ))}
-          </Select>
-          <Textarea
-            id="co-note"
-            label="Note"
-            value={note}
-            onChange={(e) => setNote(e.target.value)}
-            required
-          />
-          {error && (
-            <p role="alert" className="text-sm text-danger-500">
-              {error}
-            </p>
-          )}
-          <Button type="submit" loading={submitting}>
-            Save the call
-          </Button>
-        </form>
-      </Card>
-
-      <Card title="Call history">
-        <AsyncBoundary
-          state={historyState}
-          onRetry={retryHistory}
-          emptyMessage="No calls logged yet."
-        >
-          {(items: CallLogDto[]) => (
-            <Table>
-              <thead>
-                <tr>
-                  <Th>When</Th>
-                  <Th>Way</Th>
-                  <Th>Outcome</Th>
-                  <Th>Note</Th>
+    <Card title="Call history">
+      <AsyncBoundary
+        state={historyState}
+        onRetry={retryHistory}
+        emptyMessage="No calls logged yet."
+      >
+        {(items: CallLogDto[]) => (
+          <Table>
+            <thead>
+              <tr>
+                <Th>When</Th>
+                <Th>Way</Th>
+                <Th>Outcome</Th>
+                <Th>Note</Th>
+              </tr>
+            </thead>
+            <tbody>
+              {items.map((c) => (
+                <tr key={c.callLogId}>
+                  <Td>{formatDateTime(c.at)}</Td>
+                  <Td>{c.direction === 'in' ? '↓' : c.direction === 'out' ? '↑' : '—'}</Td>
+                  <Td>{c.outcome ? humanize(c.outcome) : '—'}</Td>
+                  <Td>{c.note}</Td>
                 </tr>
-              </thead>
-              <tbody>
-                {items.map((c) => (
-                  <tr key={c.callLogId}>
-                    <Td>{new Date(c.at).toLocaleString()}</Td>
-                    <Td>{c.direction === 'in' ? '↓' : c.direction === 'out' ? '↑' : '—'}</Td>
-                    <Td>{c.outcome ? humanize(c.outcome) : '—'}</Td>
-                    <Td>{c.note}</Td>
-                  </tr>
-                ))}
-              </tbody>
-            </Table>
-          )}
-        </AsyncBoundary>
-      </Card>
-    </>
+              ))}
+            </tbody>
+          </Table>
+        )}
+      </AsyncBoundary>
+    </Card>
   );
 }
 
@@ -508,12 +470,21 @@ function newCallLine(key: number): CallLine {
   return { key, skuId: '', qty: 1, expectedRate: '' };
 }
 
-export function LogBuyerCallSection({ buyerCounterpartyId }: { buyerCounterpartyId: string }) {
+export function LogBuyerCallSection({
+  buyerCounterpartyId,
+  direction,
+  onLogged,
+}: {
+  buyerCounterpartyId: string;
+  direction?: 'in' | 'out';
+  /** Called once any ask was raised, so the page can reload its lists. */
+  onLogged?: () => void;
+}) {
   const { callApi } = useAuth();
   const [lines, setLines] = useState<CallLine[]>(() => [newCallLine(0)]);
   const [nextKey, setNextKey] = useState(1);
   const [callNote, setCallNote] = useState('');
-  const [raised, setRaised] = useState<string[]>([]);
+  const [raised, setRaised] = useState({ asks: 0, offers: 0, added: 0 });
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
@@ -534,7 +505,7 @@ export function LogBuyerCallSection({ buyerCounterpartyId }: { buyerCounterparty
   async function handleSubmit(event: FormEvent): Promise<void> {
     event.preventDefault();
     setError(null);
-    setRaised([]);
+    setRaised({ asks: 0, offers: 0, added: 0 });
     const missing = lines.findIndex((l) => !l.skuId);
     if (missing !== -1) {
       setError(`Product ${missing + 1} needs a product and a pack — or remove it.`);
@@ -553,6 +524,7 @@ export function LogBuyerCallSection({ buyerCounterpartyId }: { buyerCounterparty
         proxyRaiseAsks(token, {
           buyerCounterpartyId,
           callNote,
+          ...(direction ? { direction } : {}),
           lines: lines.map((l) => ({
             skuId: l.skuId,
             qty: l.qty,
@@ -564,12 +536,18 @@ export function LogBuyerCallSection({ buyerCounterpartyId }: { buyerCounterparty
         }),
       );
       const failedByKey = new Map<number, string>();
-      const askIds: string[] = [];
+      const tally = { asks: 0, offers: 0, added: 0 };
       for (const r of results) {
-        if ('askId' in r) askIds.push(r.askId);
-        else failedByKey.set(lines[r.index]!.key, r.error);
+        if ('error' in r) failedByKey.set(lines[r.index]!.key, r.error);
+        else if (r.kind === 'ask') {
+          // 30 Oct — boxes added to an ask he already had open (BR-371) is not a new ask.
+          if (r.merged) tally.added += 1;
+          else tally.asks += 1;
+        } else tally.offers += 1;
       }
-      setRaised(askIds);
+      const saved = tally.asks + tally.offers + tally.added;
+      setRaised(tally);
+      if (saved > 0) onLogged?.();
       if (failedByKey.size === 0) {
         // All saved — reset to one fresh line and clear the note for the next call.
         setLines([newCallLine(nextKey)]);
@@ -584,7 +562,7 @@ export function LogBuyerCallSection({ buyerCounterpartyId }: { buyerCounterparty
             .map((l) => ({ ...l, error: failedByKey.get(l.key) })),
         );
         setError(
-          `${askIds.length} of ${results.length} products logged. The rest are below with the reason — fix and log again.`,
+          `${saved} of ${results.length} products logged. The rest are below with the reason — fix and log again.`,
         );
       }
     } catch (submitError) {
@@ -597,13 +575,19 @@ export function LogBuyerCallSection({ buyerCounterpartyId }: { buyerCounterparty
   return (
     <Card title="Log a buyer call">
       <p className="mb-4 text-sm text-slate-500">
-        Raises an ask on the buyer&apos;s behalf. A call can name several products: each becomes its
-        own ask, all under the one call note. The expected rate is only what he said he hopes to
-        pay — it stays with Sales and is never shown to a seller or to him (BR-121).
+        A call can name several products, all under the one call note. A product on his board puts
+        him on its cheapest offer for the seller to confirm (Purchase → Confirmations); one that is
+        not listed becomes an ask (Purchase → Demand). The expected rate is only what he said he
+        hopes to pay — it stays with Sales and is never shown to a seller or to him (BR-121).
       </p>
       <form onSubmit={handleSubmit} className="flex w-full flex-col gap-4">
         <div className="max-w-md">
-          <Input id="lbc-buyer" label="Buyer counterparty ID" value={buyerCounterpartyId} disabled />
+          <Input
+            id="lbc-buyer"
+            label="Buyer counterparty ID"
+            value={buyerCounterpartyId}
+            disabled
+          />
         </div>
         {lines.map((line, i) => (
           <CallLineFields
@@ -650,320 +634,20 @@ export function LogBuyerCallSection({ buyerCounterpartyId }: { buyerCounterparty
             {error}
           </p>
         )}
-        {raised.length > 0 && (
+        {raised.asks + raised.offers + raised.added > 0 && (
           <p className="text-sm text-success-600">
-            Logged {raised.length === 1 ? 'as ask' : `${raised.length} asks`}: {raised.join(', ')}.
+            Logged.{' '}
+            {raised.offers > 0 && `${raised.offers} on the board — sent to the seller to confirm. `}
+            {raised.asks > 0 &&
+              `${raised.asks} not listed — ${raised.asks === 1 ? 'an ask' : 'asks'} for Purchase. `}
+            {raised.added > 0 &&
+              `${raised.added} added to ${raised.added === 1 ? 'an ask' : 'asks'} he already had open.`}
           </p>
         )}
         <Button type="submit" loading={submitting} icon={<FiPhoneCall />}>
           {lines.length > 1 ? `Log call (${lines.length} products)` : 'Log call'}
         </Button>
       </form>
-    </Card>
-  );
-}
-
-/**
- * Staff-assisted enquiries — advancing an ask on a call (API-042 accept-fill
- * / API-043 walk-away), and the WF-11 promoted-fallback decision (API-071)
- * a buyer might also decide over the phone.
- */
-/**
- * `AskPicker` / `QuotePicker` — B-17's other half. Same shape as
- * `enquiryPickers.tsx`'s pickers, kept local because they need the buyer
- * already on this page rather than picking one themselves: list the
- * buyer's open asks via the same read `GET /asks` uses (`listMyAsks`), then
- * for the chosen ask list its own live quotes — no comma-separated IDs.
- */
-function AskPicker({
-  buyerCounterpartyId,
-  asks,
-  value,
-  onChange,
-}: {
-  buyerCounterpartyId: string;
-  asks: ProxyAskItem[];
-  value: string;
-  onChange: (askId: string) => void;
-}) {
-  const advanceable = asks.filter((a) => a.state === 'open' || a.state === 'quoted');
-  return (
-    <Select
-      id="aa-ask"
-      label="Ask"
-      value={value}
-      onChange={(e) => onChange(e.target.value)}
-      disabled={!buyerCounterpartyId}
-      required
-    >
-      <option value="">Choose one of his open asks…</option>
-      {advanceable.map((a) => (
-        <option key={a.askId} value={a.askId}>
-          {a.qty} boxes · {a.quotes.length} live quote{a.quotes.length === 1 ? '' : 's'} · {a.state}
-        </option>
-      ))}
-    </Select>
-  );
-}
-
-function QuotePicker({
-  quotes,
-  selected,
-  onChange,
-}: {
-  quotes: ProxyAskQuote[];
-  selected: string[];
-  onChange: (quoteIds: string[]) => void;
-}) {
-  const live = quotes.filter((q) => q.status === 'live');
-  if (live.length === 0) {
-    return <p className="text-sm text-slate-500">No live quotes on this ask yet.</p>;
-  }
-  function toggle(quoteId: string): void {
-    onChange(
-      selected.includes(quoteId) ? selected.filter((id) => id !== quoteId) : [...selected, quoteId],
-    );
-  }
-  return (
-    <div className="flex flex-col gap-2">
-      <span className="text-sm font-medium text-slate-700">Quote(s) the buyer accepted</span>
-      {live.map((q) => (
-        <label
-          key={q.quoteId}
-          className="flex items-center gap-2 rounded-md border border-slate-200 p-2 text-sm"
-        >
-          <input
-            type="checkbox"
-            checked={selected.includes(q.quoteId)}
-            onChange={() => toggle(q.quoteId)}
-          />
-          <span className="font-semibold text-slate-900">
-            {q.ratePaiseForIndore != null ? formatRupees(q.ratePaiseForIndore) : 'no rate'}
-          </span>
-          <span className="text-slate-500">qty {q.qtyAvailable}</span>
-          <span className="text-slate-500">{q.daysToIndore}d to Indore</span>
-        </label>
-      ))}
-    </div>
-  );
-}
-
-function AdvanceAskSection({ buyerCounterpartyId }: { buyerCounterpartyId: string }) {
-  const { callApi } = useAuth();
-  const [askId, setAskId] = useState('');
-  const [option, setOption] = useState<'partial' | 'full'>('full');
-  const [quoteIds, setQuoteIds] = useState<string[]>([]);
-  const [callNote, setCallNote] = useState('');
-  const [error, setError] = useState<string | null>(null);
-  const [message, setMessage] = useState<string | null>(null);
-  const [submitting, setSubmitting] = useState(false);
-
-  const [soId, setSoId] = useState('');
-  const [promotionNote, setPromotionNote] = useState('');
-  const [promotionError, setPromotionError] = useState<string | null>(null);
-  const [promotionMessage, setPromotionMessage] = useState<string | null>(null);
-
-  const asksLoader = useCallback(
-    () => callApi((token) => proxyListBuyerAsks(token, buyerCounterpartyId)),
-    [callApi, buyerCounterpartyId],
-  );
-  const { state: asksState, retry: retryAsks } = useAsyncData(
-    asksLoader,
-    (items) => items.length === 0,
-    [asksLoader],
-  );
-  const asks = asksState.status === 'success' ? asksState.data : [];
-  const selectedAsk = asks.find((a) => a.askId === askId);
-
-  function handleAskChange(nextAskId: string): void {
-    setAskId(nextAskId);
-    setQuoteIds([]);
-  }
-
-  async function handleAccept(): Promise<void> {
-    setError(null);
-    setSubmitting(true);
-    try {
-      const result = await callApi((token) =>
-        proxyAcceptAskFill(token, askId, {
-          buyerCounterpartyId,
-          option,
-          quoteIds,
-          callNote,
-        }),
-      );
-      setMessage(`Accepted — order(s): ${result.soIds.join(', ')}.`);
-      setAskId('');
-      setQuoteIds([]);
-      retryAsks();
-    } catch (submitError) {
-      setError(
-        submitError instanceof ApiError ? submitError.message : 'Could not accept this fill.',
-      );
-    } finally {
-      setSubmitting(false);
-    }
-  }
-
-  async function handleDecline(): Promise<void> {
-    setError(null);
-    setSubmitting(true);
-    try {
-      await callApi((token) => proxyDeclineAsk(token, askId, { buyerCounterpartyId, callNote }));
-      setMessage('Walked away — free, no strike.');
-      setAskId('');
-      setQuoteIds([]);
-      retryAsks();
-    } catch (submitError) {
-      setError(submitError instanceof ApiError ? submitError.message : 'Could not decline.');
-    } finally {
-      setSubmitting(false);
-    }
-  }
-
-  async function handlePromotionAccept(): Promise<void> {
-    setPromotionError(null);
-    try {
-      await callApi((token) =>
-        proxyAcceptPromotion(token, soId, {
-          buyerCounterpartyId,
-          callNote: promotionNote,
-        }),
-      );
-      setPromotionMessage('Accepted the replacement seller.');
-    } catch (submitError) {
-      setPromotionError(
-        submitError instanceof ApiError ? submitError.message : 'Could not accept.',
-      );
-    }
-  }
-
-  async function handlePromotionReject(): Promise<void> {
-    setPromotionError(null);
-    try {
-      await callApi((token) =>
-        proxyRejectPromotion(token, soId, {
-          buyerCounterpartyId,
-          callNote: promotionNote,
-        }),
-      );
-      setPromotionMessage('Declined — refunded on the next run.');
-    } catch (submitError) {
-      setPromotionError(
-        submitError instanceof ApiError ? submitError.message : 'Could not decline.',
-      );
-    }
-  }
-
-  return (
-    <Card title="Advance an ask on a call">
-      <p className="mb-4 text-sm text-slate-500">
-        Confirming a rate over the phone and accepting a fill are the same action in this system
-        (API-042) — pick the quote(s) the buyer accepted below. Walking away is free and never a
-        strike (API-043).
-      </p>
-      <AsyncBoundary state={asksState} onRetry={retryAsks} emptyMessage="He has no open asks.">
-        {() => (
-          <div className="flex max-w-md flex-col gap-4">
-            <AskPicker
-              buyerCounterpartyId={buyerCounterpartyId}
-              asks={asks}
-              value={askId}
-              onChange={handleAskChange}
-            />
-            <Input
-              id="aa-buyer"
-              label="Buyer counterparty ID"
-              value={buyerCounterpartyId}
-              disabled
-            />
-            <Select
-              id="aa-option"
-              label="Option"
-              value={option}
-              onChange={(e) => setOption(e.target.value as typeof option)}
-            >
-              <option value="full">Full — the partial plus the balance</option>
-              <option value="partial">Partial — the cheap portion alone</option>
-            </Select>
-            {selectedAsk && (
-              <QuotePicker quotes={selectedAsk.quotes} selected={quoteIds} onChange={setQuoteIds} />
-            )}
-            <Textarea
-              id="aa-note"
-              label="Call note"
-              value={callNote}
-              onChange={(e) => setCallNote(e.target.value)}
-              required
-            />
-            {error && (
-              <p role="alert" className="text-sm text-danger-500">
-                {error}
-              </p>
-            )}
-            {message && <p className="text-sm text-success-600">{message}</p>}
-            <div className="flex gap-2">
-              <Button
-                loading={submitting}
-                disabled={!askId || !buyerCounterpartyId || !callNote || quoteIds.length === 0}
-                onClick={() => void handleAccept()}
-                icon={<FiCheck />}
-              >
-                Accept fill
-              </Button>
-              <Button
-                variant="secondary"
-                loading={submitting}
-                disabled={!askId || !buyerCounterpartyId || !callNote}
-                onClick={() => void handleDecline()}
-                icon={<FiX />}
-              >
-                Walk away
-              </Button>
-            </div>
-          </div>
-        )}
-      </AsyncBoundary>
-
-      <div className="mt-6 flex max-w-md flex-col gap-4 border-t border-slate-200 pt-4">
-        <h3 className="text-sm font-semibold text-slate-900">Promoted-fallback decision (WF-11)</h3>
-        <Input
-          id="aa-so"
-          label="Order (SO) ID"
-          value={soId}
-          onChange={(e) => setSoId(e.target.value)}
-        />
-        <Textarea
-          id="aa-promo-note"
-          label="Call note"
-          value={promotionNote}
-          onChange={(e) => setPromotionNote(e.target.value)}
-        />
-        {promotionError && (
-          <p role="alert" className="text-sm text-danger-500">
-            {promotionError}
-          </p>
-        )}
-        {promotionMessage && <p className="text-sm text-success-600">{promotionMessage}</p>}
-        <div className="flex gap-2">
-          <Button
-            variant="secondary"
-            disabled={!soId || !buyerCounterpartyId || !promotionNote}
-            onClick={() => void handlePromotionAccept()}
-            icon={<FiCheck />}
-          >
-            Accept replacement
-          </Button>
-          <Button
-            variant="secondary"
-            disabled={!soId || !buyerCounterpartyId || !promotionNote}
-            onClick={() => void handlePromotionReject()}
-            icon={<FiX />}
-          >
-            Decline
-          </Button>
-        </div>
-      </div>
     </Card>
   );
 }

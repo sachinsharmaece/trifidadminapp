@@ -3,7 +3,7 @@ import { ApiError, type ErrorCode } from './errors';
 
 interface Envelope<T> {
   data: T;
-  meta: { correlationId: string; nextCursor?: string };
+  meta: { correlationId: string; nextCursor?: string; total?: number } & Record<string, unknown>;
 }
 
 interface ErrorEnvelope {
@@ -39,6 +39,24 @@ interface RequestOptions {
  * attempting a silent refresh.
  */
 export async function apiFetch<T>(path: string, options: RequestOptions = {}): Promise<T> {
+  return (await apiFetchEnvelope<T>(path, options)).data;
+}
+
+/** One page of a list and the cursor for the next (`meta.nextCursor`; absent on the last page). */
+export async function apiFetchPage<T>(
+  path: string,
+  options: RequestOptions = {},
+): Promise<{ items: T[]; nextCursor?: string; total?: number; meta?: Record<string, unknown> }> {
+  const envelope = await apiFetchEnvelope<T[]>(path, options);
+  return {
+    items: envelope.data,
+    nextCursor: envelope.meta?.nextCursor,
+    total: envelope.meta?.total,
+    meta: envelope.meta,
+  };
+}
+
+async function apiFetchEnvelope<T>(path: string, options: RequestOptions): Promise<Envelope<T>> {
   let response: Response;
   try {
     response = await fetch(`${env.apiBaseUrl}${path}`, {
@@ -77,5 +95,5 @@ export async function apiFetch<T>(path: string, options: RequestOptions = {}): P
     });
   }
 
-  return json.data;
+  return json;
 }

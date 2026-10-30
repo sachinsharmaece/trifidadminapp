@@ -11,6 +11,31 @@ export interface ActiveDemandItem {
   brand: string;
   technical: string;
   manufacturerName: string;
+  /** 30 Oct — what the ask is for; `packLabel` null = all packs. */
+  packLabel: string | null;
+  expiryBand: string;
+  deliveryBand: string | null;
+}
+
+/** 30 Oct — one product, its asks under it (BR-371); each seller counted once across them. */
+export interface DemandProductGroup {
+  productId: string | null;
+  brand: string;
+  technical: string;
+  manufacturerName: string;
+  askCount: number;
+  totalBoxes: number;
+  sellerCounts: { quoted: number; active: number; dormant: number; dark: number };
+  noSeller: boolean;
+  asks: ActiveDemandItem[];
+}
+
+export function getActiveDemandByProduct(
+  accessToken: string,
+  noSellerOnly?: boolean,
+): Promise<DemandProductGroup[]> {
+  const query = noSellerOnly ? '&noSeller=true' : '';
+  return apiFetch(`/staff/purchase/demand?by=product${query}`, { accessToken });
 }
 
 export function getActiveDemandList(
@@ -211,7 +236,12 @@ export interface SellerCatalogueItem {
   technical: string;
   manufacturerName: string;
   productState: string;
+  /** 25 Oct — a draft company blocks a listing too. */
+  manufacturerState: string;
+  /** False when Admin switched the product off in Manage. */
+  productActive: boolean;
   packsDetailed: boolean;
+  /** Active packs only. */
   packs: SellerCataloguePackItem[];
   setAt: string;
   setBy: string | null;
@@ -247,8 +277,14 @@ export function getSellerCatalogue(
 export function postSellerCatalogueEntry(
   accessToken: string,
   input: { sellerId: string; productId: string; skuIds?: string[] },
+  idempotencyKey: string,
 ): Promise<{ entryId: string }> {
-  return apiFetch('/staff/purchase/catalogue', { method: 'POST', body: input, accessToken });
+  return apiFetch('/staff/purchase/catalogue', {
+    method: 'POST',
+    body: input,
+    accessToken,
+    idempotencyKey,
+  });
 }
 
 export interface SellerFileListingItem {
@@ -365,6 +401,10 @@ export interface SupplyMatrixSellerRow {
   sellerId: string;
   firm: string;
   trustTier: string;
+  /** Phase 4 — his own district, and who he is assigned to (null = the Queue). */
+  district: string | null;
+  assignedTo: string | null;
+  assignedToEmployeeId: string | null;
   carryCount: number;
   listedCount: number;
   manufacturerNames: string[];
@@ -803,4 +843,11 @@ export interface OnBoardNotQuotedItem {
 
 export function getOnBoardNotQuotedQueue(accessToken: string): Promise<OnBoardNotQuotedItem[]> {
   return apiFetch('/staff/purchase/demand/on-board-not-quoted', { accessToken });
+}
+
+/** Phase 4 — who the caller may assign a seller to (himself; his team; Admin: all Purchase). */
+export function getAssignablePurchasePeople(
+  accessToken: string,
+): Promise<import('./dto').AssignableSalesPerson[]> {
+  return apiFetch('/staff/purchase/assignees', { accessToken });
 }

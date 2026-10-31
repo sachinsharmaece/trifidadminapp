@@ -199,7 +199,7 @@ export function RequirementFields({
   onDeliveryBand: (value: '' | '48h' | '2-5d') => void;
 }) {
   return (
-    <div className="grid grid-cols-2 gap-4">
+    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
       <Select
         label="Expiry requirement"
         value={expiryBand}

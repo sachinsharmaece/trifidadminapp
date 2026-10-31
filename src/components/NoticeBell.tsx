@@ -76,7 +76,7 @@ export function NoticeBell() {
         type="button"
         aria-label={unread ? `Notices, ${unread} unread` : 'Notices'}
         onClick={() => setOpen((v) => !v)}
-        className="relative rounded-md p-2 text-slate-600 hover:bg-slate-100"
+        className="relative rounded-md p-2 text-slate-600 hover:bg-slate-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand-600"
       >
         <FiBell className="text-lg" />
         {unread > 0 && (
@@ -86,7 +86,7 @@ export function NoticeBell() {
         )}
       </button>
       {open && (
-        <div className="absolute left-0 z-50 mt-2 w-80 rounded-md border border-slate-200 bg-white shadow-lg">
+        <div className="fixed inset-x-4 top-16 z-50 rounded-md border border-slate-200 bg-white shadow-lg md:absolute md:inset-x-auto md:top-auto md:left-0 md:mt-2 md:w-80">
           <div className="flex items-center justify-between border-b border-slate-200 px-3 py-2">
             <span className="text-sm font-semibold text-slate-900">Notices</span>
             {unread > 0 && (
@@ -102,7 +102,7 @@ export function NoticeBell() {
           {items.length === 0 ? (
             <p className="px-3 py-4 text-sm text-slate-500">Nothing yet.</p>
           ) : (
-            <ul className="max-h-96 overflow-y-auto">
+            <ul className="max-h-[60vh] overflow-y-auto md:max-h-96">
               {items.map((notice) => (
                 <li key={notice.noticeId}>
                   <button

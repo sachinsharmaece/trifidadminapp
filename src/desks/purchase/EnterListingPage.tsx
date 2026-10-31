@@ -16,6 +16,7 @@ import { Input, Select, Textarea } from '../../components/ui/Input';
 import { Button } from '../../components/ui/Button';
 import { DevNote } from '../../components/dev/DevNote';
 import { listBlockedReason } from './listBlockedReason';
+import { FormActions } from '../../components/ui/FormActions';
 
 /**
  * 25 Oct — pick the product first (searchable: what he carries comes first,
@@ -244,8 +245,8 @@ function ListingForm({
         what he carries comes first; type to find any other product, and add it to his catalogue if
         he sells it.
       </p>
-      <form onSubmit={handleSubmit} className="grid max-w-2xl grid-cols-2 gap-4">
-        <div className="col-span-2">
+      <form onSubmit={handleSubmit} className="grid max-w-2xl grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className="col-span-full">
           <SearchSelect
             label="Product"
             required
@@ -268,7 +269,7 @@ function ListingForm({
         {notCarried && (
           <div
             role="status"
-            className="col-span-2 flex flex-wrap items-center gap-3 rounded-md border border-warning-500/40 bg-warning-50 px-3 py-2 text-sm text-warning-600"
+            className="col-span-full flex flex-wrap items-center gap-3 rounded-md border border-warning-500/40 bg-warning-50 px-3 py-2 text-sm text-warning-600"
           >
             <span>
               He doesn&apos;t carry {chosenName || 'this product'} yet — add it to his catalogue to
@@ -289,13 +290,13 @@ function ListingForm({
         {chosen && chosenReason && (
           <p
             role="alert"
-            className="col-span-2 rounded-md bg-danger-50 px-3 py-2 text-sm text-danger-600"
+            className="col-span-full rounded-md bg-danger-50 px-3 py-2 text-sm text-danger-600"
           >
             {chosen.brand} can’t be listed yet — {chosenReason}.
           </p>
         )}
         {file.catalogue.length === 0 && !productId && (
-          <p className="col-span-2 text-sm text-slate-500">
+          <p className="col-span-full text-sm text-slate-500">
             His catalogue is empty — find the product above and add it, or tick the companies he
             deals in from his seller file.
           </p>
@@ -395,7 +396,7 @@ function ListingForm({
           <option value="all_india">All India</option>
           <option value="all_except_mine">All India except his area</option>
         </Select>
-        <div className="col-span-2">
+        <div className="col-span-full">
           <Textarea
             id="el-note"
             label="Authority — who you spoke to, what he said"
@@ -406,20 +407,20 @@ function ListingForm({
           />
         </div>
         {error && (
-          <p role="alert" className="col-span-2 text-sm text-danger-500">
+          <p role="alert" className="col-span-full text-sm text-danger-500">
             {error}
           </p>
         )}
         {result && (
-          <p className="col-span-2 text-sm text-success-600">
+          <p className="col-span-full text-sm text-success-600">
             Listing put on the board and logged against you.
           </p>
         )}
-        <div className="col-span-2">
+        <FormActions>
           <Button type="submit" loading={submitting} disabled={!skuId} icon={<FiPhoneCall />}>
             Put it on the board
           </Button>
-        </div>
+        </FormActions>
       </form>
     </Card>
   );

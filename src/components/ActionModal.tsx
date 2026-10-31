@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState, type FormEvent, type ReactNode } from 'react';
+import { useCallback, useEffect, useId, useState, type FormEvent, type ReactNode } from 'react';
 import { ApiError } from '../api/errors';
 import { useAuth } from '../auth/AuthContext';
 import { useToast } from './ui/Toast';
@@ -41,6 +41,7 @@ export function ActionModal({
   const [note, setNote] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const formId = useId();
 
   useEffect(() => {
     if (open) {
@@ -68,8 +69,32 @@ export function ActionModal({
   }
 
   return (
-    <Modal open={open} title={title} onClose={onClose}>
-      <form onSubmit={(event) => void handleSubmit(event)} className="flex flex-col gap-4">
+    <Modal
+      open={open}
+      title={title}
+      onClose={onClose}
+      footer={
+        <>
+          <Button variant="ghost" onClick={onClose}>
+            Back
+          </Button>
+          <Button
+            type="submit"
+            form={formId}
+            variant={danger ? 'danger' : 'primary'}
+            loading={submitting}
+            disabled={!canSubmit}
+          >
+            {submitLabel}
+          </Button>
+        </>
+      }
+    >
+      <form
+        id={formId}
+        onSubmit={(event) => void handleSubmit(event)}
+        className="flex flex-col gap-4"
+      >
         {children}
         <Textarea
           label="Call note"
@@ -83,19 +108,6 @@ export function ActionModal({
             {error}
           </p>
         )}
-        <div className="flex justify-end gap-2">
-          <Button variant="ghost" onClick={onClose}>
-            Back
-          </Button>
-          <Button
-            type="submit"
-            variant={danger ? 'danger' : 'primary'}
-            loading={submitting}
-            disabled={!canSubmit}
-          >
-            {submitLabel}
-          </Button>
-        </div>
       </form>
     </Modal>
   );

@@ -138,7 +138,7 @@ export function ConfirmWarnings({
 }) {
   if (warnings.length === 0) return null;
   return (
-    <div className="col-span-2 flex flex-col gap-2 rounded-md border border-amber-300 bg-amber-50 p-3">
+    <div className="col-span-full flex flex-col gap-2 rounded-md border border-warning-500/40 bg-warning-50 p-3">
       <p className="text-sm font-medium text-slate-800">Please confirm before saving</p>
       {warnings.map((w) => (
         <label key={w.key} className="flex items-start gap-2 text-sm text-slate-700">

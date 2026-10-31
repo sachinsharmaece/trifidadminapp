@@ -26,6 +26,7 @@ import {
   PACK_UNIT_OPTIONS,
   useProductMasters,
 } from './productMasters';
+import { FormActions } from '../../components/ui/FormActions';
 
 /**
  * 24 Oct — one form for Manage → Products, in create and edit mode, so the
@@ -505,7 +506,7 @@ export function ProductForm(
           </p>
         )}
 
-        <div className="flex gap-2">
+        <FormActions>
           <Button
             type="submit"
             loading={save.submitting}
@@ -518,7 +519,7 @@ export function ProductForm(
               Cancel
             </Button>
           )}
-        </div>
+        </FormActions>
       </form>
 
       {adding?.kind === 'technical' && (

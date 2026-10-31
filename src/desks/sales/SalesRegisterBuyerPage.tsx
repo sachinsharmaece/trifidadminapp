@@ -27,6 +27,7 @@ import {
   type ConfirmWarning,
 } from '../../components/buyer/BuyerFields';
 import { CompanyPicker } from '../purchase/CompanyPicker';
+import { FormActions } from '../../components/ui/FormActions';
 
 const FIELDS = [
   'mobile',
@@ -186,7 +187,11 @@ export function SalesRegisterBuyerPage() {
         Buyers
       </Button>
       <Card title="Register a buyer">
-        <form onSubmit={handleSubmit} noValidate className="grid max-w-3xl grid-cols-2 gap-4">
+        <form
+          onSubmit={handleSubmit}
+          noValidate
+          className="grid max-w-3xl grid-cols-1 sm:grid-cols-2 gap-4"
+        >
           <Input
             label="Mobile"
             required
@@ -232,7 +237,7 @@ export function SalesRegisterBuyerPage() {
             }}
             error={errors.category}
           />
-          <div className="col-span-2">
+          <div className="col-span-full">
             <LocationBlock
               required
               value={location}
@@ -251,7 +256,7 @@ export function SalesRegisterBuyerPage() {
               }}
             />
           </div>
-          <div className="col-span-2">
+          <div className="col-span-full">
             <p className="mb-1 text-sm font-medium text-slate-700">Companies he deals in</p>
             <CompanyPicker value={companyIds} onChange={setCompanyIds} />
             {errors.dealerships && (
@@ -314,7 +319,7 @@ export function SalesRegisterBuyerPage() {
             error={errors['bankDetail.accountName']}
           />
           <div />
-          <div className="col-span-2">
+          <div className="col-span-full">
             <Textarea
               label="Call note"
               hint="Who called, what was agreed."
@@ -322,7 +327,7 @@ export function SalesRegisterBuyerPage() {
               onChange={(e) => setCallNote(e.target.value)}
             />
           </div>
-          <div className="col-span-2">
+          <div className="col-span-full">
             <label className="flex items-center gap-2 text-sm text-slate-700">
               <input
                 type="checkbox"
@@ -343,7 +348,7 @@ export function SalesRegisterBuyerPage() {
           </div>
           <ConfirmWarnings warnings={warnings} value={confirmations} onChange={setConfirmations} />
           {save.duplicate && (
-            <p role="alert" className="col-span-2 text-sm text-danger-500">
+            <p role="alert" className="col-span-full text-sm text-danger-500">
               That{' '}
               {save.duplicate.field === 'gstin'
                 ? 'GSTIN'
@@ -358,18 +363,18 @@ export function SalesRegisterBuyerPage() {
             </p>
           )}
           {save.formError && warnings.length === 0 && !save.duplicate && (
-            <p role="alert" className="col-span-2 text-sm text-danger-500">
+            <p role="alert" className="col-span-full text-sm text-danger-500">
               {save.formError}
             </p>
           )}
           {save.successMessage && (
-            <p className="col-span-2 text-sm text-success-600">{save.successMessage}</p>
+            <p className="col-span-full text-sm text-success-600">{save.successMessage}</p>
           )}
-          <div className="col-span-2">
+          <FormActions>
             <Button type="submit" loading={save.submitting} icon={<FiPhoneCall />}>
               {warnings.length > 0 ? 'Confirm and register' : 'Register buyer'}
             </Button>
-          </div>
+          </FormActions>
         </form>
       </Card>
     </div>

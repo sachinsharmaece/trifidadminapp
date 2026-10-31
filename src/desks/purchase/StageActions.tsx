@@ -196,7 +196,7 @@ export function SellerDispatchedButton({
           <option value="bus">Bus</option>
         </Select>
         {mode === 'transport' ? (
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <Input label="LR number" required value={lr} onChange={(e) => setLr(e.target.value)} />
             <Input
               label="Transporter"
@@ -205,7 +205,7 @@ export function SellerDispatchedButton({
             />
           </div>
         ) : (
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <Input
               label="Bus number"
               required
@@ -226,7 +226,7 @@ export function SellerDispatchedButton({
             />
           </div>
         )}
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <Select
             label="Freight"
             value={freightTerms}

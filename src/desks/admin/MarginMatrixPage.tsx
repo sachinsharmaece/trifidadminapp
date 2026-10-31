@@ -174,7 +174,10 @@ function MatrixEditor({
         apply to future orders only — orders already placed keep the margin they were priced with.
       </p>
       {unsetCount > 0 && (
-        <p role="status" className="mb-4 rounded-md bg-amber-50 px-3 py-2 text-sm text-amber-800">
+        <p
+          role="status"
+          className="mb-4 rounded-md bg-warning-50 px-3 py-2 text-sm text-warning-600"
+        >
           {unsetCount} of 12 cells are not set. Orders for a class and client type with no margin
           cannot be priced until it is entered.
         </p>
@@ -230,7 +233,7 @@ function MatrixEditor({
         </Table>
 
         {orderWarnings.length > 0 && (
-          <p role="status" className="text-sm text-amber-700">
+          <p role="status" className="text-sm text-warning-600">
             BR-042 — Class High should be the thinnest margin and Class Low the widest. Check the{' '}
             {orderWarnings.join(', ')} {orderWarnings.length === 1 ? 'column' : 'columns'}.
           </p>
@@ -292,7 +295,7 @@ function HistoryCard({ history }: { history: MarginMatrixHistoryRowDto[] }) {
                 <Td>
                   {formatDateTime(row.effectiveFrom)}
                   {new Date(row.effectiveFrom).getTime() > now && (
-                    <span className="ml-2 rounded bg-amber-100 px-1.5 py-0.5 text-xs text-amber-800">
+                    <span className="ml-2 rounded bg-warning-50 px-1.5 py-0.5 text-xs text-warning-600">
                       Scheduled
                     </span>
                   )}

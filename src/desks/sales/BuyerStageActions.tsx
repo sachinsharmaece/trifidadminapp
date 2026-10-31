@@ -427,7 +427,7 @@ export function MarkBilledButton({
         onSubmit={submit}
       >
         {skipSteps && (
-          <div className="rounded-md border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">
+          <div className="rounded-md border border-warning-500/40 bg-warning-50 p-3 text-sm text-warning-600">
             <p className="font-medium">This skips Logistics and the dock.</p>
             <p>
               It records leg 1 and an all-accepted inspection as “recorded by Sales, not physically
@@ -453,7 +453,7 @@ export function MarkBilledButton({
           value={invoiceNo}
           onChange={(event) => setInvoiceNo(event.target.value)}
         />
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <Input
             label="Invoice date"
             type="date"
@@ -537,7 +537,7 @@ export function DispatchButton({ order, onDone }: { order: SalesOrderRow; onDone
           <option value="bus">Bus</option>
         </Select>
         {mode === 'transport' ? (
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <Input
               label="LR number"
               required
@@ -551,7 +551,7 @@ export function DispatchButton({ order, onDone }: { order: SalesOrderRow; onDone
             />
           </div>
         ) : (
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <Input
               label="Bus number"
               required
@@ -572,7 +572,7 @@ export function DispatchButton({ order, onDone }: { order: SalesOrderRow; onDone
             />
           </div>
         )}
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <Select
             label="Freight"
             value={freightTerms}

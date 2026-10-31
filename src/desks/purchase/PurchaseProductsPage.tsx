@@ -496,7 +496,7 @@ function NewMastersCard({
             onChange={(e) => setPackLabel(e.target.value)}
             error={fieldErrors.packLabel}
           />
-          <div className="mt-2 grid grid-cols-3 gap-2">
+          <div className="mt-2 grid grid-cols-1 sm:grid-cols-3 gap-2">
             <Select
               id="pm-pack-unit"
               label="Base unit"

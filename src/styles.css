@@ -30,6 +30,9 @@
 
   --color-brand-50: #e4f0e9; /* prototype --brand-soft */
   --color-brand-100: #c9e1d3;
+  --color-brand-200: #9fcab2;
+  --color-brand-300: #6fae8b;
+  --color-brand-400: #3d8a62;
   --color-brand-500: #0b5d3b; /* prototype --brand */
   --color-brand-600: #094a30;
   --color-brand-700: #073823;
@@ -60,4 +63,33 @@ body,
 body {
   @apply bg-slate-50 text-slate-900 antialiased;
   font-family: var(--font-sans);
+}
+
+/* Checkboxes, radios and range sliders in the brand colour instead of the browser's blue. */
+input[type='checkbox'],
+input[type='radio'],
+input[type='range'] {
+  accent-color: var(--color-brand-500);
+}
+
+/* A jump to an anchor (e.g. a funnel row → its section) lands below the fixed phone
+ * top bar and the sticky desk tabs, not under them. */
+html {
+  scroll-padding-top: 7.5rem;
+}
+@media (min-width: 48rem) {
+  html {
+    scroll-padding-top: 4.5rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }

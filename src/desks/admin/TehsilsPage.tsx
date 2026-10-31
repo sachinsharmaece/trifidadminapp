@@ -47,7 +47,7 @@ export function TehsilsPage() {
       {canEdit && <AddTehsilCard onAdded={retry} />}
 
       <Card title="All tehsils">
-        <div className="mb-4 grid max-w-2xl grid-cols-2 gap-4">
+        <div className="mb-4 grid max-w-2xl grid-cols-1 sm:grid-cols-2 gap-4">
           <LocationPickers showTehsil={false} value={filter} onChange={setFilter} />
         </div>
         <p className="mb-4 text-sm text-slate-500">
@@ -138,7 +138,11 @@ function AddTehsilCard({ onAdded }: { onAdded: () => void }) {
 
   return (
     <Card title="Add a tehsil">
-      <form onSubmit={handleSubmit} noValidate className="grid max-w-2xl grid-cols-2 gap-4">
+      <form
+        onSubmit={handleSubmit}
+        noValidate
+        className="grid max-w-2xl grid-cols-1 sm:grid-cols-2 gap-4"
+      >
         <LocationPickers
           showTehsil={false}
           required
@@ -146,7 +150,7 @@ function AddTehsilCard({ onAdded }: { onAdded: () => void }) {
           onChange={setPick}
           errors={{ districtId: form.fieldErrors.districtId }}
         />
-        <div className="col-span-2">
+        <div className="col-span-full">
           <Input
             label="Tehsil name"
             required
@@ -159,14 +163,14 @@ function AddTehsilCard({ onAdded }: { onAdded: () => void }) {
           />
         </div>
         {form.formError && (
-          <p role="alert" className="col-span-2 text-sm text-danger-500">
+          <p role="alert" className="col-span-full text-sm text-danger-500">
             {form.formError}
           </p>
         )}
         {form.successMessage && (
-          <p className="col-span-2 text-sm text-success-600">{form.successMessage}</p>
+          <p className="col-span-full text-sm text-success-600">{form.successMessage}</p>
         )}
-        <div className="col-span-2">
+        <div className="col-span-full">
           <Button
             type="submit"
             loading={form.submitting}

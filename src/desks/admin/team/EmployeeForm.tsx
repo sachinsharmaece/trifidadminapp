@@ -25,6 +25,7 @@ import {
 } from '../../../lib/validators';
 import { Input, Select, Textarea } from '../../../components/ui/Input';
 import { Button } from '../../../components/ui/Button';
+import { FormActions } from '../../../components/ui/FormActions';
 
 const POSITION_OPTIONS: Array<{ key: Position; label: string }> = [
   { key: 'SALES_LEADER', label: 'Sales Leader' },
@@ -284,9 +285,9 @@ function hrInput(form: FormState): NonNullable<EmployeeInput['hr']> {
 
 function Section({ title, children }: { title: string; children: ReactNode }) {
   return (
-    <fieldset className="col-span-2 rounded-md border border-slate-300 p-3">
+    <fieldset className="col-span-full rounded-md border border-slate-300 p-3">
       <legend className="px-1 text-sm font-medium text-slate-700">{title}</legend>
-      <div className="grid grid-cols-2 gap-4">{children}</div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">{children}</div>
     </fieldset>
   );
 }
@@ -515,7 +516,11 @@ export function EmployeeForm({
   };
 
   return (
-    <form onSubmit={handleSubmit} noValidate className="grid max-w-3xl grid-cols-2 gap-4">
+    <form
+      onSubmit={handleSubmit}
+      noValidate
+      className="grid max-w-3xl grid-cols-1 sm:grid-cols-2 gap-4"
+    >
       <Section title="Account">
         <Input
           label="Name"
@@ -553,7 +558,7 @@ export function EmployeeForm({
       </Section>
 
       <Section title="Positions">
-        <div className="col-span-2 grid grid-cols-2 gap-2">
+        <div className="col-span-full grid grid-cols-2 gap-2">
           {POSITION_OPTIONS.map((p) => {
             const locked = p.key === 'PURCHASE_EXEC' && positions.includes('SALES_LEADER');
             return (
@@ -582,7 +587,7 @@ export function EmployeeForm({
       </Section>
 
       <Section title="Roles">
-        <div className="col-span-2 grid grid-cols-2 gap-2">
+        <div className="col-span-full grid grid-cols-2 gap-2">
           {ROLE_KEYS.map((key) => (
             <Check
               key={key}
@@ -596,7 +601,7 @@ export function EmployeeForm({
           <FieldError message={errors.roleKeys} />
         </div>
         {accountsLike && (
-          <div className="col-span-2">
+          <div className="col-span-full">
             <p className="mb-2 text-sm font-medium text-slate-700">Works for team(s)</p>
             <Check
               label="All teams (Accounts head)"
@@ -634,7 +639,7 @@ export function EmployeeForm({
 
       {mode === 'create' && laneOptions.length > 0 && (
         <Section title="Lanes (optional)">
-          <div className="col-span-2 grid grid-cols-2 gap-2">
+          <div className="col-span-full grid grid-cols-2 gap-2">
             {laneOptions.map((lane) => (
               <Check
                 key={lane.laneKey}
@@ -658,7 +663,7 @@ export function EmployeeForm({
       )}
 
       {hrOptional && (
-        <div className="col-span-2 rounded-md border border-warning-500/40 bg-warning-50 p-3 text-sm">
+        <div className="col-span-full rounded-md border border-warning-500/40 bg-warning-50 p-3 text-sm">
           <p className="text-warning-600">
             No HR details on record for this employee yet. You can save other changes now and add
             them later.
@@ -736,7 +741,7 @@ export function EmployeeForm({
               </Button>
             )}
           </div>
-          {revealError && <p className="col-span-2 text-sm text-danger-500">{revealError}</p>}
+          {revealError && <p className="col-span-full text-sm text-danger-500">{revealError}</p>}
           <Input
             label="Father's name"
             required
@@ -788,7 +793,7 @@ export function EmployeeForm({
             error={errors['hr.emergencyContact.mobile']}
           />
           <div />
-          <div className="col-span-2">
+          <div className="col-span-full">
             <Textarea
               label="Permanent address"
               required
@@ -797,7 +802,7 @@ export function EmployeeForm({
               error={errors['hr.permanentAddress']}
             />
           </div>
-          <div className="col-span-2">
+          <div className="col-span-full">
             <Check
               label="Current local address is the same as permanent"
               checked={form.currentSameAsPermanent}
@@ -807,7 +812,7 @@ export function EmployeeForm({
             />
           </div>
           {!form.currentSameAsPermanent && (
-            <div className="col-span-2">
+            <div className="col-span-full">
               <Textarea
                 label="Current local address"
                 required
@@ -845,20 +850,20 @@ export function EmployeeForm({
       )}
 
       {Object.keys(localErrors).length > 0 && (
-        <p role="alert" className="col-span-2 text-sm text-danger-500">
+        <p role="alert" className="col-span-full text-sm text-danger-500">
           Some fields need attention — see the messages next to them.
         </p>
       )}
       {save.formError && (
-        <p role="alert" className="col-span-2 text-sm text-danger-500">
+        <p role="alert" className="col-span-full text-sm text-danger-500">
           {save.formError}
         </p>
       )}
       {save.successMessage && (
-        <p className="col-span-2 text-sm text-success-600">{save.successMessage}</p>
+        <p className="col-span-full text-sm text-success-600">{save.successMessage}</p>
       )}
 
-      <div className="col-span-2 flex gap-2">
+      <FormActions>
         <Button
           type="submit"
           loading={save.submitting}
@@ -871,7 +876,7 @@ export function EmployeeForm({
             Cancel
           </Button>
         )}
-      </div>
+      </FormActions>
     </form>
   );
 }

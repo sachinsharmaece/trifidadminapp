@@ -1,6 +1,7 @@
 import { createContext, useCallback, useContext, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { createPortal } from 'react-dom';
+import { FiX } from 'react-icons/fi';
 
 interface ToastOptions {
   undo?: () => void;
@@ -50,9 +51,10 @@ export function ToastProvider({ children }: { children: ReactNode }) {
         createPortal(
           <div
             role="status"
-            className="fixed right-6 bottom-6 z-50 flex items-center gap-3 rounded-lg bg-slate-900 px-4 py-3 text-sm text-white shadow-lg"
+            aria-live="polite"
+            className="fixed inset-x-4 bottom-[max(1rem,env(safe-area-inset-bottom))] z-[60] flex items-center gap-3 rounded-lg bg-slate-900 py-3 pr-2 pl-4 text-sm text-white shadow-xl sm:inset-x-auto sm:right-6 sm:bottom-6 sm:max-w-md"
           >
-            <span>{toast.message}</span>
+            <span className="min-w-0 flex-1">{toast.message}</span>
             {toast.undo && (
               <button
                 type="button"
@@ -65,6 +67,14 @@ export function ToastProvider({ children }: { children: ReactNode }) {
                 Undo
               </button>
             )}
+            <button
+              type="button"
+              onClick={dismiss}
+              aria-label="Dismiss"
+              className="rounded-md p-1.5 text-slate-300 hover:bg-white/10 hover:text-white"
+            >
+              <FiX aria-hidden />
+            </button>
           </div>,
           document.body,
         )}

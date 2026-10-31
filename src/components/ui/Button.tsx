@@ -1,3 +1,4 @@
+import { useId } from 'react';
 import type { ButtonHTMLAttributes, ReactNode } from 'react';
 import { FiLoader } from 'react-icons/fi';
 
@@ -27,7 +28,11 @@ export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   icon?: ReactNode;
 }
 
-/** The one button in the app — every action goes through this. */
+/**
+ * The one button in the app — every action goes through this. A disabled button's `title`
+ * (why it cannot be pressed yet) also shows as a tip on hover, keyboard focus and tap, since
+ * the browser's own tooltip never appears on a phone or for a button that cannot take focus.
+ */
 export function Button({
   variant = 'primary',
   size = 'md',
@@ -37,17 +42,41 @@ export function Button({
   className = '',
   children,
   type = 'button',
+  title,
   ...rest
 }: ButtonProps) {
-  return (
+  const tipId = useId();
+  const isDisabled = disabled || loading;
+  const showTip = !!title && !!disabled && !loading;
+  const button = (
     <button
       type={type}
-      disabled={disabled || loading}
+      disabled={isDisabled}
+      title={showTip ? undefined : title}
+      aria-describedby={showTip ? tipId : undefined}
       className={`inline-flex items-center justify-center rounded-md font-medium transition-colors disabled:cursor-not-allowed focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 ${VARIANT_CLASSES[variant]} ${SIZE_CLASSES[size]} ${className}`}
       {...rest}
     >
       {loading ? <FiLoader className="animate-spin" aria-hidden /> : icon}
       {children}
     </button>
+  );
+  if (!showTip) return button;
+  return (
+    <span
+      tabIndex={0}
+      className={`group/tip relative inline-flex rounded-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600 ${
+        /\bw-full\b/.test(className) ? 'w-full' : ''
+      }`}
+    >
+      {button}
+      <span
+        id={tipId}
+        role="tooltip"
+        className="pointer-events-none absolute bottom-full left-1/2 z-40 mb-2 hidden w-max max-w-64 -translate-x-1/2 rounded-md bg-slate-900 px-2.5 py-1.5 text-xs leading-snug font-normal text-white shadow-lg group-hover/tip:block group-focus/tip:block"
+      >
+        {title}
+      </span>
+    </span>
   );
 }

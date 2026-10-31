@@ -1,6 +1,6 @@
 import { useCallback } from 'react';
 import { FiFlag } from 'react-icons/fi';
-import { useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import {
   getActiveDemandList,
   getPilesAwaitingDecision,
@@ -55,7 +55,6 @@ interface TodaySummary {
  */
 export function TodayPage() {
   const { callApi, hasPermission } = useAuth();
-  const navigate = useNavigate();
 
   const loader = useCallback(async (): Promise<TodaySummary> => {
     const [
@@ -160,12 +159,12 @@ export function TodayPage() {
                     </li>
                   ))}
                 </ul>
-                <button
-                  className="mt-3 text-sm font-medium text-brand-600 hover:underline"
-                  onClick={() => navigate('/purchase/dispatch')}
+                <Link
+                  to="/purchase/dispatch"
+                  className="mt-3 inline-block rounded-sm text-sm font-medium text-brand-600 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600"
                 >
                   Open Dispatch →
-                </button>
+                </Link>
               </Card>
             )}
 
@@ -182,12 +181,12 @@ export function TodayPage() {
                     </li>
                   ))}
                 </ul>
-                <button
-                  className="mt-3 text-sm font-medium text-brand-600 hover:underline"
-                  onClick={() => navigate('/purchase/confirmations')}
+                <Link
+                  to="/purchase/confirmations"
+                  className="mt-3 inline-block rounded-sm text-sm font-medium text-brand-600 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600"
                 >
                   Open Confirmations →
-                </button>
+                </Link>
               </Card>
             )}
 
@@ -203,12 +202,12 @@ export function TodayPage() {
                     </li>
                   ))}
                 </ul>
-                <button
-                  className="mt-3 text-sm font-medium text-brand-600 hover:underline"
-                  onClick={() => navigate('/purchase/demand')}
+                <Link
+                  to="/purchase/demand"
+                  className="mt-3 inline-block rounded-sm text-sm font-medium text-brand-600 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600"
                 >
                   Open Demand →
-                </button>
+                </Link>
               </Card>
             )}
 
@@ -230,12 +229,12 @@ export function TodayPage() {
                     </li>
                   ))}
                 </ul>
-                <button
-                  className="mt-3 text-sm font-medium text-brand-600 hover:underline"
-                  onClick={() => navigate('/purchase/demand')}
+                <Link
+                  to="/purchase/demand"
+                  className="mt-3 inline-block rounded-sm text-sm font-medium text-brand-600 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600"
                 >
                   Open Demand →
-                </button>
+                </Link>
               </Card>
             )}
 
@@ -246,12 +245,12 @@ export function TodayPage() {
                   {s.inspectionsPending.length === 1 ? '' : 's'} recorded at the dock, still waiting
                   on Purchase to apply (BR-190).
                 </p>
-                <button
-                  className="mt-3 text-sm font-medium text-brand-600 hover:underline"
-                  onClick={() => navigate('/purchase/recovery')}
+                <Link
+                  to="/purchase/recovery"
+                  className="mt-3 inline-block rounded-sm text-sm font-medium text-brand-600 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600"
                 >
                   Open Recovery →
-                </button>
+                </Link>
               </Card>
             )}
 
@@ -261,12 +260,12 @@ export function TodayPage() {
                   {s.returnNotesOld.length} return note{s.returnNotesOld.length === 1 ? '' : 's'}{' '}
                   past 21 of their 30 lawful days.
                 </p>
-                <button
-                  className="mt-3 text-sm font-medium text-brand-600 hover:underline"
-                  onClick={() => navigate('/purchase/recovery')}
+                <Link
+                  to="/purchase/recovery"
+                  className="mt-3 inline-block rounded-sm text-sm font-medium text-brand-600 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600"
                 >
                   Open Recovery →
-                </button>
+                </Link>
               </Card>
             )}
 
@@ -277,12 +276,12 @@ export function TodayPage() {
                   {s.sellersPendingApproval === 1 ? '' : 's'} waiting on Purchase — no area, no
                   listing (BR-083).
                 </p>
-                <button
-                  className="mt-3 text-sm font-medium text-brand-600 hover:underline"
-                  onClick={() => navigate('/purchase/sellers')}
+                <Link
+                  to="/purchase/sellers"
+                  className="mt-3 inline-block rounded-sm text-sm font-medium text-brand-600 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600"
                 >
                   Open Sellers →
-                </button>
+                </Link>
               </Card>
             )}
 

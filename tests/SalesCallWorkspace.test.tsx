@@ -49,6 +49,7 @@ beforeEach(() => {
     mobile: '9827625116',
     tehsil: 'Ashta',
     tier: 'Retailer',
+    accountStatus: 'active',
   } as never);
   vi.mocked(getSalesBoardForBuyer).mockResolvedValue([
     {
@@ -166,7 +167,9 @@ describe('Call page — board products fold under a rate count (29 Oct)', () => 
       { name: /dhanutop super.*5 rates available · from ₹287\.45/ },
       { timeout: 5000 },
     );
-    const imida = screen.getByRole('button', { name: /DEMO ImidaPro.*1 rate available · from ₹335\.36/ });
+    const imida = screen.getByRole('button', {
+      name: /DEMO ImidaPro.*1 rate available · from ₹335\.36/,
+    });
     expect(dhanutop).toHaveAttribute('aria-expanded', 'false');
     expect(imida).toHaveAttribute('aria-expanded', 'false');
     expect(screen.queryByRole('button', { name: 'He wants it' })).toBeNull();
@@ -174,5 +177,27 @@ describe('Call page — board products fold under a rate count (29 Oct)', () => 
     fireEvent.click(dhanutop);
     expect(dhanutop).toHaveAttribute('aria-expanded', 'true');
     expect(screen.getAllByRole('button', { name: 'He wants it' })).toHaveLength(5);
+  });
+
+  it('1 Nov — a buyer not yet approved: says so, and "He wants it" and Log call are off', async () => {
+    vi.mocked(getSalesBuyerFile).mockResolvedValue({
+      buyerId: 'b1',
+      counterpartyId: 'c1',
+      firm: 'A S krishi seva kendra',
+      mobile: '9827625116',
+      tehsil: 'Ashta',
+      tier: 'Retailer',
+      accountStatus: 'pending',
+    } as never);
+    renderPage();
+    expect(await screen.findByText('Not approved yet.', {}, { timeout: 5000 })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'open Registrations' })).toHaveAttribute(
+      'href',
+      '/registrations',
+    );
+    expect(
+      await screen.findByRole('button', { name: 'He wants it' }, { timeout: 5000 }),
+    ).toBeDisabled();
+    expect(screen.getByRole('button', { name: /^Log call/ })).toBeDisabled();
   });
 });

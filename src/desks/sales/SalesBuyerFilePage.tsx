@@ -14,7 +14,7 @@ import { DropdownCard } from '../../components/DropdownCard';
 import { Card } from '../../components/ui/Card';
 import { BuyerDetailsCard } from '../../components/buyer/BuyerDetailsCard';
 import { PushToPurchaseCard } from '../../components/push/PushToPurchaseCard';
-import { BoardForHimBody } from './SalesCallWorkspacePage';
+import { BoardForHimBody, NotApprovedNote } from './SalesCallWorkspacePage';
 import {
   CancelAskButton,
   CancelOrderButton,
@@ -128,10 +128,12 @@ export function SalesBuyerFilePage() {
                 </DropdownCard>
 
                 <DropdownCard {...sectionProps('board')} title="On the board for him">
+                  {file.accountStatus !== 'active' && <NotApprovedNote />}
                   <BoardForHimBody
                     buyerId={buyerId}
                     counterpartyId={file.counterpartyId}
                     onChanged={retry}
+                    notApproved={file.accountStatus !== 'active'}
                   />
                 </DropdownCard>
 

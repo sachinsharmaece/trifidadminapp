@@ -514,6 +514,8 @@ export interface BuyerFileDto {
   buyerId: string;
   counterpartyId: string;
   firm: string;
+  /** 1 Nov — `active` once approved; only then can he be put on an offer or have an ask raised. */
+  accountStatus: string;
   gstin: string | null;
   mobile: string;
   tehsil: string | null;

@@ -39,12 +39,15 @@ export function HeWantsItButton({
   counterpartyId,
   direction,
   onDone,
+  notApproved = false,
 }: {
   line: BoardForBuyerLine;
   counterpartyId: string;
   /** Incoming/Outgoing, when raised on the call page — for the call history. */
   direction?: 'in' | 'out';
   onDone: () => void;
+  /** 1 Nov — he is not approved yet, so no order could be made for him. */
+  notApproved?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const [qty, setQty] = useState('');
@@ -63,7 +66,13 @@ export function HeWantsItButton({
   }, onDone);
   return (
     <>
-      <Button size="sm" variant="secondary" onClick={() => setOpen(true)}>
+      <Button
+        size="sm"
+        variant="secondary"
+        disabled={notApproved}
+        title={notApproved ? 'Approve him in Registrations first.' : undefined}
+        onClick={() => setOpen(true)}
+      >
         He wants it
       </Button>
       <ActionModal

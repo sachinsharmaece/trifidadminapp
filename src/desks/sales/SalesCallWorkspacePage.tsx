@@ -1,6 +1,6 @@
 import { useCallback, useState } from 'react';
 import type { FormEvent } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import { FiArrowLeft, FiChevronDown, FiPhoneCall, FiPlus } from 'react-icons/fi';
 import { proxyRaiseAsks } from '../../api/proxy';
 import { HeWantsItButton } from './BuyerStageActions';
@@ -98,11 +98,13 @@ export function SalesCallWorkspacePage() {
                 {file.tier && ` · ${file.tier}`}
               </p>
             </div>
+            {file.accountStatus !== 'active' && <NotApprovedNote />}
             <BoardForHimSection
               buyerId={buyerId}
               counterpartyId={file.counterpartyId}
               direction={direction}
               onAskRaised={onCallLogged}
+              notApproved={file.accountStatus !== 'active'}
             />
 
             <DirectionToggle direction={direction} onChange={setDirection} />
@@ -111,6 +113,7 @@ export function SalesCallWorkspacePage() {
               buyerCounterpartyId={file.counterpartyId}
               direction={direction}
               onLogged={onCallLogged}
+              notApproved={file.accountStatus !== 'active'}
             />
 
             <CallHistorySection buyerId={buyerId} refreshKey={callsVersion} />
@@ -157,16 +160,38 @@ function DirectionToggle({
  * reaches his tehsil (client item 16). It is never his order history: a buyer
  * who has never ordered sees the same board as one who orders every week.
  */
+/**
+ * 1 Nov — a buyer not yet approved can't be put on an offer or have an ask raised: no order could
+ * be made for him, so it used to go through Confirmations and then vanish.
+ */
+export function NotApprovedNote() {
+  return (
+    <div
+      role="alert"
+      className="rounded-md border border-amber-300 bg-amber-50 p-3 text-sm text-slate-700"
+    >
+      <strong>Not approved yet.</strong> He can&apos;t be put on an offer or have an ask raised
+      until he is approved —{' '}
+      <Link to="/registrations" className="font-medium underline">
+        open Registrations
+      </Link>
+      .
+    </div>
+  );
+}
+
 function BoardForHimSection({
   buyerId,
   counterpartyId,
   direction,
   onAskRaised,
+  notApproved,
 }: {
   buyerId: string;
   counterpartyId: string;
   direction: 'in' | 'out';
   onAskRaised: () => void;
+  notApproved: boolean;
 }) {
   return (
     <Card title="On the board for him">
@@ -175,6 +200,7 @@ function BoardForHimSection({
         counterpartyId={counterpartyId}
         direction={direction}
         onChanged={onAskRaised}
+        notApproved={notApproved}
       />
     </Card>
   );
@@ -191,12 +217,15 @@ export function BoardForHimBody({
   counterpartyId,
   direction,
   onChanged,
+  notApproved = false,
 }: {
   buyerId: string;
   counterpartyId: string;
   /** Incoming/Outgoing on the call page; the buyer file has no call in progress. */
   direction?: 'in' | 'out';
   onChanged?: () => void;
+  /** 1 Nov — not approved yet: the board shows, "He wants it" stays off. */
+  notApproved?: boolean;
 }) {
   const { callApi } = useAuth();
   const loader = useCallback(
@@ -219,6 +248,7 @@ export function BoardForHimBody({
               counterpartyId={counterpartyId}
               direction={direction}
               onChanged={onChanged}
+              notApproved={notApproved}
               detail={detail}
               startOpen={details.length === 1}
             />
@@ -240,12 +270,14 @@ function BoardProductBlock({
   onChanged,
   detail,
   startOpen = false,
+  notApproved = false,
 }: {
   counterpartyId: string;
   direction?: 'in' | 'out';
   onChanged?: () => void;
   detail: BoardForBuyerProduct;
   startOpen?: boolean;
+  notApproved?: boolean;
 }) {
   const [open, setOpen] = useState(startOpen);
   const count = detail.ladder.length;
@@ -306,6 +338,7 @@ function BoardProductBlock({
                 line={line}
                 counterpartyId={counterpartyId}
                 direction={direction}
+                notApproved={notApproved}
                 onDone={() => onChanged?.()}
               />
             </li>
@@ -474,11 +507,14 @@ export function LogBuyerCallSection({
   buyerCounterpartyId,
   direction,
   onLogged,
+  notApproved = false,
 }: {
   buyerCounterpartyId: string;
   direction?: 'in' | 'out';
   /** Called once any ask was raised, so the page can reload its lists. */
   onLogged?: () => void;
+  /** 1 Nov — not approved yet: nothing can be raised for him (the server refuses it too). */
+  notApproved?: boolean;
 }) {
   const { callApi } = useAuth();
   const [lines, setLines] = useState<CallLine[]>(() => [newCallLine(0)]);
@@ -644,7 +680,13 @@ export function LogBuyerCallSection({
               `${raised.added} added to ${raised.added === 1 ? 'an ask' : 'asks'} he already had open.`}
           </p>
         )}
-        <Button type="submit" loading={submitting} icon={<FiPhoneCall />}>
+        <Button
+          type="submit"
+          loading={submitting}
+          disabled={notApproved}
+          title={notApproved ? 'Approve him in Registrations first.' : undefined}
+          icon={<FiPhoneCall />}
+        >
           {lines.length > 1 ? `Log call (${lines.length} products)` : 'Log call'}
         </Button>
       </form>

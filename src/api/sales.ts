@@ -477,6 +477,25 @@ export interface SalesOrderRow {
   updatedAt: string;
 }
 
+/** A deal given to him when the seller confirmed the pile he is on — his to take or walk away from. */
+export interface BuyerFilePileOffer {
+  requestId: string;
+  productId: string | null;
+  brand: string;
+  packLabel: string | null;
+  /** The boxes offered — fewer than he asked on a short pile. */
+  boxes: number;
+  askedBoxes: number;
+  /** His own rate; null while the margin matrix has no cell for him. */
+  ratePaise: number | null;
+  /** The expiry the seller fixed: a year, or month and year. */
+  expiryExact: string | null;
+  expiryBand: string;
+  deliveryBand: string;
+  offeredAt: string;
+  holdUntil: string;
+}
+
 export interface BuyerFileLiveQuote {
   quoteId: string;
   askId: string;
@@ -545,6 +564,8 @@ export interface BuyerFileDto {
   openAsks: BuyerFileOpenAsk[];
   waitingOnSeller: BuyerFileWaitingOnSeller[];
   liveQuotes: BuyerFileLiveQuote[];
+  /** 2 Nov — BR-378: deals given to him when a seller confirmed his pile, held 24 hours for his word. */
+  pileOffers: BuyerFilePileOffer[];
   callLogs: CallLogDto[];
   orders: SalesOrderRow[];
   ordersByStage: BuyerFileOrdersByStage;
@@ -808,7 +829,8 @@ export function getShortPiles(accessToken: string): Promise<ShortPile[]> {
 }
 
 export interface ResolveShortPileResult {
-  orderedBoxes: number;
+  /** Boxes now offered to the buyers, each to take or walk away from (BR-378). */
+  offeredBoxes: number;
   backOnAskBoxes: number;
   lineQty: number;
 }

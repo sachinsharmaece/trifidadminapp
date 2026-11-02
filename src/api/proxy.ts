@@ -308,3 +308,31 @@ export function proxyDeclinePile(
     accessToken,
   });
 }
+
+// BR-378 — the deal given to a buyer when the seller confirmed his pile: Sales takes it, or walks
+// away from it, on the buyer's word.
+export function proxyAcceptPileOffer(
+  accessToken: string,
+  requestId: string,
+  input: { buyerCounterpartyId: string; callNote: string; direction?: 'in' | 'out' },
+): Promise<{ soId: string; boxes: number }> {
+  return apiFetch(`/staff/proxy/buyer/pile-offers/${requestId}/accept`, {
+    method: 'POST',
+    body: input,
+    accessToken,
+    idempotencyKey: idempotencyKey(),
+  });
+}
+
+export function proxyDeclinePileOffer(
+  accessToken: string,
+  requestId: string,
+  input: { buyerCounterpartyId: string; callNote: string; direction?: 'in' | 'out' },
+): Promise<{ released: boolean }> {
+  return apiFetch(`/staff/proxy/buyer/pile-offers/${requestId}/decline`, {
+    method: 'POST',
+    body: input,
+    accessToken,
+    idempotencyKey: idempotencyKey(),
+  });
+}

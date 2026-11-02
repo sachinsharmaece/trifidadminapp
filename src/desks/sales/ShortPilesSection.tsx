@@ -25,7 +25,7 @@ export function ShortPilesSection() {
   return (
     <Card title="Short piles — who gets the boxes">
       <p className="mb-4 text-sm text-slate-500">
-        The seller can send fewer boxes than were asked for, so nothing is ordered yet. Divide what
+        The seller can send fewer boxes than were asked for, so nothing is offered yet. Divide what
         he can send between the buyers. What a buyer does not get stays open as his ask, and
         Purchase finds another seller for it.
       </p>
@@ -81,8 +81,8 @@ function ShortPileForm({ pile, onDone }: { pile: ShortPile; onDone: () => void }
       );
       toast?.show(
         result.backOnAskBoxes > 0
-          ? `${result.orderedBoxes} boxes ordered; ${result.backOnAskBoxes} are open as asks.`
-          : `${result.orderedBoxes} boxes ordered.`,
+          ? `${result.offeredBoxes} boxes offered; ${result.backOnAskBoxes} are open as asks.`
+          : `${result.offeredBoxes} boxes offered.`,
       );
       onDone();
     } catch (e) {

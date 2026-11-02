@@ -105,7 +105,7 @@ describe('Short piles on the Sales desk (BR-134)', () => {
   it('sends every buyer with his boxes and the reason, then reloads the list', async () => {
     vi.mocked(getShortPiles).mockResolvedValueOnce([pile()]).mockResolvedValue([]);
     vi.mocked(resolveShortPile).mockResolvedValue({
-      orderedBoxes: 10,
+      offeredBoxes: 10,
       backOnAskBoxes: 5,
       lineQty: 0,
     });
@@ -128,7 +128,7 @@ describe('Short piles on the Sales desk (BR-134)', () => {
       ],
       reason: 'Two regulars.',
     });
-    expect(await screen.findByText('10 boxes ordered; 5 are open as asks.')).toBeInTheDocument();
+    expect(await screen.findByText('10 boxes offered; 5 are open as asks.')).toBeInTheDocument();
     await waitFor(() => expect(getShortPiles).toHaveBeenCalledTimes(2)); // The divided pile is gone.
     expect(screen.queryByText(/He can send/)).toBeNull();
   });

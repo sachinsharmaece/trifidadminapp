@@ -228,7 +228,7 @@ export interface BoardForBuyerLine {
   deliveryBand: string;
   provenance: string;
   /** 2 Nov — why it takes no more requests (BR-136); null when it takes them. */
-  closed: 'confirmed' | 'requoted' | 'declined' | 'sold_out' | null;
+  closed: 'confirmed' | 'short' | 'requoted' | 'declined' | 'sold_out' | null;
   /** 2 Nov — a pool is open for this offer, so fewer boxes than its minimum can still join it. */
   poolOpen: boolean;
   /** 2 Nov — his place in the pool this offer opened; `canChange` is false once binding (BR-154). */
@@ -775,4 +775,53 @@ export function cancelUnpaidOrder(
 /** Phase 3 — who the caller may assign a buyer to (himself; his team; Admin: all Sales). */
 export function getAssignableSalesPeople(accessToken: string): Promise<AssignableSalesPerson[]> {
   return apiFetch('/staff/sales/assignees', { accessToken });
+}
+
+// ---------------------------------------------------------------------------
+// Short piles — BR-134. The seller can send fewer boxes than the buyers on a pile asked for; Sales
+// divides what he can send between them.
+// ---------------------------------------------------------------------------
+
+export interface ShortPileRequest {
+  pileRequestId: string;
+  buyerId: string;
+  firm: string;
+  boxes: number;
+  requestedAt: string;
+}
+
+export interface ShortPile {
+  pileId: string;
+  brand: string;
+  packLabel: string;
+  /** What the seller confirmed he can send. */
+  canSend: number;
+  /** What the buyers asked for, together. */
+  asked: number;
+  decidedAt: string | null;
+  /** In the order they asked. */
+  requests: ShortPileRequest[];
+}
+
+export function getShortPiles(accessToken: string): Promise<ShortPile[]> {
+  return apiFetch('/staff/sales/short-piles', { accessToken });
+}
+
+export interface ResolveShortPileResult {
+  orderedBoxes: number;
+  backOnAskBoxes: number;
+  lineQty: number;
+}
+
+export function resolveShortPile(
+  accessToken: string,
+  pileId: string,
+  input: { allocations: Array<{ pileRequestId: string; boxes: number }>; reason: string },
+): Promise<ResolveShortPileResult> {
+  return apiFetch(`/staff/sales/short-piles/${pileId}/resolve`, {
+    method: 'POST',
+    body: input,
+    accessToken,
+    idempotencyKey: stageKey(),
+  });
 }

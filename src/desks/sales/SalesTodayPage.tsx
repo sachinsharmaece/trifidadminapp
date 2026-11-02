@@ -12,6 +12,7 @@ import { Badge } from '../../components/ui/Badge';
 import { Input } from '../../components/ui/Input';
 import { Button } from '../../components/ui/Button';
 import { formatDateTime } from '../../lib/dates';
+import { ShortPilesSection } from './ShortPilesSection';
 
 const BUCKET_ORDER: SalesWorkItem['bucket'][] = ['money', 'promised', 'he_asked', 'market'];
 
@@ -53,6 +54,7 @@ export function SalesTodayPage() {
 
   return (
     <div className="flex flex-col gap-6">
+      <ShortPilesSection />
       <AsyncBoundary
         state={worklistState}
         onRetry={retryWorklist}

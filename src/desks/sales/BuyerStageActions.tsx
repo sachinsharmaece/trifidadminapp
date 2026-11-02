@@ -126,6 +126,7 @@ export function HeWantsItButton({
 // means something is still in flight, or the seller said no, or it is sold out.
 const CLOSED_LABEL = {
   confirmed: 'Confirmation in progress',
+  short: 'Short — boxes to be divided',
   requoted: 'Seller revised — awaiting buyers',
   declined: 'Seller declined — closed',
   sold_out: 'Sold out',

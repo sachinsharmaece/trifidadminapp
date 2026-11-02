@@ -271,7 +271,8 @@ export function proxyConfirmPile(
   input: {
     sellerCounterpartyId: string;
     canSendBoxes: number;
-    expiryExact: string;
+    /** A year, or month and year. Left out, the expiry on his listing stands. */
+    expiryExact?: string;
     batch?: string;
     callNote: string;
   },

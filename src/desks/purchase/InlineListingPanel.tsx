@@ -67,8 +67,8 @@ export function buildListingLines(
       skuId: row.skuId,
       ratePaise: rate,
       expiryBand: band,
-      // Only a month that was given is an exact month; the year alone gives the band.
-      ...(month ? { expiryExact: expiryExactOf(Number(row.year), month) } : {}),
+      // A month and year, or the year alone when no month was given.
+      expiryExact: expiryExactOf(Number(row.year), month),
       moqExact: moq,
       deliveryBand: '48h',
       provenance: 'company',

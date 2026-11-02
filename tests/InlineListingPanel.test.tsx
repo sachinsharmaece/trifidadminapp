@@ -186,7 +186,7 @@ describe('Defaults, and the optional month (2 Nov)', () => {
     expect(screen.getByText('Over 12 months · month not given')).toBeInTheDocument();
   });
 
-  it('lists with no month: the band from the year, and no exact month sent', async () => {
+  it('lists with no month: the band from the year, and the year alone kept as the expiry', async () => {
     show();
     open();
     // The year before: January 2027 is under a year away.
@@ -202,7 +202,7 @@ describe('Defaults, and the optional month (2 Nov)', () => {
     await waitFor(() => expect(proxyCreateListing).toHaveBeenCalledTimes(1));
     const line = vi.mocked(proxyCreateListing).mock.calls[0]![1].lines[0]!;
     expect(line).toMatchObject({ expiryBand: 'over12', moqExact: 1, qty: 100 });
-    expect(line).not.toHaveProperty('expiryExact');
+    expect(line.expiryExact).toBe('2028'); // The year, not a made-up month.
   });
 });
 

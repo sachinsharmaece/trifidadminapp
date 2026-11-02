@@ -429,7 +429,12 @@ export interface PileAwaitingDecisionItem {
   brand: string;
   ratePaise: number;
   boxes: number;
+  /** What he listed on the line: the boxes he can send start here (capped by what was asked). */
   lineQty: number;
+  /** The expiry the line was listed with (a year, or month and year); null when none was given. */
+  listedExpiry: string | null;
+  /** My stock needs a batch to confirm; company billing does not. */
+  provenance: 'company' | 'auth';
   buyers: number;
   openedAt: string;
   confirmWindowEndsAt: string;
@@ -649,6 +654,12 @@ export interface SellerPileRow {
   brand: string;
   packLabel: string;
   boxes: number;
+  /** What he listed on the line: the boxes he can send start here (capped by what was asked). */
+  lineQty: number;
+  /** The expiry the line was listed with (a year, or month and year); null when none was given. */
+  listedExpiry: string | null;
+  /** My stock needs a batch to confirm; company billing does not. */
+  provenance: 'company' | 'auth';
   buyers: number;
   openedAt: string;
   chaseLeftHours: number;

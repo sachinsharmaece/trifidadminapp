@@ -30,6 +30,10 @@ describe('The expiry on a price sheet (25-27, March)', () => {
     expect(bandOfExpiry(2027, null, now)).toBe('under12'); // Could be January 2027.
   });
 
+  it('keeps the year alone when no month is given', () => {
+    expect(expiryExactOf(2028, null)).toBe('2028');
+  });
+
   it('stores the exact month as MM/YYYY', () => {
     expect(expiryExactOf(2027, 3)).toBe('03/2027');
     expect(expiryExactOf(2028, 12)).toBe('12/2028');

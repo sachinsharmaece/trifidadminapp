@@ -41,9 +41,9 @@ export function expiryYearOptions(now: Date = new Date()): ExpiryYearOption[] {
   return options;
 }
 
-/** MM/YYYY, the form the server stores. `month` is 1–12. */
-export function expiryExactOf(expiryYear: number, month: number): string {
-  return `${String(month).padStart(2, '0')}/${expiryYear}`;
+/** MM/YYYY, or the year alone when no month is given — the forms the server stores. `month` is 1–12. */
+export function expiryExactOf(expiryYear: number, month: number | null): string {
+  return month ? `${String(month).padStart(2, '0')}/${expiryYear}` : String(expiryYear);
 }
 
 /** The year pair that starts this year (26-28 in 2026), as its expiry year: what the rows open on. */
@@ -70,3 +70,6 @@ export function bandOfExpiry(
   aYearOn.setFullYear(aYearOn.getFullYear() + 1);
   return endOfMonth.getTime() > aYearOn.getTime() ? 'over12' : 'under12';
 }
+
+/** The expiry as it is stored and shown: a year (2028) or a month and year (03/2028). */
+export const EXPIRY_EXACT = /^((0[1-9]|1[0-2])\/)?\d{4}$/;

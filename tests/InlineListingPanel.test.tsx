@@ -132,7 +132,7 @@ describe('Add to listing, in place (2 Nov)', () => {
     expect(body).toMatchObject({
       sellerCounterpartyId: 'c1',
       productId: 'p1',
-      scopeType: 'my_area',
+      scopeType: 'all_india',
       callNote: 'Called him, gave these.',
     });
     expect(body.lines).toEqual([
@@ -174,6 +174,38 @@ describe('Add to listing, in place (2 Nov)', () => {
   });
 });
 
+describe('Defaults, and the optional month (2 Nov)', () => {
+  it("opens on this year's pair with no month, and has no territory to pick", () => {
+    show();
+    open();
+    expect((screen.getByLabelText('Expiry year, row 1') as HTMLSelectElement).value).toBe('2028'); // 26-28.
+    expect(screen.getByRole('option', { name: '26-28' })).toBeInTheDocument();
+    expect((screen.getByLabelText('Expiry month, row 1') as HTMLSelectElement).value).toBe('');
+    expect(screen.queryByLabelText('Territory')).toBeNull();
+    // Without a month the band is counted from January, so it never promises more than the year.
+    expect(screen.getByText('Over 12 months · month not given')).toBeInTheDocument();
+  });
+
+  it('lists with no month: the band from the year, and no exact month sent', async () => {
+    show();
+    open();
+    // The year before: January 2027 is under a year away.
+    pick('Expiry year, row 1', '2027');
+    expect(screen.getByText('Under 12 months · month not given')).toBeInTheDocument();
+    pick('Expiry year, row 1', '2028');
+
+    pick('Pack, row 1', 'k1');
+    pick('Rate, row 1', '280');
+    pick('Boxes, row 1', '100');
+    note();
+    submit();
+    await waitFor(() => expect(proxyCreateListing).toHaveBeenCalledTimes(1));
+    const line = vi.mocked(proxyCreateListing).mock.calls[0]![1].lines[0]!;
+    expect(line).toMatchObject({ expiryBand: 'over12', moqExact: 1, qty: 100 });
+    expect(line).not.toHaveProperty('expiryExact');
+  });
+});
+
 describe('What the rows refuse, and what they leave to the full form', () => {
   it('says which row is wrong, and sends nothing', async () => {
     show();
@@ -183,12 +215,13 @@ describe('What the rows refuse, and what they leave to the full form', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent('Row 1: pick the pack.');
 
     pick('Pack, row 1', 'k1');
+    pick('Expiry year, row 1', '');
     submit();
-    expect(screen.getByRole('alert')).toHaveTextContent('Row 1: pick the expiry year and month.');
+    expect(screen.getByRole('alert')).toHaveTextContent('Row 1: pick the expiry year.');
+    pick('Expiry year, row 1', '2028');
 
-    pick('Expiry year, row 1', '2027');
-    pick('Expiry month, row 1', '3');
     submit();
+    // The year opens on this year's pair and the month is optional, so the rate is next.
     expect(screen.getByRole('alert')).toHaveTextContent('Row 1: enter the rate in rupees');
 
     pick('Rate, row 1', '280');

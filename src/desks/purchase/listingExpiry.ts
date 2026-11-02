@@ -46,18 +46,25 @@ export function expiryExactOf(expiryYear: number, month: number): string {
   return `${String(month).padStart(2, '0')}/${expiryYear}`;
 }
 
+/** The year pair that starts this year (26-28 in 2026), as its expiry year: what the rows open on. */
+export function defaultExpiryYear(now: Date = new Date()): string {
+  return String(now.getFullYear() + SHELF_LIFE_YEARS);
+}
+
 export type ExpiryBandResult = 'over12' | 'under12' | 'expired';
 
 /**
  * Over 12 months when the end of the expiry month is more than a year away; Under 12 months when
  * it is nearer; "expired" when that month is already over. No six-month floor here (DEC-071).
+ * The month is optional: without one it is counted from January, the earliest it could be, so the
+ * band never promises more than the year does.
  */
 export function bandOfExpiry(
   expiryYear: number,
-  month: number,
+  month: number | null,
   now: Date = new Date(),
 ): ExpiryBandResult {
-  const endOfMonth = new Date(expiryYear, month, 0, 23, 59, 59);
+  const endOfMonth = new Date(expiryYear, month ?? 1, 0, 23, 59, 59);
   if (endOfMonth.getTime() < now.getTime()) return 'expired';
   const aYearOn = new Date(now.getTime());
   aYearOn.setFullYear(aYearOn.getFullYear() + 1);

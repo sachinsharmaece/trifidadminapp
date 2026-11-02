@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   bandOfExpiry,
+  defaultExpiryYear,
   expiryExactOf,
   expiryYearOptions,
 } from '../src/desks/purchase/listingExpiry';
@@ -15,6 +16,18 @@ describe('The expiry on a price sheet (25-27, March)', () => {
       { value: '2029', label: '27-29' },
       { value: '2030', label: '28-30' },
     ]);
+  });
+
+  it('opens on the pair that starts this year', () => {
+    expect(defaultExpiryYear(now)).toBe('2028'); // 26-28.
+    expect(expiryYearOptions(now).find((o) => o.value === defaultExpiryYear(now))?.label).toBe(
+      '26-28',
+    );
+  });
+
+  it('counts a missing month from January, so the band never promises more than the year', () => {
+    expect(bandOfExpiry(2028, null, now)).toBe('over12');
+    expect(bandOfExpiry(2027, null, now)).toBe('under12'); // Could be January 2027.
   });
 
   it('stores the exact month as MM/YYYY', () => {

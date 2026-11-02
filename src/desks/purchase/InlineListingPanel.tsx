@@ -7,12 +7,19 @@ import { useAuth } from '../../auth/AuthContext';
 import { Button } from '../../components/ui/Button';
 import { Textarea } from '../../components/ui/Input';
 import { useOptionalToast } from '../../components/ui/Toast';
-import { MONTHS, bandOfExpiry, expiryExactOf, expiryYearOptions } from './listingExpiry';
+import {
+  MONTHS,
+  bandOfExpiry,
+  defaultExpiryYear,
+  expiryExactOf,
+  expiryYearOptions,
+} from './listingExpiry';
 
 /**
  * 2 Nov — "Add to listing" in place, on the product's own card under "What he sells": one row per
  * pack — pack, expiry year, expiry month, rate, MOQ, boxes — the way a seller's price sheet reads.
- * Delivery (48 hours) and provenance (company billing) are not asked; "More options" opens the full
+ * The year opens on the pair that starts this year and the month is optional. Delivery (48 hours),
+ * provenance (company billing) and territory (all India) are not asked; "More options" opens the full
  * form for My stock, a different delivery, or a product he does not carry yet. One submit lists every
  * row together as one listing (BR-113); nothing is saved if any row is refused.
  */
@@ -41,8 +48,9 @@ export function buildListingLines(
     if (!row.skuId) return { error: `${at}pick the pack.` };
     if (seen.has(row.skuId)) return { error: `${at}that pack is already in another row.` };
     seen.add(row.skuId);
-    if (!row.year || !row.month) return { error: `${at}pick the expiry year and month.` };
-    const band = bandOfExpiry(Number(row.year), Number(row.month), now);
+    if (!row.year) return { error: `${at}pick the expiry year.` };
+    const month = row.month ? Number(row.month) : null; // The month is optional.
+    const band = bandOfExpiry(Number(row.year), month, now);
     if (band === 'expired') return { error: `${at}that expiry month has already passed.` };
     const rate = Math.round(Number(row.rate) * 100);
     if (!row.rate.trim() || Number.isNaN(rate) || rate <= 0) {
@@ -59,7 +67,8 @@ export function buildListingLines(
       skuId: row.skuId,
       ratePaise: rate,
       expiryBand: band,
-      expiryExact: expiryExactOf(Number(row.year), Number(row.month)),
+      // Only a month that was given is an exact month; the year alone gives the band.
+      ...(month ? { expiryExact: expiryExactOf(Number(row.year), month) } : {}),
       moqExact: moq,
       deliveryBand: '48h',
       provenance: 'company',
@@ -91,16 +100,13 @@ export function InlineListingPanel({
     {
       key: 1,
       skuId: packs.length === 1 ? packs[0]!.skuId : '',
-      year: '',
+      year: defaultExpiryYear(),
       month: '',
       rate: '',
       moq: '',
       boxes: '',
     },
   ]);
-  const [scopeType, setScopeType] = useState<'my_area' | 'all_india' | 'all_except_mine'>(
-    'my_area',
-  );
   const [callNote, setCallNote] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -141,7 +147,7 @@ export function InlineListingPanel({
         proxyCreateListing(token, {
           sellerCounterpartyId,
           productId: item.productId,
-          scopeType,
+          scopeType: 'all_india', // Not asked: a listing from a call goes to all India.
           lines: built.lines,
           callNote: callNote.trim(),
         }),
@@ -219,19 +225,6 @@ export function InlineListingPanel({
         >
           Add another pack
         </Button>
-        <label className="flex items-center gap-2 text-sm text-slate-600">
-          Territory
-          <select
-            aria-label="Territory"
-            className={`${CELL} w-auto`}
-            value={scopeType}
-            onChange={(e) => setScopeType(e.target.value as typeof scopeType)}
-          >
-            <option value="my_area">My area</option>
-            <option value="all_india">All India</option>
-            <option value="all_except_mine">All India except his area</option>
-          </select>
-        </label>
       </div>
       <div className="max-w-xl">
         <Textarea
@@ -285,7 +278,9 @@ function ListingRow({
   onRemove: () => void;
 }) {
   const n = index + 1;
-  const band = row.year && row.month ? bandOfExpiry(Number(row.year), Number(row.month)) : null;
+  const band = row.year
+    ? bandOfExpiry(Number(row.year), row.month ? Number(row.month) : null)
+    : null;
   const bandText = {
     over12: 'Over 12 months',
     under12: 'Under 12 months',
@@ -331,14 +326,19 @@ function ListingRow({
           value={row.month}
           onChange={(e) => onChange({ month: e.target.value })}
         >
-          <option value="">Select…</option>
+          <option value="">Any</option>
           {MONTHS.map((m, i) => (
             <option key={m} value={String(i + 1)}>
               {m}
             </option>
           ))}
         </select>
-        {band && <span className="mt-0.5 block text-xs text-slate-500">{bandText[band]}</span>}
+        {band && (
+          <span className="mt-0.5 block text-xs text-slate-500">
+            {bandText[band]}
+            {!row.month && ' · month not given'}
+          </span>
+        )}
       </td>
       <td className="pr-2 pb-2">
         <input

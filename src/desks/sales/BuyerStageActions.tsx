@@ -1,6 +1,12 @@
 import { useEffect, useState } from 'react';
 import { ActionModal, ActionRefused, errorText, useAction } from '../../components/ActionModal';
-import { proxyAcceptAskFill, proxyDeclineAsk, proxyWantsIt } from '../../api/proxy';
+import {
+  proxyAcceptAskFill,
+  proxyDeclineAsk,
+  proxyPoolChange,
+  proxyPoolWithdraw,
+  proxyWantsIt,
+} from '../../api/proxy';
 import {
   cancelUnpaidOrder,
   dispatchOrder,
@@ -104,6 +110,163 @@ export function HeWantsItButton({
         />
       </ActionModal>
     </>
+  );
+}
+
+const CLOSED_LABEL = {
+  confirmed: 'Seller confirmed — closed',
+  requoted: 'Seller requoted — closed',
+  declined: 'Seller declined — closed',
+} as const;
+
+/**
+ * 2 Nov — what Sales can do with one offer on his board: "He wants it" while it is open; nothing
+ * once the seller has answered it (a line has one request group for life, BR-135), said so up
+ * front instead of after a refusal; and, when he already holds a place in the offer's pool, that
+ * place with Change boxes / Withdraw (free while not binding, BR-154).
+ */
+export function OfferAction({
+  line,
+  counterpartyId,
+  direction,
+  onDone,
+  notApproved = false,
+}: {
+  line: BoardForBuyerLine;
+  counterpartyId: string;
+  direction?: 'in' | 'out';
+  onDone: () => void;
+  notApproved?: boolean;
+}) {
+  if (line.closed) {
+    return (
+      <div className="flex items-center gap-2">
+        <Badge tone="neutral">{CLOSED_LABEL[line.closed]}</Badge>
+        <Button
+          size="sm"
+          variant="secondary"
+          disabled
+          title="This offer already has a seller decision, so it takes no more requests."
+        >
+          He wants it
+        </Button>
+      </div>
+    );
+  }
+  if (line.inPool) {
+    return (
+      <PoolPlace
+        place={line.inPool}
+        counterpartyId={counterpartyId}
+        direction={direction}
+        onDone={onDone}
+      />
+    );
+  }
+  return (
+    <HeWantsItButton
+      line={line}
+      counterpartyId={counterpartyId}
+      direction={direction}
+      onDone={onDone}
+      notApproved={notApproved}
+    />
+  );
+}
+
+function PoolPlace({
+  place,
+  counterpartyId,
+  direction,
+  onDone,
+}: {
+  place: NonNullable<BoardForBuyerLine['inPool']>;
+  counterpartyId: string;
+  direction?: 'in' | 'out';
+  onDone: () => void;
+}) {
+  const [changing, setChanging] = useState(false);
+  const [withdrawing, setWithdrawing] = useState(false);
+  const [qty, setQty] = useState(String(place.boxes));
+  const parsedQty = Number(qty);
+  const qtyOk = Number.isInteger(parsedQty) && parsedQty >= 1 && parsedQty !== place.boxes;
+  const change = useAction(async (token, callNote) => {
+    await proxyPoolChange(token, place.poolId, {
+      buyerCounterpartyId: counterpartyId,
+      qty: parsedQty,
+      callNote,
+      ...(direction ? { direction } : {}),
+    });
+    return `Changed to ${parsedQty} ${parsedQty === 1 ? 'box' : 'boxes'} in the pool.`;
+  }, onDone);
+  const withdraw = useAction(async (token, callNote) => {
+    await proxyPoolWithdraw(token, place.poolId, {
+      buyerCounterpartyId: counterpartyId,
+      callNote,
+      ...(direction ? { direction } : {}),
+    });
+    return 'Withdrawn from the pool.';
+  }, onDone);
+  return (
+    <div className="flex flex-wrap items-center justify-end gap-2">
+      <span className="text-xs text-slate-600">
+        In the pool with {place.boxes} {place.boxes === 1 ? 'box' : 'boxes'} ({place.committedBoxes}{' '}
+        of {place.moq})
+      </span>
+      {place.canChange ? (
+        <>
+          <Button
+            size="sm"
+            variant="secondary"
+            onClick={() => {
+              setQty(String(place.boxes));
+              setChanging(true);
+            }}
+          >
+            Change boxes
+          </Button>
+          <Button size="sm" variant="secondary" onClick={() => setWithdrawing(true)}>
+            Withdraw
+          </Button>
+        </>
+      ) : (
+        <Badge tone="neutral">Binding — can&apos;t be changed</Badge>
+      )}
+      <ActionModal
+        open={changing}
+        title="Change his boxes in the pool"
+        submitLabel="Change boxes"
+        canSubmit={qtyOk}
+        onClose={() => setChanging(false)}
+        onSubmit={change}
+      >
+        <p className="text-sm text-slate-600">
+          He is in this offer&apos;s pool with {place.boxes} {place.boxes === 1 ? 'box' : 'boxes'}.
+        </p>
+        <Input
+          label="Boxes he wants"
+          type="number"
+          min={1}
+          required
+          value={qty}
+          onChange={(event) => setQty(event.target.value)}
+        />
+      </ActionModal>
+      <ActionModal
+        open={withdrawing}
+        title="Withdraw him from the pool"
+        submitLabel="Withdraw"
+        danger
+        onClose={() => setWithdrawing(false)}
+        onSubmit={withdraw}
+      >
+        <p className="text-sm text-slate-600">
+          He leaves this offer&apos;s pool and his {place.boxes}{' '}
+          {place.boxes === 1 ? 'box comes' : 'boxes come'} out of it. Free, as it is not binding
+          yet.
+        </p>
+      </ActionModal>
+    </div>
   );
 }
 

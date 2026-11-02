@@ -66,6 +66,38 @@ export function proxyWantsIt(
   });
 }
 
+/** 2 Nov — Sales changes how many boxes he holds in a pool (free while not binding, BR-154). */
+export function proxyPoolChange(
+  accessToken: string,
+  poolId: string,
+  input: {
+    buyerCounterpartyId: string;
+    qty: number;
+    callNote: string;
+    direction?: 'in' | 'out';
+  },
+): Promise<{ poolId: string; previousQty: number; qty: number }> {
+  return apiFetch(`/staff/proxy/buyer/pools/${poolId}/change`, {
+    method: 'POST',
+    body: input,
+    accessToken,
+    idempotencyKey: idempotencyKey(),
+  });
+}
+
+export function proxyPoolWithdraw(
+  accessToken: string,
+  poolId: string,
+  input: { buyerCounterpartyId: string; callNote: string; direction?: 'in' | 'out' },
+): Promise<{ poolId: string }> {
+  return apiFetch(`/staff/proxy/buyer/pools/${poolId}/withdraw`, {
+    method: 'POST',
+    body: input,
+    accessToken,
+    idempotencyKey: idempotencyKey(),
+  });
+}
+
 /**
  * One entry per submitted line, by position. 29 Oct — a product on his board goes on the
  * cheapest offer (`pile` / `pool`, Purchase → Confirmations); one that is not becomes an

@@ -227,6 +227,17 @@ export interface BoardForBuyerLine {
   moqBand: string;
   deliveryBand: string;
   provenance: string;
+  /** 2 Nov — the seller has already answered this line (BR-135); it takes no more requests. */
+  closed: 'confirmed' | 'requoted' | 'declined' | null;
+  /** 2 Nov — his place in the pool this offer opened; `canChange` is false once binding (BR-154). */
+  inPool: {
+    poolId: string;
+    boxes: number;
+    committedBoxes: number;
+    moq: number;
+    status: string;
+    canChange: boolean;
+  } | null;
 }
 
 export interface BoardForBuyerProduct {

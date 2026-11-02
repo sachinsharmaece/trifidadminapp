@@ -184,6 +184,11 @@ function AskRows({
             {open ? '▾ ' : '▸ '}
             {askLabel(item)}
             <span className="ml-2 text-xs text-slate-500">asked {timeAgo(item.createdAt)}</span>
+            {item.filledQty > 0 && (
+              <span className="ml-2 text-xs text-slate-500">
+                {item.filledQty} of {item.filledQty + item.qty} already ordered
+              </span>
+            )}
           </span>
         </Td>
         <Td numeric>{item.qty}</Td>
@@ -207,6 +212,25 @@ function AskRows({
       )}
     </>
   );
+}
+
+/**
+ * 2 Nov — what a seller's quote falls short on. "Short on quantity" now says by how much
+ * ("Short: offered 10 of 100 boxes"); other gaps are listed as they are, without repeating "short".
+ */
+function gapText(s: AskSellerStateItem): string | null {
+  if (s.gapCodes.length === 0) return null;
+  const parts: string[] = [];
+  for (const code of s.gapCodes) {
+    if (code === 'short_on_quantity' && s.qtyAvailable !== null) {
+      parts.push(`Short: offered ${s.qtyAvailable} of ${s.askQty} boxes`);
+    } else if (code === 'short_on_quantity') {
+      parts.push('Short on quantity');
+    } else {
+      parts.push(code.replaceAll('_', ' '));
+    }
+  }
+  return parts.join(' · ');
 }
 
 const SELLER_STATE_LABEL: Record<
@@ -291,9 +315,7 @@ function SellerStateRow({
       {s.ratePaise !== null && (
         <span className="text-slate-500">₹{(s.ratePaise / 100).toFixed(2)}</span>
       )}
-      {s.gapCodes.length > 0 && (
-        <span className="text-danger-500">short: {s.gapCodes.join(', ').replaceAll('_', ' ')}</span>
-      )}
+      {gapText(s) && <span className="text-danger-500">{gapText(s)}</span>}
       {canSeeLedger && (
         <Link
           to={`/accounts/party/${s.sellerId}`}

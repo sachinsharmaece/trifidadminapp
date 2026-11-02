@@ -227,8 +227,8 @@ export interface BoardForBuyerLine {
   moqBand: string;
   deliveryBand: string;
   provenance: string;
-  /** 2 Nov — the seller has already answered this line (BR-135); it takes no more requests. */
-  closed: 'confirmed' | 'requoted' | 'declined' | null;
+  /** 2 Nov — why it takes no more requests (BR-136); null when it takes them. */
+  closed: 'confirmed' | 'requoted' | 'declined' | 'sold_out' | null;
   /** 2 Nov — a pool is open for this offer, so fewer boxes than its minimum can still join it. */
   poolOpen: boolean;
   /** 2 Nov — his place in the pool this offer opened; `canChange` is false once binding (BR-154). */
@@ -417,7 +417,11 @@ export interface BuyerFileOpenAsk {
   askId: string;
   productId: string | null;
   skuId: string | null;
+  /** Boxes still wanted; `filledQty` is what was already ordered (a short fill leaves it open). */
   qty: number;
+  filledQty: number;
+  /** Nothing is listed and nobody has quoted it: it waits on Purchase to find a seller. */
+  waitingOnPurchase: boolean;
   state: string;
   brand: string;
   technical: string;

@@ -186,7 +186,14 @@ export function SalesBuyerFilePage() {
                                 </ul>
                               )}
                             </Td>
-                            <Td numeric>{a.qty}</Td>
+                            <Td numeric>
+                              {a.qty}
+                              {a.filledQty > 0 && (
+                                <div className="text-xs text-slate-500">
+                                  {a.filledQty} of {a.filledQty + a.qty} ordered
+                                </div>
+                              )}
+                            </Td>
                             <Td numeric>
                               {a.expectedRatePaise != null
                                 ? formatRupees(a.expectedRatePaise)
@@ -200,6 +207,11 @@ export function SalesBuyerFilePage() {
                               >
                                 Asked {timeAgo(a.askedAt, now)}
                               </div>
+                              {a.waitingOnPurchase && (
+                                <div className="mt-1 text-xs text-slate-500">
+                                  No seller carries it yet — Purchase is finding one.
+                                </div>
+                              )}
                             </Td>
                             <Td>
                               <div className="flex flex-wrap justify-end gap-1">

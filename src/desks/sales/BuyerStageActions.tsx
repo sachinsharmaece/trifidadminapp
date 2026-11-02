@@ -122,10 +122,13 @@ export function HeWantsItButton({
   );
 }
 
+// 2 Nov — BR-136: a decided line opens its next group once the orders are made, so "closed" only
+// means something is still in flight, or the seller said no, or it is sold out.
 const CLOSED_LABEL = {
-  confirmed: 'Seller confirmed — closed',
-  requoted: 'Seller requoted — closed',
+  confirmed: 'Confirmation in progress',
+  requoted: 'Seller revised — awaiting buyers',
   declined: 'Seller declined — closed',
+  sold_out: 'Sold out',
 } as const;
 
 /**
@@ -173,7 +176,7 @@ export function OfferAction({
           size="sm"
           variant="secondary"
           disabled
-          title="This offer already has a seller decision, so it takes no more requests."
+          title="This offer takes no more requests right now."
         >
           He wants it
         </Button>
@@ -492,14 +495,23 @@ export function ConfirmRateButton({
   onDone: () => void;
 }) {
   const [open, setOpen] = useState(false);
+  // 2 Nov — a quote for fewer boxes than he asked for leaves the rest of the ask open (BR-127),
+  // unless Sales unticks this.
+  const short = quote.qtyAvailable < quote.askQty;
+  const left = quote.askQty - quote.qtyAvailable;
+  const [keepOpen, setKeepOpen] = useState(true);
   const submit = useAction(async (token, callNote) => {
     const result = await proxyAcceptAskFill(token, quote.askId, {
       buyerCounterpartyId: counterpartyId,
-      option: quote.qtyAvailable < quote.askQty ? 'partial' : 'full',
+      option: short ? 'partial' : 'full',
       quoteIds: [quote.quoteId],
       callNote,
+      ...(short ? { keepRemainderOpen: keepOpen } : {}),
     });
-    return result.soIds.length > 0 ? 'Order raised — now in Payment pending.' : 'Confirmed.';
+    if (result.soIds.length === 0) return 'Confirmed.';
+    return result.remainingBoxes > 0 && keepOpen
+      ? `Order raised for ${result.filledBoxes} boxes — now in Payment pending. ${result.remainingBoxes} still open under He asked.`
+      : 'Order raised — now in Payment pending.';
   }, onDone);
   return (
     <>
@@ -518,6 +530,21 @@ export function ConfirmRateButton({
           {quote.packLabel ? ` · ${quote.packLabel}` : ''}, {quote.qtyAvailable} available. This
           raises his order and starts his 24-hour payment window.
         </p>
+        {short && (
+          <label className="flex items-start gap-2 text-sm text-slate-700">
+            <input
+              type="checkbox"
+              className="mt-1 h-4 w-4 rounded border-slate-300"
+              checked={keepOpen}
+              onChange={(event) => setKeepOpen(event.target.checked)}
+            />
+            <span>
+              Keep the remaining {left} {left === 1 ? 'box' : 'boxes'} open. He asked for{' '}
+              {quote.askQty} and this covers {quote.qtyAvailable}; Purchase goes on looking for the
+              rest. Untick to close the ask with what is ordered.
+            </span>
+          </label>
+        )}
       </ActionModal>
     </>
   );

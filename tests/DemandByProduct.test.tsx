@@ -53,7 +53,11 @@ beforeEach(() => {
       totalBoxes: 147,
       sellerCounts: counts(1),
       noSeller: false,
-      asks: [ask('a1', 30, '100 GM'), ask('a2', 100, '500 GM', 'under12'), ask('a3', 17, null)],
+      asks: [
+        ask('a1', 30, '100 GM'),
+        { ...ask('a2', 90, '500 GM', 'under12'), filledQty: 10 },
+        ask('a3', 17, null),
+      ],
     },
   ]);
 });
@@ -81,5 +85,34 @@ describe('Purchase → Demand — one row per product (30 Oct, BR-371)', () => {
     fireEvent.click(screen.getByText(/500 GM · /));
     await waitFor(() => expect(getAskSellerStates).toHaveBeenCalled());
     expect(vi.mocked(getAskSellerStates).mock.calls[0]![1]).toBe('a2');
+  });
+
+  it('shows what was already ordered on a short-filled ask, and by how much a seller is short (2 Nov)', async () => {
+    vi.mocked(getAskSellerStates).mockResolvedValue([
+      {
+        sellerId: 's1',
+        sellerCounterpartyId: 'sc1',
+        firm: 'Rajat Maheshwari',
+        state: 'quoted',
+        ratePaise: 11500,
+        gapCodes: ['short_on_quantity', 'expiry_too_short'],
+        qtyAvailable: 50,
+        askQty: 90,
+      },
+    ]);
+    render(
+      <MemoryRouter>
+        <DemandPage />
+      </MemoryRouter>,
+    );
+    fireEvent.click(await screen.findByText(/VESTA · Clodinafop/));
+    expect(screen.getByText('10 of 100 already ordered')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByText(/500 GM · /));
+    expect(
+      await screen.findByText('Short: offered 50 of 90 boxes · expiry too short'),
+    ).toBeInTheDocument();
+    // No more "short: short on quantity".
+    expect(screen.queryByText(/short: short/i)).toBeNull();
   });
 });

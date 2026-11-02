@@ -11,6 +11,8 @@ export interface ActiveDemandItem {
   brand: string;
   technical: string;
   manufacturerName: string;
+  /** 2 Nov — boxes already ordered on this ask; `qty` is what is still wanted. */
+  filledQty: number;
   /** 30 Oct — what the ask is for; `packLabel` null = all packs. */
   packLabel: string | null;
   expiryBand: string;
@@ -63,6 +65,9 @@ export interface AskSellerStateItem {
   state: 'quoted' | 'listed' | 'carries';
   ratePaise: number | null;
   gapCodes: string[];
+  /** 2 Nov — the boxes he quoted against the boxes still wanted. */
+  qtyAvailable: number | null;
+  askQty: number;
 }
 
 export function getAskSellerStates(

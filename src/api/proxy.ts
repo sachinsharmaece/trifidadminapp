@@ -160,8 +160,10 @@ export function proxyAcceptAskFill(
     quoteIds: string[];
     callNote: string;
     direction?: 'in' | 'out';
+    /** 2 Nov — when the quotes cover fewer boxes than asked, keep the rest open (default) or close. */
+    keepRemainderOpen?: boolean;
   },
-): Promise<{ soIds: string[] }> {
+): Promise<{ soIds: string[]; filledBoxes: number; remainingBoxes: number }> {
   return apiFetch(`/staff/proxy/buyer/asks/${askId}/accept`, {
     method: 'POST',
     body: input,

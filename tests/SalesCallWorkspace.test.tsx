@@ -233,7 +233,7 @@ describe('Call page — a closed offer and his place in a pool (2 Nov)', () => {
     board(line({ closed: 'confirmed' }));
     renderPage();
     expect(
-      await screen.findByText('Seller confirmed — closed', {}, { timeout: 5000 }),
+      await screen.findByText('Confirmation in progress', {}, { timeout: 5000 }),
     ).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'He wants it' })).toBeDisabled();
   });
@@ -242,7 +242,7 @@ describe('Call page — a closed offer and his place in a pool (2 Nov)', () => {
     board(line({ closed: 'confirmed', poolOpen: true }));
     renderPage();
     expect(
-      await screen.findByText('Seller confirmed — closed', {}, { timeout: 5000 }),
+      await screen.findByText('Confirmation in progress', {}, { timeout: 5000 }),
     ).toBeInTheDocument();
     const button = screen.getByRole('button', { name: 'He wants it' });
     expect(button).toBeEnabled();
@@ -271,16 +271,17 @@ describe('Call page — a closed offer and his place in a pool (2 Nov)', () => {
     expect(
       await screen.findByText(/In the pool with 3 boxes \(3 of 10\)/, {}, { timeout: 5000 }),
     ).toBeInTheDocument();
-    expect(screen.getByText('Seller confirmed — closed')).toBeInTheDocument();
+    expect(screen.getByText('Confirmation in progress')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Change boxes' })).toBeEnabled();
     expect(screen.getByRole('button', { name: 'Withdraw' })).toBeEnabled();
     expect(screen.queryByRole('button', { name: 'He wants it' })).toBeNull();
   });
 
   it.each([
-    ['requoted', 'Seller requoted — closed'],
+    ['requoted', 'Seller revised — awaiting buyers'],
     ['declined', 'Seller declined — closed'],
-  ])('says so for a %s line', async (closed, text) => {
+    ['sold_out', 'Sold out'],
+  ])('says why for a %s line', async (closed, text) => {
     board(line({ closed }));
     renderPage();
     expect(await screen.findByText(text, {}, { timeout: 5000 })).toBeInTheDocument();

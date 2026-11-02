@@ -46,6 +46,7 @@ export function HeWantsItButton({
   direction,
   onDone,
   notApproved = false,
+  poolOnly = false,
 }: {
   line: BoardForBuyerLine;
   counterpartyId: string;
@@ -54,6 +55,8 @@ export function HeWantsItButton({
   onDone: () => void;
   /** 1 Nov — he is not approved yet, so no order could be made for him. */
   notApproved?: boolean;
+  /** 2 Nov — the seller has answered this line, so only the pool (fewer than its minimum) is open. */
+  poolOnly?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const [qty, setQty] = useState('');
@@ -93,6 +96,12 @@ export function HeWantsItButton({
           {line.packLabel} at {formatRupees(line.ratePaise)} — {expiryBandLabel(line.expiryBand)},{' '}
           {deliveryBandLabel(line.deliveryBand)}.
         </p>
+        {poolOnly && (
+          <p className="text-xs text-slate-500">
+            The seller has already answered this offer. Only fewer boxes than its minimum order can
+            still join its pool.
+          </p>
+        )}
         <p className="text-xs text-slate-500">
           It goes to the seller to confirm (Purchase → Confirmations)
           {line.moqBand !== '1'
@@ -138,10 +147,28 @@ export function OfferAction({
   onDone: () => void;
   notApproved?: boolean;
 }) {
-  if (line.closed) {
+  const closedBadge = line.closed ? (
+    <Badge tone="neutral">{CLOSED_LABEL[line.closed]}</Badge>
+  ) : null;
+  // His place in the pool comes first: the pool is separate from the seller's decision on the
+  // line, so he can still be changed or withdrawn even when the line is closed.
+  if (line.inPool) {
+    return (
+      <div className="flex flex-wrap items-center justify-end gap-2">
+        {closedBadge}
+        <PoolPlace
+          place={line.inPool}
+          counterpartyId={counterpartyId}
+          direction={direction}
+          onDone={onDone}
+        />
+      </div>
+    );
+  }
+  if (line.closed && !line.poolOpen) {
     return (
       <div className="flex items-center gap-2">
-        <Badge tone="neutral">{CLOSED_LABEL[line.closed]}</Badge>
+        {closedBadge}
         <Button
           size="sm"
           variant="secondary"
@@ -153,14 +180,20 @@ export function OfferAction({
       </div>
     );
   }
-  if (line.inPool) {
+  if (line.closed) {
+    // Closed, but its pool is still open: fewer boxes than the minimum can still join it.
     return (
-      <PoolPlace
-        place={line.inPool}
-        counterpartyId={counterpartyId}
-        direction={direction}
-        onDone={onDone}
-      />
+      <div className="flex items-center gap-2">
+        {closedBadge}
+        <HeWantsItButton
+          line={line}
+          counterpartyId={counterpartyId}
+          direction={direction}
+          onDone={onDone}
+          notApproved={notApproved}
+          poolOnly
+        />
+      </div>
     );
   }
   return (

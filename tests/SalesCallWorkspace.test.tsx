@@ -215,6 +215,7 @@ describe('Call page — a closed offer and his place in a pool (2 Nov)', () => {
     deliveryBand: '48h',
     qty: 15,
     closed: null,
+    poolOpen: false,
     inPool: null,
     ...extra,
   });
@@ -235,6 +236,45 @@ describe('Call page — a closed offer and his place in a pool (2 Nov)', () => {
       await screen.findByText('Seller confirmed — closed', {}, { timeout: 5000 }),
     ).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'He wants it' })).toBeDisabled();
+  });
+
+  it('closed but its pool is still open: He wants it stays, for fewer than the minimum', async () => {
+    board(line({ closed: 'confirmed', poolOpen: true }));
+    renderPage();
+    expect(
+      await screen.findByText('Seller confirmed — closed', {}, { timeout: 5000 }),
+    ).toBeInTheDocument();
+    const button = screen.getByRole('button', { name: 'He wants it' });
+    expect(button).toBeEnabled();
+    fireEvent.click(button);
+    expect(
+      await screen.findByText(/Only fewer boxes than its minimum order can still join its pool/),
+    ).toBeInTheDocument();
+  });
+
+  it('closed AND he is in its pool (the BASAGRAM case): his place and its buttons still show', async () => {
+    board(
+      line({
+        closed: 'confirmed',
+        poolOpen: true,
+        inPool: {
+          poolId: 'pool1',
+          boxes: 3,
+          committedBoxes: 3,
+          moq: 10,
+          status: 'open',
+          canChange: true,
+        },
+      }),
+    );
+    renderPage();
+    expect(
+      await screen.findByText(/In the pool with 3 boxes \(3 of 10\)/, {}, { timeout: 5000 }),
+    ).toBeInTheDocument();
+    expect(screen.getByText('Seller confirmed — closed')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Change boxes' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'Withdraw' })).toBeEnabled();
+    expect(screen.queryByRole('button', { name: 'He wants it' })).toBeNull();
   });
 
   it.each([

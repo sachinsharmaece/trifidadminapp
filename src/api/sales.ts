@@ -229,6 +229,8 @@ export interface BoardForBuyerLine {
   provenance: string;
   /** 2 Nov — the seller has already answered this line (BR-135); it takes no more requests. */
   closed: 'confirmed' | 'requoted' | 'declined' | null;
+  /** 2 Nov — a pool is open for this offer, so fewer boxes than its minimum can still join it. */
+  poolOpen: boolean;
   /** 2 Nov — his place in the pool this offer opened; `canChange` is false once binding (BR-154). */
   inPool: {
     poolId: string;

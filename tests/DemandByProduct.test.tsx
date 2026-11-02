@@ -109,10 +109,41 @@ describe('Purchase → Demand — one row per product (30 Oct, BR-371)', () => {
     expect(screen.getByText('10 of 100 already ordered')).toBeInTheDocument();
 
     fireEvent.click(screen.getByText(/500 GM · /));
-    expect(
-      await screen.findByText('Short: offered 50 of 90 boxes · expiry too short'),
-    ).toBeInTheDocument();
+    expect(await screen.findByText('Short: offered 50 of 90 boxes')).toBeInTheDocument();
+    expect(screen.getByText('expiry too short')).toBeInTheDocument();
     // No more "short: short on quantity".
     expect(screen.queryByText(/short: short/i)).toBeNull();
+  });
+
+  it('says for every quote how many boxes it covers: short, exact, or above the demand (2 Nov)', async () => {
+    const seller = (n: number, firm: string, qtyAvailable: number, gapCodes: string[] = []) => ({
+      sellerId: `s${n}`,
+      sellerCounterpartyId: `sc${n}`,
+      firm,
+      state: 'quoted' as const,
+      ratePaise: 90000,
+      gapCodes,
+      qtyAvailable,
+      askQty: 11,
+    });
+    vi.mocked(getAskSellerStates).mockResolvedValue([
+      seller(1, 'Rajat Maheshwari', 5, ['short_on_quantity']),
+      seller(2, 'DMK AGRI', 20),
+      seller(3, 'Malwa Krishi', 11),
+    ]);
+    render(
+      <MemoryRouter>
+        <DemandPage />
+      </MemoryRouter>,
+    );
+    fireEvent.click(await screen.findByText(/VESTA · Clodinafop/));
+    fireEvent.click(screen.getByText(/100 GM · /));
+
+    const short = await screen.findByText('Short: offered 5 of 11 boxes');
+    expect(short).toHaveClass('text-danger-500');
+    // Above the demand: said, in a calm colour — an order never exceeds what was asked.
+    const above = screen.getByText('Offers 20 boxes — 9 more than the 11 asked');
+    expect(above).not.toHaveClass('text-danger-500');
+    expect(screen.getByText('Offers all 11 boxes')).toBeInTheDocument();
   });
 });

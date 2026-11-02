@@ -12,6 +12,7 @@ import { Button } from '../../components/ui/Button';
 import { Textarea } from '../../components/ui/Input';
 import { useToast } from '../../components/ui/Toast';
 import { formatRupees, soStateLabel } from '../../lib/labels';
+import { formatDateTime } from '../../lib/dates';
 // CHAIN_STAGE_ORDER, chainStageLabel — only used by the commented-out
 // ChainStrip/Progress column below; restore this import alongside them.
 // import { CHAIN_STAGE_ORDER, chainStageLabel } from '../../lib/labels';
@@ -149,7 +150,7 @@ export function SalesOrdersPage() {
                         </div>
                         {WARN_STATES.has(row.state) && (
                           <div className="mt-1 text-xs text-slate-500">
-                            Pay by {new Date(row.payDeadline).toLocaleString()}
+                            Pay by {formatDateTime(row.payDeadline)}
                           </div>
                         )}
                       </Td>

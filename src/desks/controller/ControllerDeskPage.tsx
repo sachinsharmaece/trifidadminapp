@@ -13,6 +13,7 @@ import { Card } from '../../components/ui/Card';
 import { Table, Th, Td } from '../../components/ui/Table';
 import { Input, Select } from '../../components/ui/Input';
 import { Button } from '../../components/ui/Button';
+import { formatDateTime } from '../../lib/dates';
 
 /**
  * New — M7. The Controller surface in full: the cross-desk exception view
@@ -238,9 +239,7 @@ function BulkLifelineSection() {
           checkerEmployeeId,
         }),
       );
-      setResult(
-        `${r.extendedPoCount} PO(s) extended to ${new Date(r.newDispatchDueDate).toLocaleString()}.`,
-      );
+      setResult(`${r.extendedPoCount} PO(s) extended to ${formatDateTime(r.newDispatchDueDate)}.`);
     } catch {
       setError('Could not grant the lifeline.');
     } finally {

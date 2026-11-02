@@ -25,6 +25,7 @@ import {
   SellerDispatchedButton,
 } from './StageActions';
 import { PileDecisionForm } from './PileDecisionForm';
+import { formatDateTime } from '../../lib/dates';
 
 type SectionId = Exclude<SellerFunnelKey, 'approved' | 'carries' | 'on_board'> | 'funnel';
 
@@ -233,11 +234,9 @@ function Sections({
                   <Td numeric>{q.boxesAsked}</Td>
                   <Td numeric>{q.boxesOffered}</Td>
                   <Td>
-                    <span title={new Date(q.givenAt).toLocaleString()}>
-                      {timeAgo(q.givenAt, now)}
-                    </span>
+                    <span title={formatDateTime(q.givenAt)}>{timeAgo(q.givenAt, now)}</span>
                   </Td>
-                  <Td>{new Date(q.heldUntil).toLocaleString()}</Td>
+                  <Td>{formatDateTime(q.heldUntil)}</Td>
                 </tr>
               ))}
             </tbody>
@@ -251,7 +250,11 @@ function Sections({
         )}
       </DropdownCard>
 
-      <DropdownCard {...props('confirmations')} title="Confirmations" count={countOf('confirmations')}>
+      <DropdownCard
+        {...props('confirmations')}
+        title="Confirmations"
+        count={countOf('confirmations')}
+      >
         {stages.confirmations.length === 0 ? (
           empty('Nothing is waiting on his decision.')
         ) : (
@@ -296,7 +299,7 @@ function Sections({
                   <Td>
                     {item.brand} {item.packLabel} · {item.boxes} boxes
                   </Td>
-                  <Td>{new Date(item.payDeadline).toLocaleString()}</Td>
+                  <Td>{formatDateTime(item.payDeadline)}</Td>
                   <Td>
                     {item.hold === 'holding' && <Badge tone="good">he is holding it</Badge>}
                     {item.hold === 'lapsed' && <Badge tone="bad">hold ran out</Badge>}
@@ -344,9 +347,7 @@ function Sections({
                     {po.brand} {po.packLabel} · {po.boxes} boxes
                   </Td>
                   <Td>
-                    <span title={new Date(po.releasedAt).toLocaleString()}>
-                      {timeAgo(po.releasedAt, now)}
-                    </span>
+                    <span title={formatDateTime(po.releasedAt)}>{timeAgo(po.releasedAt, now)}</span>
                   </Td>
                   <Td>
                     <div className="flex justify-end">
@@ -427,7 +428,11 @@ function Sections({
       </DropdownCard>
 
       <DropdownCard {...props('paid')} title="Paid" count={countOf('paid')}>
-        <AfterDispatchTable rows={stages.paid} empty="Nothing has been paid out to him yet." now={now} />
+        <AfterDispatchTable
+          rows={stages.paid}
+          empty="Nothing has been paid out to him yet."
+          now={now}
+        />
       </DropdownCard>
     </>
   );
@@ -453,7 +458,7 @@ function PileRow({
         <Td numeric>{pile.boxes}</Td>
         <Td numeric>{pile.buyers}</Td>
         <Td>
-          <span title={new Date(pile.openedAt).toLocaleString()}>{timeAgo(pile.openedAt, now)}</span>
+          <span title={formatDateTime(pile.openedAt)}>{timeAgo(pile.openedAt, now)}</span>
         </Td>
         <Td>
           {pile.chaseLeftHours < 0 ? (
@@ -573,8 +578,10 @@ function AfterDispatchTable({
             </Td>
             <Td>
               <Badge tone="neutral">{r.state.replace(/_/g, ' ')}</Badge>
-              <div className="mt-1 text-xs text-slate-500" title={new Date(r.updatedAt).toLocaleString()}>
-                {r.receivedAt ? `Received ${timeAgo(r.receivedAt, now)}` : `Updated ${timeAgo(r.updatedAt, now)}`}
+              <div className="mt-1 text-xs text-slate-500" title={formatDateTime(r.updatedAt)}>
+                {r.receivedAt
+                  ? `Received ${timeAgo(r.receivedAt, now)}`
+                  : `Updated ${timeAgo(r.updatedAt, now)}`}
               </div>
             </Td>
             {onDone && (

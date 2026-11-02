@@ -9,6 +9,7 @@ import type {
   TradeStatus,
   WaitingOn,
 } from '../../api/enquiry';
+import { formatDateTime } from '../../lib/dates';
 
 /**
  * Which side of an enquiry this screen is showing — the same decision the
@@ -201,5 +202,4 @@ export function rupees(paise: number | null | undefined): string {
   return paise === null || paise === undefined ? '—' : `₹${(paise / 100).toFixed(2)}`;
 }
 
-export const when = (iso: string | null | undefined) =>
-  iso ? new Date(iso).toLocaleString() : '—';
+export const when = (iso: string | null | undefined) => (iso ? formatDateTime(iso) : '—');

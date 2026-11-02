@@ -28,6 +28,7 @@ import { useAuth } from '../auth/AuthContext';
 import { listSalesBuyers, type BuyerListRow } from '../api/sales';
 import { PERMISSIONS } from '../lib/permissions';
 import { ToastProvider } from './ui/Toast';
+import { NoticeBell } from './NoticeBell';
 
 interface NavChild {
   to: string;
@@ -52,12 +53,22 @@ const NAV_ITEMS: NavItem[] = [
   {
     label: 'Manage',
     icon: <FiDatabase />,
-    permission: PERMISSIONS.CATALOG_WRITE,
+    // Phase 1 — leaders (location:master_write) manage tehsils without catalogue rights.
+    permission: [PERMISSIONS.CATALOG_WRITE, PERMISSIONS.LOCATION_MASTER_WRITE],
     children: [
-      { to: '/manage/products', label: 'Products' },
-      { to: '/manage/manufacturers', label: 'Manufacturers' },
-      { to: '/manage/tehsils', label: 'Tehsils' },
-      { to: '/manage/margin-matrix', label: 'Margin matrix', permission: PERMISSIONS.MARGIN_MATRIX_READ },
+      { to: '/manage/products', label: 'Products', permission: PERMISSIONS.CATALOG_WRITE },
+      {
+        to: '/manage/manufacturers',
+        label: 'Manufacturers',
+        permission: PERMISSIONS.CATALOG_WRITE,
+      },
+      { to: '/manage/tehsils', label: 'Tehsils', permission: PERMISSIONS.TERRITORY_READ },
+      { to: '/manage/pincodes', label: 'Pincodes', permission: PERMISSIONS.TERRITORY_READ },
+      {
+        to: '/manage/margin-matrix',
+        label: 'Margin matrix',
+        permission: PERMISSIONS.MARGIN_MATRIX_READ,
+      },
     ],
   },
   {
@@ -150,7 +161,9 @@ function NavGroup({
 }) {
   const location = useLocation();
   const { hasPermission } = useAuth();
-  const children = item.children.filter((child) => !child.permission || hasPermission(child.permission));
+  const children = item.children.filter(
+    (child) => !child.permission || hasPermission(child.permission),
+  );
   const containsActiveChild = children.some((child) => location.pathname.startsWith(child.to));
   const [open, setOpen] = useState(containsActiveChild);
 
@@ -288,7 +301,9 @@ function SalesQuickCallControl() {
             {buyers === null ? (
               <li className="px-3 py-2 text-slate-500">Loading…</li>
             ) : matches.length === 0 ? (
-              <li className="px-3 py-2 text-slate-500">No buyer matches &quot;{text.trim()}&quot;.</li>
+              <li className="px-3 py-2 text-slate-500">
+                No buyer matches &quot;{text.trim()}&quot;.
+              </li>
             ) : (
               matches.map((b) => (
                 <li key={b.buyerId}>
@@ -341,8 +356,9 @@ export function AppShell({ children }: { children: ReactNode }) {
       <div className="flex min-h-screen bg-slate-50">
         {/* Desktop sidebar */}
         <aside className="hidden w-60 shrink-0 flex-col border-r border-slate-200 bg-white md:flex">
-          <div className="border-b border-slate-200 px-4 py-4">
+          <div className="flex items-center justify-between border-b border-slate-200 px-4 py-4">
             <span className="text-lg font-semibold text-brand-600">TriFid</span>
+            <NoticeBell />
           </div>
           <SidebarLinks />
           <div className="border-t border-slate-200 p-3">
@@ -361,6 +377,8 @@ export function AppShell({ children }: { children: ReactNode }) {
         {/* Mobile top bar */}
         <div className="fixed inset-x-0 top-0 z-30 flex items-center justify-between border-b border-slate-200 bg-white px-4 py-3 md:hidden">
           <span className="text-lg font-semibold text-brand-600">TriFid</span>
+          <div className="flex-1" />
+          <NoticeBell />
           <button
             type="button"
             aria-label="Open menu"

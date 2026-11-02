@@ -9,6 +9,7 @@ import { Badge } from '../../components/ui/Badge';
 import { timeAgo, useMinuteClock } from '../../lib/timeAgo';
 import { formatRupees } from '../../lib/labels';
 import { AdjustHoldButton } from './StageActions';
+import { formatDateTime } from '../../lib/dates';
 
 function hoursLabel(hours: number | null): string {
   if (hours === null) return '';
@@ -61,13 +62,13 @@ export function StockPage() {
                     <Td numeric>
                       {item.sellerRatePaise == null ? '—' : formatRupees(item.sellerRatePaise)}
                     </Td>
-                    <Td>{new Date(item.payDeadline).toLocaleString()}</Td>
+                    <Td>{formatDateTime(item.payDeadline)}</Td>
                     <Td>
                       {item.hold === 'holding' && <Badge tone="good">seller is holding it</Badge>}
                       {item.hold === 'lapsed' && <Badge tone="bad">hold ran out</Badge>}
                       <div
                         className="mt-1 text-xs text-slate-500"
-                        title={new Date(item.holdUntil).toLocaleString()}
+                        title={formatDateTime(item.holdUntil)}
                       >
                         {item.holdHours !== null && `${item.holdHours}h hold · `}
                         {hoursLabel(item.hoursLeft)}

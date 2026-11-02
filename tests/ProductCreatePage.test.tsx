@@ -95,19 +95,23 @@ describe('Create product', () => {
 
     fireEvent.click(screen.getByRole('button', { name: /^create product/i }));
     await waitFor(() => expect(createProduct).toHaveBeenCalledTimes(1));
-    expect(createProduct).toHaveBeenCalledWith('token', {
-      brand: 'Roundup',
-      technical: 'Glyphosate 41% SL',
-      manufacturerId: 'm1',
-      hsn: '38089199',
-      category: 'fertilizer',
-      taxPercent: 5,
-      class: 'Medium',
-      packs: [
-        { packSize: 500, unit: 'ML', unitsPerBox: 24 },
-        { packSize: 1, unit: 'LTR', unitsPerBox: 12 },
-      ],
-    });
+    expect(createProduct).toHaveBeenCalledWith(
+      'token',
+      {
+        brand: 'Roundup',
+        technical: 'Glyphosate 41% SL',
+        manufacturerId: 'm1',
+        hsn: '38089199',
+        category: 'fertilizer',
+        taxPercent: 5,
+        class: 'Medium',
+        packs: [
+          { packSize: 500, unit: 'ML', unitsPerBox: 24 },
+          { packSize: 1, unit: 'LTR', unitsPerBox: 12 },
+        ],
+      },
+      expect.any(String), // the Idempotency-Key
+    );
   });
 
   it('does not submit until technical, manufacturer and HSN are picked', async () => {
@@ -132,7 +136,9 @@ describe('Create product', () => {
     expect(dialog).toHaveTextContent('Add technical');
     fireEvent.click(screen.getByRole('button', { name: /^add$/i }));
 
-    await waitFor(() => expect(createTechnical).toHaveBeenCalledWith('token', 'Azadirachtin'));
+    await waitFor(() =>
+      expect(createTechnical).toHaveBeenCalledWith('token', 'Azadirachtin', expect.any(String)),
+    );
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
     expect(screen.getByRole('combobox', { name: /^technical/i })).toHaveValue('Azadirachtin');
   });
@@ -150,11 +156,15 @@ describe('Create product', () => {
     fireEvent.click(within(dialog).getByRole('button', { name: /^add$/i }));
 
     await waitFor(() =>
-      expect(createHsn).toHaveBeenCalledWith('token', {
-        code: '31051000',
-        description: undefined,
-        taxPercent: 5,
-      }),
+      expect(createHsn).toHaveBeenCalledWith(
+        'token',
+        {
+          code: '31051000',
+          description: undefined,
+          taxPercent: 5,
+        },
+        expect.any(String),
+      ),
     );
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
     expect(screen.getByRole('combobox', { name: /^hsn/i })).toHaveValue('31051000');

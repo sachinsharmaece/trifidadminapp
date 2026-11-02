@@ -317,14 +317,12 @@ function Parties({ enquiry }: { enquiry: EnquiryDetail }) {
         <div>
           <dt className="text-slate-500">Buyer</dt>
           <dd className="font-medium text-slate-900">{enquiry.buyer.firm ?? '—'}</dd>
-          <dd className="text-xs text-slate-400">{enquiry.buyer.counterpartyId}</dd>
         </div>
       )}
       {enquiry.seller && (
         <div>
           <dt className="text-slate-500">Seller</dt>
           <dd className="font-medium text-slate-900">{enquiry.seller.firm ?? '—'}</dd>
-          <dd className="text-xs text-slate-400">{enquiry.seller.counterpartyId}</dd>
         </div>
       )}
     </dl>

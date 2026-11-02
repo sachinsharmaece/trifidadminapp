@@ -25,6 +25,7 @@ function toAsyncState<T>(error: unknown): AsyncState<T> {
         return { status: 'validation_error', message: error.message };
       case 'PERMISSION_DENIED':
       case 'NOT_VISIBLE':
+      case 'OUT_OF_SCOPE':
         return { status: 'authorization_error', message: error.message };
       case 'REAUTH_REQUIRED':
       case 'SESSION_REPLACED':

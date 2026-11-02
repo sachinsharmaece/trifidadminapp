@@ -18,6 +18,7 @@ import { Table, Th, Td } from '../../components/ui/Table';
 import { Badge } from '../../components/ui/Badge';
 import { Button } from '../../components/ui/Button';
 import { DevNote } from '../../components/dev/DevNote';
+import { formatDate } from '../../lib/dates';
 
 export function RecoveryPage() {
   return (
@@ -135,7 +136,7 @@ function ReturnNotesSection() {
                   <Td className="font-mono">{item.poId.slice(-6)}</Td>
                   <Td numeric>{item.cases}</Td>
                   <Td numeric>{item.daysOld}</Td>
-                  <Td>{new Date(item.dueDate).toLocaleDateString()}</Td>
+                  <Td>{formatDate(item.dueDate)}</Td>
                   <Td>{item.overdue && <Badge tone="bad">Past 30 days</Badge>}</Td>
                 </tr>
               ))}
@@ -175,7 +176,7 @@ function DebitsSection() {
                   <Td className="font-medium">{d.sellerFirm}</Td>
                   <Td>{d.reason}</Td>
                   <Td numeric>₹{(d.amountPaise / 100).toFixed(2)}</Td>
-                  <Td>{new Date(d.raisedAt).toLocaleDateString()}</Td>
+                  <Td>{formatDate(d.raisedAt)}</Td>
                 </tr>
               ))}
             </tbody>
@@ -211,7 +212,7 @@ function SellerRecoverySection() {
                   <Td className="font-mono text-xs">
                     {item.debitNoteId ? item.debitNoteId.slice(-6) : '—'}
                   </Td>
-                  <Td>{item.decidedAt ? new Date(item.decidedAt).toLocaleDateString() : '—'}</Td>
+                  <Td>{item.decidedAt ? formatDate(item.decidedAt) : '—'}</Td>
                 </tr>
               ))}
             </tbody>

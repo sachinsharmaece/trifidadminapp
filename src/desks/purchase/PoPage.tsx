@@ -7,6 +7,7 @@ import { Card } from '../../components/ui/Card';
 import { Table, Th, Td } from '../../components/ui/Table';
 import { timeAgo, useMinuteClock } from '../../lib/timeAgo';
 import { RecordInvoiceButton } from './StageActions';
+import { formatDateTime } from '../../lib/dates';
 
 /** PO — released on the buyer's payment; waiting on the seller to bill the goods. */
 export function PoPage() {
@@ -22,7 +23,11 @@ export function PoPage() {
           The buyer has paid, so the PO is out and the seller must dispatch the same day. When he
           has billed the goods, record his invoice and e-way bill — the PO then moves to Billed.
         </p>
-        <AsyncBoundary state={state} onRetry={retry} emptyMessage="No PO is waiting on a seller's bill.">
+        <AsyncBoundary
+          state={state}
+          onRetry={retry}
+          emptyMessage="No PO is waiting on a seller's bill."
+        >
           {(items: PoStageItem[]) => (
             <Table>
               <thead>
@@ -43,7 +48,7 @@ export function PoPage() {
                       {po.brand} {po.packLabel} · {po.boxes} boxes
                     </Td>
                     <Td>
-                      <span title={new Date(po.releasedAt).toLocaleString()}>
+                      <span title={formatDateTime(po.releasedAt)}>
                         {timeAgo(po.releasedAt, now)}
                       </span>
                     </Td>

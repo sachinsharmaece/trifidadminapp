@@ -45,7 +45,7 @@ function SalesRegisterSection() {
               {items.map((row) => (
                 <tr key={row.soId}>
                   <Td>{row.soNo}</Td>
-                  <Td>{row.buyerId}</Td>
+                  <Td>{row.buyerFirm}</Td>
                   <Td>₹{(row.totalPaise / 100).toFixed(2)}</Td>
                 </tr>
               ))}
@@ -78,7 +78,7 @@ function PurchaseRegisterSection() {
               {items.map((row) => (
                 <tr key={row.poId}>
                   <Td>{row.poNo}</Td>
-                  <Td>{row.sellerId}</Td>
+                  <Td>{row.sellerFirm}</Td>
                   <Td>
                     <Badge tone={row.billed ? 'good' : 'neutral'}>
                       {row.billed ? 'Yes' : 'No'}

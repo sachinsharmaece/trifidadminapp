@@ -13,6 +13,7 @@ import { Table, Th, Td } from '../../components/ui/Table';
 import { Input, Select, Textarea } from '../../components/ui/Input';
 import { Button } from '../../components/ui/Button';
 import type { ChainViewDto } from '../../api/dto';
+import { formatDateTime } from '../../lib/dates';
 
 const OVERRIDE_REASON_CODES = [
   'undercutting_local_trader',
@@ -52,7 +53,8 @@ function CreateSoSection({ onCreated }: { onCreated: (soId: string) => void }) {
   const [buyerId, setBuyerId] = useState('');
   const [sellerId, setSellerId] = useState('');
   const [skuId, setSkuId] = useState('');
-  const [boxes, setBoxes] = useState(1);
+  // Kept as text so the field can start empty — a numeric 1 here made typing "5" read "15".
+  const [boxes, setBoxes] = useState('');
   const [sellerNetRupees, setSellerNetRupees] = useState('');
   const [placeOfSupply, setPlaceOfSupply] = useState<'intra_state' | 'inter_state'>('intra_state');
   const [useOverride, setUseOverride] = useState(false);
@@ -72,7 +74,7 @@ function CreateSoSection({ onCreated }: { onCreated: (soId: string) => void }) {
           buyerId,
           sellerId,
           skuId,
-          boxes,
+          boxes: Number(boxes),
           sellerNetPaise: Math.round(Number(sellerNetRupees) * 100),
           placeOfSupply,
           ...(useOverride
@@ -127,7 +129,7 @@ function CreateSoSection({ onCreated }: { onCreated: (soId: string) => void }) {
           type="number"
           min={1}
           value={boxes}
-          onChange={(e) => setBoxes(Number(e.target.value))}
+          onChange={(e) => setBoxes(e.target.value)}
           required
         />
         <Input
@@ -402,7 +404,7 @@ function ReduceSoQuantitySection() {
         )}
         {result && (
           <p className="text-sm text-success-600">
-            SO reduced. Refund <strong>{result.refundId}</strong> raised.
+            SO reduced. A refund has been raised for the difference.
           </p>
         )}
         <Button type="submit" loading={submitting} icon={<FiMinusCircle />}>
@@ -467,7 +469,7 @@ function ChainViewSection({
                     {chain.so.totalPaise !== undefined &&
                       ` · Total: ₹${(chain.so.totalPaise / 100).toFixed(2)}`}
                     {chain.so.payDeadline !== undefined &&
-                      ` · Pay deadline: ${new Date(chain.so.payDeadline).toLocaleString()}`}
+                      ` · Pay deadline: ${formatDateTime(chain.so.payDeadline)}`}
                   </p>
                 </div>
               )}
@@ -476,7 +478,7 @@ function ChainViewSection({
                   <h3 className="font-semibold text-slate-900">PO {chain.po.poNo}</h3>
                   <p>
                     State: {chain.po.state} · Dispatch due:{' '}
-                    {new Date(chain.po.dispatchDueDate).toLocaleString()}
+                    {formatDateTime(chain.po.dispatchDueDate)}
                   </p>
                 </div>
               )}
@@ -493,7 +495,7 @@ function ChainViewSection({
                 <tbody>
                   {chain.events.map((event, index) => (
                     <tr key={index}>
-                      <Td>{new Date(event.at).toLocaleString()}</Td>
+                      <Td>{formatDateTime(event.at)}</Td>
                       <Td>{event.type}</Td>
                       <Td>{event.summary ?? '—'}</Td>
                     </tr>

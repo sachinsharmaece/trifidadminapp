@@ -2,12 +2,17 @@ import { useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FiPlus, FiEye } from 'react-icons/fi';
 import { getSupplyMatrixBySeller, type SupplyMatrixSellerRow } from '../../api/purchase';
-import { listRegistrations } from '../../api/onboarding';
+import { listRegistrationsPage } from '../../api/onboarding';
+import { usePagedList } from '../../lib/usePagedList';
+import { ListFooter } from '../../components/ListFooter';
+import { Loader } from '../../components/ui/Loader';
+import { ErrorState } from '../../components/ui/ErrorState';
 import type { RegistrationListItem } from '../../api/dto';
 import { AsyncBoundary } from '../../components/AsyncBoundary';
 import { useAsyncData } from '../../lib/useAsyncData';
 import { useAuth } from '../../auth/AuthContext';
 import { Card } from '../../components/ui/Card';
+import { LeadLookup } from '../../components/lead/LeadLookup';
 import { Table, Th, Td } from '../../components/ui/Table';
 import { Badge } from '../../components/ui/Badge';
 import { Button } from '../../components/ui/Button';
@@ -17,15 +22,17 @@ export function SellersPage() {
   const { callApi } = useAuth();
   const navigate = useNavigate();
 
-  const pendingLoader = useCallback(
-    () => callApi((token) => listRegistrations(token, 'pending')),
+  // 29 Oct — sellers only, from the server, a page at a time: the old call took
+  // the first 25 pending registrations of every kind, so a seller behind 25
+  // buyers never showed.
+  const loadPending = useCallback(
+    (cursor?: string) =>
+      callApi((token) =>
+        listRegistrationsPage(token, { stage: 'pending', kind: 'seller', cursor, limit: 25 }),
+      ),
     [callApi],
   );
-  const pending = useAsyncData(
-    pendingLoader,
-    (items) => items.filter((r) => r.kind !== 'buyer').length === 0,
-    [pendingLoader],
-  );
+  const pending = usePagedList<RegistrationListItem>(loadPending);
 
   const panelLoader = useCallback(
     () => callApi((token) => getSupplyMatrixBySeller(token)),
@@ -46,20 +53,26 @@ export function SellersPage() {
         </Button>
       </div>
 
+      <Card title="Already on TriFid?">
+        <LeadLookup side="seller" fileHref={(id) => `/purchase/sellers/${id}`} />
+      </Card>
+
       <Card title="Waiting on us">
         <p className="mb-4 text-sm text-slate-500">
           No area, no listing (BR-083/BR-082). Setting the area is done from Registrations.
         </p>
-        <AsyncBoundary
-          state={pending.state}
-          onRetry={pending.retry}
-          emptyMessage="Nothing waiting."
-        >
-          {(items: RegistrationListItem[]) => {
-            const sellers = items.filter((r) => r.kind !== 'buyer');
-            return sellers.length === 0 ? (
-              <p className="text-sm text-slate-500">Nothing waiting.</p>
-            ) : (
+        {pending.status === 'loading' && <Loader />}
+        {pending.status === 'error' && (
+          <ErrorState
+            message={pending.error ?? 'Could not load.'}
+            onRetry={() => void pending.reload()}
+          />
+        )}
+        {pending.status === 'ready' &&
+          (pending.items.length === 0 ? (
+            <p className="text-sm text-slate-500">Nothing waiting.</p>
+          ) : (
+            <>
               <Table>
                 <thead>
                   <tr>
@@ -69,7 +82,7 @@ export function SellersPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {sellers.map((r) => (
+                  {pending.items.map((r) => (
                     <tr key={r.registrationId}>
                       <Td className="font-medium">{r.firm ?? '—'}</Td>
                       <Td className="font-mono text-xs">{r.gstin ?? '—'}</Td>
@@ -86,9 +99,16 @@ export function SellersPage() {
                   ))}
                 </tbody>
               </Table>
-            );
-          }}
-        </AsyncBoundary>
+              <ListFooter
+                shown={pending.items.length}
+                total={pending.total}
+                hasMore={pending.hasMore}
+                loading={pending.loadingMore}
+                error={pending.error}
+                onMore={() => void pending.loadMore()}
+              />
+            </>
+          ))}
       </Card>
 
       <Card title="On the panel">
@@ -98,6 +118,8 @@ export function SellersPage() {
               <thead>
                 <tr>
                   <Th>Firm</Th>
+                  <Th>District</Th>
+                  <Th>Assigned to</Th>
                   <Th>Tier</Th>
                   <Th numeric>Carries</Th>
                   <Th numeric>Listed</Th>
@@ -109,6 +131,8 @@ export function SellersPage() {
                 {items.map((s) => (
                   <tr key={s.sellerId}>
                     <Td className="font-medium">{s.firm}</Td>
+                    <Td>{s.district ?? '—'}</Td>
+                    <Td>{s.assignedTo ?? <Badge tone="warn">Queue</Badge>}</Td>
                     <Td>
                       <Badge tone="neutral">{s.trustTier}</Badge>
                     </Td>

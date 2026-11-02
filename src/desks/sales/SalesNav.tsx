@@ -43,6 +43,7 @@ const ITEMS: Array<{ to: string; label: string; end?: boolean; countKey?: keyof 
   { to: '/sales/pulse', label: 'Pulse' },
   { to: '/sales/msp', label: 'MSP', countKey: 'msp' },
   { to: '/sales/complaints', label: 'Complaints', countKey: 'complaints' },
+  { to: '/sales/pushed', label: 'Pushed to Purchase' },
 ];
 
 /**

@@ -12,6 +12,7 @@ import { Card } from '../../components/ui/Card';
 import { Select } from '../../components/ui/Input';
 import { Table, Th, Td } from '../../components/ui/Table';
 import { useAsyncData } from '../../lib/useAsyncData';
+import { formatDateTime } from '../../lib/dates';
 
 /**
  * New — M8, BR-293. A read screen for debugging delivery issues: what was sent,
@@ -73,7 +74,7 @@ function WorklistSection() {
                         <Td>
                           <Badge tone="bad">{t.status}</Badge>
                         </Td>
-                        <Td>{t.since ? new Date(t.since).toLocaleString() : '—'}</Td>
+                        <Td>{t.since ? formatDateTime(t.since) : '—'}</Td>
                       </tr>
                     ))}
                   </tbody>
@@ -100,7 +101,7 @@ function WorklistSection() {
                         <Td>{q.templateKey}</Td>
                         <Td>{q.toFirm ?? '—'}</Td>
                         <Td>{q.toMobileMasked}</Td>
-                        <Td>{new Date(q.queuedAt).toLocaleString()}</Td>
+                        <Td>{formatDateTime(q.queuedAt)}</Td>
                       </tr>
                     ))}
                   </tbody>
@@ -165,7 +166,7 @@ function LogSection() {
             <tbody>
               {page.items.map((item) => (
                 <tr key={item.logId}>
-                  <Td>{new Date(item.sentAt).toLocaleString()}</Td>
+                  <Td>{formatDateTime(item.sentAt)}</Td>
                   <Td>{item.templateKey}</Td>
                   <Td>
                     {item.toFirm ?? '—'}{' '}

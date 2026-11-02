@@ -21,6 +21,8 @@ export interface ProxyRaiseAskInput {
   qty: number;
   conditionRequirement: { expiryBand: 'over12' | 'under12'; deliveryBand?: '48h' | '2-5d' };
   callNote: string;
+  /** 28 Oct — Incoming/Outgoing, for the call history. */
+  direction?: 'in' | 'out';
 }
 
 export function proxyRaiseAsk(
@@ -30,19 +32,60 @@ export function proxyRaiseAsk(
   return apiFetch('/staff/proxy/buyer/asks', { method: 'POST', body: input, accessToken });
 }
 
-export type ProxyRaiseAskLine = Omit<ProxyRaiseAskInput, 'buyerCounterpartyId' | 'callNote'> & {
+export type ProxyRaiseAskLine = Omit<
+  ProxyRaiseAskInput,
+  'buyerCounterpartyId' | 'callNote' | 'direction'
+> & {
   /** What he said he hopes to pay, in paise — kept for Sales only. */
   expectedRatePaise?: number;
 };
 
-/** One entry per submitted line, by position — an ask id if it was raised, an error if it wasn't. */
-export type ProxyRaiseAsksLineResult =
-  { index: number; askId: string } | { index: number; error: string; code: string | null };
+/**
+ * 29 Oct — "He wants it" on a listed offer: a pile request on it (Purchase → Confirmations), or
+ * the pool for it when he wants fewer than its minimum order.
+ */
+export type ProxyWantsItResult =
+  | { kind: 'pile'; pileId: string; listingLineId: string }
+  | { kind: 'pool'; poolId: string; listingLineId: string };
 
-/** One call naming several products: one ask per line, all under the same call note. */
+export function proxyWantsIt(
+  accessToken: string,
+  listingLineId: string,
+  input: {
+    buyerCounterpartyId: string;
+    qty: number;
+    callNote: string;
+    direction?: 'in' | 'out';
+  },
+): Promise<ProxyWantsItResult> {
+  return apiFetch(`/staff/proxy/buyer/listing-lines/${listingLineId}/wants-it`, {
+    method: 'POST',
+    body: input,
+    accessToken,
+    idempotencyKey: idempotencyKey(),
+  });
+}
+
+/**
+ * One entry per submitted line, by position. 29 Oct — a product on his board goes on the
+ * cheapest offer (`pile` / `pool`, Purchase → Confirmations); one that is not becomes an
+ * `ask` (Purchase → Demand); or an error if the line was refused.
+ */
+export type ProxyRaiseAsksLineResult =
+  // merged — 30 Oct: added to an ask he already had open, not a new one (BR-371).
+  | { index: number; kind: 'ask'; askId: string; merged?: boolean }
+  | ({ index: number } & ProxyWantsItResult)
+  | { index: number; error: string; code: string | null };
+
+/** One call naming several products, all under the same call note. */
 export function proxyRaiseAsks(
   accessToken: string,
-  input: { buyerCounterpartyId: string; callNote: string; lines: ProxyRaiseAskLine[] },
+  input: {
+    buyerCounterpartyId: string;
+    callNote: string;
+    lines: ProxyRaiseAskLine[];
+    direction?: 'in' | 'out';
+  },
 ): Promise<{ results: ProxyRaiseAsksLineResult[] }> {
   return apiFetch('/staff/proxy/buyer/asks/batch', { method: 'POST', body: input, accessToken });
 }
@@ -84,6 +127,7 @@ export function proxyAcceptAskFill(
     option: 'partial' | 'full';
     quoteIds: string[];
     callNote: string;
+    direction?: 'in' | 'out';
   },
 ): Promise<{ soIds: string[] }> {
   return apiFetch(`/staff/proxy/buyer/asks/${askId}/accept`, {
@@ -97,7 +141,7 @@ export function proxyAcceptAskFill(
 export function proxyDeclineAsk(
   accessToken: string,
   askId: string,
-  input: { buyerCounterpartyId: string; callNote: string },
+  input: { buyerCounterpartyId: string; callNote: string; direction?: 'in' | 'out' },
 ): Promise<{ declined: boolean }> {
   return apiFetch(`/staff/proxy/buyer/asks/${askId}/decline`, {
     method: 'POST',
@@ -109,7 +153,7 @@ export function proxyDeclineAsk(
 export function proxyAcceptPromotion(
   accessToken: string,
   soId: string,
-  input: { buyerCounterpartyId: string; callNote: string },
+  input: { buyerCounterpartyId: string; callNote: string; direction?: 'in' | 'out' },
 ): Promise<{ accepted: boolean }> {
   return apiFetch(`/staff/proxy/buyer/orders/${soId}/promotion/accept`, {
     method: 'POST',
@@ -122,7 +166,7 @@ export function proxyAcceptPromotion(
 export function proxyRejectPromotion(
   accessToken: string,
   soId: string,
-  input: { buyerCounterpartyId: string; callNote: string },
+  input: { buyerCounterpartyId: string; callNote: string; direction?: 'in' | 'out' },
 ): Promise<{ rejected: boolean }> {
   return apiFetch(`/staff/proxy/buyer/orders/${soId}/promotion/reject`, {
     method: 'POST',

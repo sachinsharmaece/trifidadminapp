@@ -108,7 +108,9 @@ export function PileDecisionForm({
           disabled={!callNote}
           onClick={() =>
             void run(() =>
-              callApi((token) => proxyRequotePile(token, pileId, { sellerCounterpartyId, callNote })),
+              callApi((token) =>
+                proxyRequotePile(token, pileId, { sellerCounterpartyId, callNote }),
+              ),
             )
           }
         >
@@ -121,7 +123,9 @@ export function PileDecisionForm({
           icon={<FiX />}
           onClick={() =>
             void run(() =>
-              callApi((token) => proxyDeclinePile(token, pileId, { sellerCounterpartyId, callNote })),
+              callApi((token) =>
+                proxyDeclinePile(token, pileId, { sellerCounterpartyId, callNote }),
+              ),
             )
           }
         >

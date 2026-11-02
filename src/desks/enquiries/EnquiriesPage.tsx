@@ -38,6 +38,7 @@ import {
   productText,
   type Desk,
 } from './enquiryLabels';
+import { formatDate } from '../../lib/dates';
 
 /**
  * Enquiry journey — every enquiry in one list, each with its number, where it
@@ -205,11 +206,7 @@ function FollowUpCell({ item, desk }: { item: EnquiryListItem; desk: Desk }) {
   const next = dates.filter((d): d is string => !!d).sort()[0];
   if (!next) return <>—</>;
   const overdue = new Date(next) <= new Date();
-  return (
-    <span className={overdue ? 'font-medium text-danger-600' : ''}>
-      {new Date(next).toLocaleDateString()}
-    </span>
-  );
+  return <span className={overdue ? 'font-medium text-danger-600' : ''}>{formatDate(next)}</span>;
 }
 
 function EnquiryTable({ items, desk }: { items: EnquiryListItem[]; desk: Desk }) {
@@ -250,7 +247,7 @@ function EnquiryTable({ items, desk }: { items: EnquiryListItem[]; desk: Desk })
             <Td>
               <span className="font-medium text-slate-900">{item.enquiryNo}</span>
             </Td>
-            <Td>{new Date(item.raisedAt).toLocaleDateString()}</Td>
+            <Td>{formatDate(item.raisedAt)}</Td>
             <Td>
               {KIND_LABEL[item.kind]}
               {item.channel === 'sales_call' && (
@@ -323,7 +320,7 @@ function NewEnquiryModal({ open, onClose }: { open: boolean; onClose: () => void
   const [place, setPlace] = useState('');
   const [skuId, setSkuId] = useState('');
   const [productTextValue, setProductTextValue] = useState('');
-  const [qty, setQty] = useState(1);
+  const [qty, setQty] = useState('');
   const [expiryBand, setExpiryBand] = useState<'over12' | 'under12'>('over12');
   const [deliveryBand, setDeliveryBand] = useState<'' | '48h' | '2-5d'>('');
   const [callNote, setCallNote] = useState('');
@@ -357,7 +354,7 @@ function NewEnquiryModal({ open, onClose }: { open: boolean; onClose: () => void
                 },
               }),
           ...(what === 'catalogue' ? { skuId } : { productText: productTextValue.trim() }),
-          qty,
+          qty: Number(qty),
           conditionRequirement: { expiryBand, ...(deliveryBand ? { deliveryBand } : {}) },
           callNote,
         }),
@@ -457,7 +454,7 @@ function NewEnquiryModal({ open, onClose }: { open: boolean; onClose: () => void
           type="number"
           min={1}
           value={qty}
-          onChange={(e) => setQty(Number(e.target.value))}
+          onChange={(e) => setQty(e.target.value)}
           required
         />
         <RequirementFields

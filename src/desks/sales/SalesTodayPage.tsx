@@ -11,6 +11,7 @@ import { Table, Th, Td } from '../../components/ui/Table';
 import { Badge } from '../../components/ui/Badge';
 import { Input } from '../../components/ui/Input';
 import { Button } from '../../components/ui/Button';
+import { formatDateTime } from '../../lib/dates';
 
 const BUCKET_ORDER: SalesWorkItem['bucket'][] = ['money', 'promised', 'he_asked', 'market'];
 
@@ -95,9 +96,13 @@ function Worklist({ items, risingCount }: { items: SalesWorkItem[]; risingCount:
         >
           <p className="mb-3 text-sm text-slate-500">{BUCKET_NOTE[bucket]}</p>
           <div className="flex flex-col divide-y divide-slate-100 overflow-hidden rounded-md border border-slate-200">
-            {grouped.get(bucket)!.map((item, index) => (
-              <WorkRow key={`${item.refType}-${item.refId}-${index}`} item={item} />
-            ))}
+            {groupByBuyer(grouped.get(bucket)!).map((group) =>
+              group.buyerId ? (
+                <BuyerBlock key={group.key} buyerId={group.buyerId} items={group.items} />
+              ) : (
+                <WorkRow key={group.key} item={group.items[0]!} />
+              ),
+            )}
           </div>
         </Card>
       ))}
@@ -114,28 +119,121 @@ const REF_LABEL: Record<SalesWorkItem['refType'], string> = {
 
 const linkClass = 'underline-offset-2 hover:underline';
 
-function WorkRow({ item }: { item: SalesWorkItem }) {
-  const navigate = useNavigate();
-  const isMarket = item.bucket === 'market';
+interface WorkGroup {
+  key: string;
+  buyerId?: string;
+  items: SalesWorkItem[];
+}
+
+/**
+ * 29 Oct — one block per buyer, so a buyer with three enquiries shows his name once. A block sits
+ * where his first item came in the server's order, and his items keep that order inside it. An
+ * item with no buyer (a market cell) stays a row of its own.
+ */
+function groupByBuyer(items: SalesWorkItem[]): WorkGroup[] {
+  const groups: WorkGroup[] = [];
+  const byBuyer = new Map<string, WorkGroup>();
+  items.forEach((item, index) => {
+    if (!item.buyerId) {
+      groups.push({ key: `${item.refType}-${item.refId}-${index}`, items: [item] });
+      return;
+    }
+    const existing = byBuyer.get(item.buyerId);
+    if (existing) {
+      existing.items.push(item);
+      return;
+    }
+    const group = { key: `buyer-${item.buyerId}`, buyerId: item.buyerId, items: [item] };
+    byBuyer.set(item.buyerId, group);
+    groups.push(group);
+  });
+  return groups;
+}
+
+function dueOf(item: SalesWorkItem): { due: Date | null; overdue: boolean } {
   const due = item.dueAt ? new Date(item.dueAt) : null;
-  const overdue = due ? due < new Date() : false;
-  const idLabel = `${REF_LABEL[item.refType]} …${item.refId.slice(-6)}`;
+  return { due, overdue: due ? due < new Date() : false };
+}
 
-  // The party leads, as it did before product names came in — and the whole row opens his
-  // file. A market row has no buyer (it's an area × product cell), so there the product leads.
-  const hasBuyer = !!item.buyerId;
-  const title = hasBuyer ? item.buyerFirm || idLabel : (item.productName ?? idLabel);
+function DueBadge({ item }: { item: SalesWorkItem }) {
+  const { due, overdue } = dueOf(item);
+  return due ? <Badge tone={overdue ? 'bad' : 'warn'}>{overdue ? 'overdue' : 'due'}</Badge> : null;
+}
 
-  const productLink =
-    item.productId && item.productName ? (
-      <Link
-        to={`/sales/products/${item.productId}`}
-        onClick={(e) => e.stopPropagation()}
-        className={`text-slate-700 ${linkClass}`}
-      >
-        {item.productName}
-      </Link>
-    ) : null;
+function idLabelOf(item: SalesWorkItem): string {
+  return `${REF_LABEL[item.refType]} …${item.refId.slice(-6)}`;
+}
+
+/** The buyer's name once, then one line per thing he is waiting on; the whole block opens his file. */
+function BuyerBlock({ buyerId, items }: { buyerId: string; items: SalesWorkItem[] }) {
+  const navigate = useNavigate();
+  const first = items[0]!;
+  const title = items.find((i) => i.buyerFirm)?.buyerFirm || idLabelOf(first);
+
+  return (
+    <div
+      role="link"
+      tabIndex={0}
+      onClick={() => navigate(`/sales/buyers/${buyerId}`)}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter') navigate(`/sales/buyers/${buyerId}`);
+      }}
+      className="flex cursor-pointer flex-col gap-1 px-4 py-3 hover:bg-slate-50"
+    >
+      <div className="flex items-center justify-between gap-3">
+        <span className="text-sm font-semibold text-slate-900">{title}</span>
+        {items.length > 1 && (
+          <span className="text-xs text-slate-500">{items.length} enquiries</span>
+        )}
+      </div>
+      {items.map((item, index) => (
+        <div
+          key={`${item.refType}-${item.refId}-${index}`}
+          className="flex items-center justify-between gap-3"
+        >
+          <span className="text-xs text-slate-500">
+            <ItemDetails item={item} />
+          </span>
+          <DueBadge item={item} />
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/** "Product · Ask · 3 boxes · due …" for one item under its buyer. */
+function ItemDetails({ item }: { item: SalesWorkItem }) {
+  const { due } = dueOf(item);
+  const details = [
+    REF_LABEL[item.refType],
+    item.qty != null ? `${item.qty} boxes` : null,
+    due ? `due ${formatDateTime(due)}` : null,
+  ].filter(Boolean);
+  return (
+    <>
+      {item.productId && item.productName && (
+        <>
+          <Link
+            to={`/sales/products/${item.productId}`}
+            onClick={(e) => e.stopPropagation()}
+            className={`text-slate-700 ${linkClass}`}
+          >
+            {item.productName}
+          </Link>
+          {details.length > 0 && ' · '}
+        </>
+      )}
+      {details.join(' · ')}
+    </>
+  );
+}
+
+/** A row with no buyer — a market cell (area × product), so the product leads. */
+function WorkRow({ item }: { item: SalesWorkItem }) {
+  const isMarket = item.bucket === 'market';
+  const { due } = dueOf(item);
+  const title = item.productName ?? idLabelOf(item);
+  const productLink = item.productId && item.productName;
   const details = [
     isMarket
       ? item.tehsilName
@@ -143,36 +241,10 @@ function WorkRow({ item }: { item: SalesWorkItem }) {
         : 'Rising'
       : REF_LABEL[item.refType],
     item.qty != null ? `${item.qty} boxes` : null,
-    due ? `due ${due.toLocaleString()}` : null,
+    due ? `due ${formatDateTime(due)}` : null,
   ].filter(Boolean);
 
-  const content = (
-    <>
-      <div className="flex flex-col text-left">
-        <span className="text-sm font-semibold text-slate-900">{title}</span>
-        <span className="text-xs text-slate-500">
-          {hasBuyer && productLink}
-          {hasBuyer && productLink && details.length > 0 && ' · '}
-          {details.join(' · ')}
-        </span>
-      </div>
-      {due && <Badge tone={overdue ? 'bad' : 'warn'}>{overdue ? 'overdue' : 'due'}</Badge>}
-    </>
-  );
-
-  return hasBuyer ? (
-    <div
-      role="link"
-      tabIndex={0}
-      onClick={() => navigate(`/sales/buyers/${item.buyerId}`)}
-      onKeyDown={(e) => {
-        if (e.key === 'Enter') navigate(`/sales/buyers/${item.buyerId}`);
-      }}
-      className="flex cursor-pointer items-center justify-between gap-3 px-4 py-3 hover:bg-slate-50"
-    >
-      {content}
-    </div>
-  ) : (
+  return (
     <div className="flex items-center justify-between gap-3 px-4 py-3">
       <div className="flex flex-col text-left">
         {productLink ? (
@@ -187,7 +259,7 @@ function WorkRow({ item }: { item: SalesWorkItem }) {
         )}
         <span className="text-xs text-slate-500">{details.join(' · ')}</span>
       </div>
-      {due && <Badge tone={overdue ? 'bad' : 'warn'}>{overdue ? 'overdue' : 'due'}</Badge>}
+      <DueBadge item={item} />
     </div>
   );
 }

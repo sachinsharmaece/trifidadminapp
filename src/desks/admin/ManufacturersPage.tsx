@@ -2,6 +2,7 @@ import { useCallback, useState } from 'react';
 import type { FormEvent } from 'react';
 import { FiPlus } from 'react-icons/fi';
 import { createManufacturer, getAllManufacturers, updateManufacturer } from '../../api/catalog';
+import { newIdempotencyKey } from '../../lib/idempotency';
 import { ApiError } from '../../api/errors';
 import { AsyncBoundary } from '../../components/AsyncBoundary';
 import { DevNote } from '../../components/dev/DevNote';
@@ -27,7 +28,8 @@ export function ManufacturersPage() {
     setError(null);
     setSubmitting(true);
     try {
-      await callApi((token) => createManufacturer(token, name));
+      const key = newIdempotencyKey();
+      await callApi((token) => createManufacturer(token, name, key));
       setName('');
       retry();
     } catch (submitError) {

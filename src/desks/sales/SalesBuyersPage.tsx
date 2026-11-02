@@ -1,23 +1,32 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import type { NavigateFunction } from 'react-router-dom';
 import { FiArrowDownLeft, FiArrowUpRight, FiUserPlus } from 'react-icons/fi';
-import { listSalesBuyers, type BuyerListRow } from '../../api/sales';
-import { listRegistrations } from '../../api/onboarding';
+import {
+  listSalesBuyersPage,
+  type BuyerListFacets,
+  type BuyerListRow,
+  type BuyerListSort,
+} from '../../api/sales';
+import { listRegistrationsPage } from '../../api/onboarding';
+import { useDebounced, usePagedList } from '../../lib/usePagedList';
+import { ListFooter } from '../../components/ListFooter';
+import { Loader } from '../../components/ui/Loader';
+import { ErrorState } from '../../components/ui/ErrorState';
 import { assignBook } from '../../api/admin';
 import type { RegistrationListItem } from '../../api/dto';
-import { ApiError } from '../../api/errors';
-import { AsyncBoundary } from '../../components/AsyncBoundary';
-import { useAsyncData } from '../../lib/useAsyncData';
+import { useFormSubmit } from '../../lib/useFormSubmit';
 import { useAuth } from '../../auth/AuthContext';
-import { useToast } from '../../components/ui/Toast';
 import { Card } from '../../components/ui/Card';
+import { LeadLookup } from '../../components/lead/LeadLookup';
 import { Table, Th, Td } from '../../components/ui/Table';
 import { Badge } from '../../components/ui/Badge';
-import { Input, Textarea } from '../../components/ui/Input';
+import { Input, Select, Textarea } from '../../components/ui/Input';
 import { Button } from '../../components/ui/Button';
 import { Modal } from '../../components/ui/Modal';
+import { formatDate, formatDateTime } from '../../lib/dates';
+import { timeAgo, useMinuteClock } from '../../lib/timeAgo';
 
 type BookQueueTab = 'book' | 'queue';
 type Tab = BookQueueTab | 'waiting';
@@ -33,6 +42,10 @@ export function SalesBuyersPage() {
         <h1 className="text-xl font-semibold text-slate-900">Buyers</h1>
         <Button onClick={() => navigate('/sales/buyers/new')}>Register a buyer</Button>
       </div>
+
+      <Card title="Already on TriFid?">
+        <LeadLookup side="buyer" fileHref={(id) => `/sales/buyers/${id}`} />
+      </Card>
 
       <div className="flex gap-2">
         <Button
@@ -78,35 +91,90 @@ export function SalesBuyersPage() {
 function BuyerListTab({ tab }: { tab: BookQueueTab }) {
   const { callApi } = useAuth();
   const navigate = useNavigate();
-  // Live filter, as-you-type, no submit button — filters the already-fetched
-  // list client-side; re-fetches only when the tab itself changes.
-  const [q, setQ] = useState('');
+  // 29 Oct — searched, filtered and paged on the server (50 at a time; the
+  // next page loads as you scroll, or "Load more"). It used to load every
+  // buyer and filter in the browser.
+  const [searchText, setSearchText] = useState('');
+  const q = useDebounced(searchText.trim());
+  const [filters, setFilters] = useState<BuyerFilterValue>({
+    category: '',
+    districtId: '',
+    assignedTo: '',
+    sort: 'firm',
+    dir: 'asc',
+  });
   const [assigning, setAssigning] = useState<{ buyerId: string; firm: string } | null>(null);
-  const loader = useCallback(
-    () => callApi((token) => listSalesBuyers(token, { tab })),
-    [callApi, tab],
+  const loadPage = useCallback(
+    async (cursor?: string) => {
+      const page = await callApi((token) =>
+        listSalesBuyersPage(token, {
+          tab,
+          q: q || undefined,
+          category: filters.category || undefined,
+          districtId: filters.districtId || undefined,
+          assignedTo: filters.assignedTo || undefined,
+          sort: filters.sort,
+          dir: filters.dir,
+          cursor,
+          limit: 50,
+        }),
+      );
+      return { ...page, meta: { facets: page.facets } };
+    },
+    [callApi, tab, q, filters],
   );
-  const { state, retry } = useAsyncData(loader, (items) => items.length === 0, [loader]);
+  const list = usePagedList<BuyerListRow>(loadPage);
+  // The options stay as first loaded for the tab, so picking one does not empty the others.
+  const [facets, setFacets] = useState<BuyerListFacets | null>(null);
+  useEffect(() => {
+    const next = list.meta?.facets as BuyerListFacets | undefined;
+    if (next) setFacets((current) => current ?? next);
+  }, [list.meta]);
+  const filtering = Boolean(q || filters.category || filters.districtId || filters.assignedTo);
 
   return (
     <div className="flex flex-col gap-4">
       <Input
         label="Search"
-        placeholder="Firm, owner, mobile, GSTIN, tehsil…"
-        value={q}
-        onChange={(e) => setQ(e.target.value)}
+        placeholder="Firm, proprietor, mobile, GSTIN, PAN, tehsil…"
+        value={searchText}
+        onChange={(e) => setSearchText(e.target.value)}
       />
-      <AsyncBoundary state={state} onRetry={retry} emptyMessage="Nobody here yet.">
-        {(items) => (
-          <BuyerTable items={items} q={q} navigate={navigate} onAssignToMe={setAssigning} />
-        )}
-      </AsyncBoundary>
+      <BuyerFilters facets={facets} tab={tab} value={filters} onChange={setFilters} />
+      {list.status === 'loading' && <Loader />}
+      {list.status === 'error' && (
+        <ErrorState message={list.error ?? 'Could not load.'} onRetry={() => void list.reload()} />
+      )}
+      {list.status === 'ready' && list.items.length === 0 && (
+        <p className="text-sm text-slate-500">
+          {q ? (
+            <>No match for &quot;{q}&quot;.</>
+          ) : filtering ? (
+            'No buyer matches these filters.'
+          ) : (
+            'Nobody here yet.'
+          )}
+        </p>
+      )}
+      {list.status === 'ready' && list.items.length > 0 && (
+        <>
+          <BuyerTable items={list.items} q="" navigate={navigate} onAssignToMe={setAssigning} />
+          <ListFooter
+            shown={list.items.length}
+            total={list.total}
+            hasMore={list.hasMore}
+            loading={list.loadingMore}
+            error={list.error}
+            onMore={() => void list.loadMore()}
+          />
+        </>
+      )}
       <AssignToBookModal
         target={assigning}
         onClose={() => setAssigning(null)}
         onAssigned={() => {
           setAssigning(null);
-          retry();
+          void list.reload();
         }}
       />
     </div>
@@ -114,12 +182,10 @@ function BuyerListTab({ tab }: { tab: BookQueueTab }) {
 }
 
 /**
- * B-10 — BR-276's automatic queue-to-book trigger fires on a buyer's first
- * order, but if no Sales employee is active at that exact moment it
- * silently leaves him in Queue with no retry (`ensureBookAssignment`,
- * `modules/chain/chain.service.ts`). This is the already-built manual
- * fallback (`POST /admin/book-assignments`) — previously not wired to any
- * screen, so a buyer stuck this way had no way out at all.
+ * B-10 — take a buyer from the Queue into your own book
+ * (`POST /admin/book-assignments`). With the first-order auto-assign off
+ * (DEC-062) this is how an unowned buyer is picked up; moving one someone
+ * already owns is Change owner, for his leader or Admin (BR-362).
  */
 function AssignToBookModal({
   target,
@@ -131,30 +197,25 @@ function AssignToBookModal({
   onAssigned: () => void;
 }) {
   const { callApi, me } = useAuth();
-  const { show } = useToast();
   const [reason, setReason] = useState('');
-  const [error, setError] = useState<string | null>(null);
-  const [submitting, setSubmitting] = useState(false);
-
-  async function handleSubmit(event: FormEvent): Promise<void> {
-    event.preventDefault();
-    if (!target || !me) return;
-    setError(null);
-    setSubmitting(true);
-    try {
-      await callApi((token) =>
-        assignBook(token, { buyerId: target.buyerId, ownerEmployeeId: me.employeeId, reason }),
-      );
-      show(`${target.firm} is now in your book.`);
+  const save = useFormSubmit<unknown>({
+    fields: ['reason'],
+    success: `${target?.firm ?? 'He'} is now in your book.`,
+    onSuccess: () => {
       setReason('');
       onAssigned();
-    } catch (submitError) {
-      setError(
-        submitError instanceof ApiError ? submitError.message : 'Could not assign this buyer.',
-      );
-    } finally {
-      setSubmitting(false);
-    }
+    },
+    toastOnSuccess: true,
+  });
+
+  function handleSubmit(event: FormEvent): void {
+    event.preventDefault();
+    if (!target || !me) return;
+    void save.submit((key) =>
+      callApi((token) =>
+        assignBook(token, { buyerId: target.buyerId, ownerEmployeeId: me.employeeId, reason }, key),
+      ),
+    );
   }
 
   return (
@@ -172,21 +233,155 @@ function AssignToBookModal({
           onChange={(e) => setReason(e.target.value)}
           required
         />
-        {error && (
+        {save.formError && (
           <p role="alert" className="text-sm text-danger-500">
-            {error}
+            {save.formError}
           </p>
         )}
         <div className="flex justify-end gap-2">
           <Button type="button" variant="secondary" onClick={onClose}>
             Cancel
           </Button>
-          <Button type="submit" loading={submitting}>
+          <Button type="submit" loading={save.submitting}>
             Add to my book
           </Button>
         </div>
       </form>
     </Modal>
+  );
+}
+
+const CATEGORIES = ['Retailer', 'Dealer', 'Distributor', 'Trader'];
+
+interface BuyerFilterValue {
+  category: string;
+  districtId: string;
+  assignedTo: string;
+  sort: BuyerListSort;
+  dir: 'asc' | 'desc';
+}
+
+/**
+ * 29 Oct — what the list can be sorted by (on the server, so every page follows it), with the
+ * words for each direction and the direction a fresh pick starts in.
+ */
+const SORTS: Array<{
+  value: BuyerListSort;
+  label: string;
+  asc: string;
+  desc: string;
+  start: 'asc' | 'desc';
+}> = [
+  { value: 'firm', label: 'Firm name', asc: 'A → Z', desc: 'Z → A', start: 'asc' },
+  { value: 'tehsil', label: 'Tehsil', asc: 'A → Z', desc: 'Z → A', start: 'asc' },
+  { value: 'district', label: 'District', asc: 'A → Z', desc: 'Z → A', start: 'asc' },
+  {
+    value: 'registered',
+    label: 'Date registered',
+    asc: 'Oldest first',
+    desc: 'Newest first',
+    start: 'desc',
+  },
+  { value: 'orders', label: 'Orders', asc: 'Fewest first', desc: 'Most first', start: 'desc' },
+  {
+    value: 'lastOrder',
+    label: 'Last order',
+    asc: 'Oldest first',
+    desc: 'Newest first',
+    start: 'desc',
+  },
+  // 30 Oct — oldest first is a call list: never called, then longest ago.
+  {
+    value: 'lastCalled',
+    label: 'Last called',
+    asc: 'Longest ago first',
+    desc: 'Most recent first',
+    start: 'asc',
+  },
+  {
+    value: 'rateViews',
+    label: 'Rate views',
+    asc: 'Fewest first',
+    desc: 'Most first',
+    start: 'desc',
+  },
+];
+
+function BuyerFilters({
+  facets,
+  tab,
+  value,
+  onChange,
+}: {
+  facets: BuyerListFacets | null;
+  tab: BookQueueTab;
+  value: BuyerFilterValue;
+  onChange: (next: BuyerFilterValue) => void;
+}) {
+  const sort = SORTS.find((s) => s.value === value.sort) ?? SORTS[0]!;
+  return (
+    <div className="grid max-w-5xl grid-cols-2 gap-4 md:grid-cols-5">
+      <Select
+        label="Category"
+        value={value.category}
+        onChange={(e) => onChange({ ...value, category: e.target.value })}
+      >
+        <option value="">All</option>
+        {CATEGORIES.map((c) => (
+          <option key={c} value={c}>
+            {c}
+          </option>
+        ))}
+      </Select>
+      <Select
+        label="District"
+        value={value.districtId}
+        onChange={(e) => onChange({ ...value, districtId: e.target.value })}
+      >
+        <option value="">All</option>
+        {(facets?.districts ?? []).map((d) => (
+          <option key={d.districtId} value={d.districtId}>
+            {d.name}
+          </option>
+        ))}
+      </Select>
+      {tab === 'book' && (
+        <Select
+          label="Assigned to"
+          value={value.assignedTo}
+          onChange={(e) => onChange({ ...value, assignedTo: e.target.value })}
+        >
+          <option value="">Anyone</option>
+          {(facets?.assignees ?? []).map((a) => (
+            <option key={a.employeeId} value={a.employeeId}>
+              {a.person}
+            </option>
+          ))}
+        </Select>
+      )}
+      <Select
+        label="Sort by"
+        value={value.sort}
+        onChange={(e) => {
+          const next = SORTS.find((s) => s.value === e.target.value) ?? SORTS[0]!;
+          onChange({ ...value, sort: next.value, dir: next.start });
+        }}
+      >
+        {SORTS.map((s) => (
+          <option key={s.value} value={s.value}>
+            {s.label}
+          </option>
+        ))}
+      </Select>
+      <Select
+        label="Order"
+        value={value.dir}
+        onChange={(e) => onChange({ ...value, dir: e.target.value as 'asc' | 'desc' })}
+      >
+        <option value="asc">{sort.asc}</option>
+        <option value="desc">{sort.desc}</option>
+      </Select>
+    </div>
   );
 }
 
@@ -201,16 +396,23 @@ function BuyerTable({
   navigate: NavigateFunction;
   onAssignToMe: (target: { buyerId: string; firm: string }) => void;
 }) {
+  const now = useMinuteClock();
   const filtered = useMemo(() => {
     const needle = q.trim().toLowerCase();
     if (!needle) return items;
     return items.filter((b) =>
-      [b.firm, b.contactName, b.mobile, b.gstin, b.tehsil, b.ownerName].some((field) => field?.toLowerCase().includes(needle)),
+      [b.firm, b.contactName, b.mobile, b.gstin, b.pan, b.tehsil, b.district, b.ownerName].some(
+        (field) => field?.toLowerCase().includes(needle),
+      ),
     );
   }, [items, q]);
 
   if (filtered.length === 0) {
-    return <p className="text-sm text-slate-500">No match for &quot;{q}&quot;.</p>;
+    return (
+      <p className="text-sm text-slate-500">
+        {q ? <>No match for &quot;{q}&quot;.</> : 'No buyer matches these filters.'}
+      </p>
+    );
   }
 
   return (
@@ -219,11 +421,13 @@ function BuyerTable({
         <tr>
           <Th>Firm</Th>
           <Th>Tehsil</Th>
-          <Th>Position</Th>
+          <Th>District</Th>
+          <Th>Category</Th>
           <Th numeric>Orders</Th>
           <Th>Last order</Th>
+          <Th>Last called</Th>
           <Th numeric>Rate views</Th>
-          <Th>Owner</Th>
+          <Th>Assigned to</Th>
           <Th />
         </tr>
       </thead>
@@ -236,9 +440,12 @@ function BuyerTable({
           >
             <Td>
               <div className="font-medium text-slate-900">{b.firm}</div>
-              <div className="font-mono text-xs text-slate-500">{b.gstin ?? '—'}</div>
+              <div className="font-mono text-xs text-slate-500">
+                {b.gstin ?? (b.pan ? `Unregistered · PAN ${b.pan}` : '—')}
+              </div>
             </Td>
             <Td>{b.tehsil ?? '—'}</Td>
+            <Td>{b.district ?? '—'}</Td>
             <Td>
               {b.tier ? (
                 <Badge tone="neutral" variant="chip">
@@ -249,7 +456,19 @@ function BuyerTable({
               )}
             </Td>
             <Td numeric>{b.orderCount}</Td>
-            <Td>{b.lastOrderAt ? new Date(b.lastOrderAt).toLocaleDateString() : 'never'}</Td>
+            <Td>{b.lastOrderAt ? formatDate(b.lastOrderAt) : 'never'}</Td>
+            <Td>
+              {b.lastCalledAt ? (
+                <span title={formatDateTime(b.lastCalledAt)}>
+                  {timeAgo(b.lastCalledAt, now)}
+                  {b.lastCalledBy && (
+                    <span className="block text-xs text-slate-500">by {b.lastCalledBy}</span>
+                  )}
+                </span>
+              ) : (
+                'never'
+              )}
+            </Td>
             <Td numeric className={b.rateViews >= 25 ? 'font-semibold text-danger-500' : undefined}>
               {b.rateViews}
             </Td>
@@ -294,23 +513,31 @@ function BuyerTable({
 function WaitingTab() {
   const { callApi } = useAuth();
   const navigate = useNavigate();
-  const loader = useCallback(
-    () => callApi((token) => listRegistrations(token, 'pending')),
+  // 29 Oct — buyers only, from the server, a page at a time (the old call took
+  // the first 25 pending registrations of every kind).
+  const loadPage = useCallback(
+    (cursor?: string) =>
+      callApi((token) =>
+        listRegistrationsPage(token, { stage: 'pending', kind: 'buyer', cursor, limit: 25 }),
+      ),
     [callApi],
   );
-  const { state, retry } = useAsyncData(loader, (items) => items.length === 0, [loader]);
+  const list = usePagedList<RegistrationListItem>(loadPage);
 
   return (
     <Card title="Waiting on approval">
       <p className="mb-4 text-sm text-slate-500">
         Read-only awareness — approving a registration happens on the Registrations desk, not here.
       </p>
-      <AsyncBoundary state={state} onRetry={retry} emptyMessage="Nobody waiting.">
-        {(items: RegistrationListItem[]) => {
-          const buyers = items.filter((r) => r.kind === 'buyer' || r.kind === 'both');
-          return buyers.length === 0 ? (
-            <p className="text-sm text-slate-500">No buyer registrations waiting.</p>
-          ) : (
+      {list.status === 'loading' && <Loader />}
+      {list.status === 'error' && (
+        <ErrorState message={list.error ?? 'Could not load.'} onRetry={() => void list.reload()} />
+      )}
+      {list.status === 'ready' &&
+        (list.items.length === 0 ? (
+          <p className="text-sm text-slate-500">No buyer registrations waiting.</p>
+        ) : (
+          <>
             <Table>
               <thead>
                 <tr>
@@ -321,16 +548,16 @@ function WaitingTab() {
                 </tr>
               </thead>
               <tbody>
-                {buyers.map((r) => (
+                {list.items.map((r) => (
                   <tr key={r.registrationId}>
                     <Td>{r.firm ?? '—'}</Td>
                     <Td className="font-mono text-xs">{r.gstin ?? '—'}</Td>
-                    <Td>{new Date(r.createdAt).toLocaleDateString()}</Td>
+                    <Td>{formatDate(r.createdAt)}</Td>
                     <Td>
                       <Button
                         size="sm"
                         variant="secondary"
-                        onClick={() => navigate('/registrations')}
+                        onClick={() => navigate(`/registrations?open=${r.registrationId}`)}
                       >
                         Open in Registrations
                       </Button>
@@ -339,9 +566,16 @@ function WaitingTab() {
                 ))}
               </tbody>
             </Table>
-          );
-        }}
-      </AsyncBoundary>
+            <ListFooter
+              shown={list.items.length}
+              total={list.total}
+              hasMore={list.hasMore}
+              loading={list.loadingMore}
+              error={list.error}
+              onMore={() => void list.loadMore()}
+            />
+          </>
+        ))}
     </Card>
   );
 }

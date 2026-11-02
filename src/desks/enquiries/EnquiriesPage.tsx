@@ -373,7 +373,7 @@ function NewEnquiryModal({ open, onClose }: { open: boolean; onClose: () => void
   return (
     <Modal open={open} title="New enquiry — log a call" onClose={onClose}>
       <form onSubmit={handleSubmit} className="flex max-h-[70vh] flex-col gap-4 overflow-y-auto">
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           {canBuyer && canSeller ? (
             <Select
               label="Buyer or seller"
@@ -412,7 +412,7 @@ function NewEnquiryModal({ open, onClose }: { open: boolean; onClose: () => void
             <SellerPicker onChange={setCounterpartyId} />
           )
         ) : (
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Input
               label="Firm"
               value={prospectFirm}

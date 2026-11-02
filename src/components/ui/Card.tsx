@@ -15,12 +15,12 @@ export function Card({
 }) {
   return (
     <section
-      className={`rounded-lg border border-slate-200 bg-white p-5 shadow-sm ${className}`}
+      className={`rounded-lg border border-slate-200 bg-white p-4 shadow-sm sm:p-5 ${className}`}
       onClick={onClick}
     >
       {(title || actions) && (
-        <div className="mb-4 flex items-center justify-between gap-3">
-          {title && <h2 className="text-base font-semibold text-slate-900">{title}</h2>}
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
+          {title && <h2 className="min-w-0 text-base font-semibold text-slate-900">{title}</h2>}
           {actions}
         </div>
       )}

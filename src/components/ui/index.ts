@@ -14,6 +14,8 @@ export { Badge, type BadgeTone } from './Badge';
 export { Modal } from './Modal';
 export { Dropdown, type DropdownOption } from './Dropdown';
 export { Loader } from './Loader';
+export { PageHeader } from './PageHeader';
+export { FormActions } from './FormActions';
 export { EmptyState } from './EmptyState';
 export { ErrorState } from './ErrorState';
 export { ToastProvider, useToast } from './Toast';

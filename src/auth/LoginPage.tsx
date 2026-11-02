@@ -89,8 +89,9 @@ export function LoginPage() {
 
   if (step === 'mfa') {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-slate-50 p-4">
-        <Card className="w-full max-w-sm">
+      <main className="flex min-h-screen flex-col items-center justify-center gap-6 bg-slate-50 p-4">
+        <Wordmark />
+        <Card className="w-full max-w-sm shadow-md">
           <h1 className="mb-4 text-lg font-semibold text-slate-900">
             Enter your authenticator code
           </h1>
@@ -99,7 +100,9 @@ export function LoginPage() {
               id="mfa-code"
               label="6-digit code"
               inputMode="numeric"
+              autoComplete="one-time-code"
               maxLength={6}
+              className="text-center font-mono text-lg tracking-[0.4em]"
               autoFocus
               value={code}
               onChange={(event) => setCode(event.target.value)}
@@ -115,8 +118,9 @@ export function LoginPage() {
   }
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-slate-50 p-4">
-      <Card className="w-full max-w-sm">
+    <main className="flex min-h-screen flex-col items-center justify-center gap-6 bg-slate-50 p-4">
+      <Wordmark />
+      <Card className="w-full max-w-sm shadow-md">
         <h1 className="mb-4 text-lg font-semibold text-slate-900">Sign in</h1>
         <DevNote screen="admin_login" />
         {sessionExpiredNotice && (
@@ -152,5 +156,19 @@ export function LoginPage() {
         </form>
       </Card>
     </main>
+  );
+}
+
+function Wordmark() {
+  return (
+    <div className="flex items-center gap-2 text-2xl font-semibold tracking-tight text-brand-600">
+      <span
+        aria-hidden
+        className="flex size-9 items-center justify-center rounded-lg bg-brand-500 text-base font-bold text-white"
+      >
+        T
+      </span>
+      TriFid
+    </div>
   );
 }

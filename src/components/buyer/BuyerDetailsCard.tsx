@@ -28,6 +28,7 @@ import {
   warningsFrom,
   type ConfirmWarning,
 } from './BuyerFields';
+import { FormActions } from '../ui/FormActions';
 
 /**
  * Phase 3 — the buyer profile's details card: proprietor, mobile, GSTIN (or
@@ -235,11 +236,7 @@ function EditBuyerModal({
 
   return (
     <Modal open title={`Edit ${profile.firm}`} onClose={onClose}>
-      <form
-        onSubmit={handleSubmit}
-        noValidate
-        className="grid max-h-[75vh] grid-cols-2 gap-4 overflow-y-auto pr-1"
-      >
+      <form onSubmit={handleSubmit} noValidate className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <Input
           label="Firm name"
           required
@@ -283,7 +280,7 @@ function EditBuyerModal({
           error={e.category}
         />
         <div />
-        <div className="col-span-2">
+        <div className="col-span-full">
           <LocationBlock
             required
             value={location}
@@ -297,7 +294,7 @@ function EditBuyerModal({
             }}
           />
         </div>
-        <div className="col-span-2">
+        <div className="col-span-full">
           <p className="mb-1 text-sm font-medium text-slate-700">Companies he deals in</p>
           <CompanyPicker value={companyIds} onChange={setCompanyIds} />
         </div>
@@ -315,11 +312,11 @@ function EditBuyerModal({
         />
         <ConfirmWarnings warnings={warnings} value={confirmations} onChange={setConfirmations} />
         {save.formError && warnings.length === 0 && (
-          <p role="alert" className="col-span-2 text-sm text-danger-500">
+          <p role="alert" className="col-span-full text-sm text-danger-500">
             {save.formError}
           </p>
         )}
-        <div className="col-span-2 flex gap-2">
+        <FormActions>
           <Button
             type="submit"
             loading={save.submitting}
@@ -330,7 +327,7 @@ function EditBuyerModal({
           <Button type="button" variant="ghost" onClick={onClose}>
             Cancel
           </Button>
-        </div>
+        </FormActions>
       </form>
     </Modal>
   );

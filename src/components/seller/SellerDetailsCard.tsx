@@ -14,6 +14,7 @@ import { Modal } from '../ui/Modal';
 import { Input } from '../ui/Input';
 import { LocationBlock, type LocationValue } from '../location/LocationBlock';
 import { ChangeOwnerButton } from '../lead/ChangeOwner';
+import { FormActions } from '../ui/FormActions';
 
 /**
  * Phase 4 — the seller profile's details card: proprietor, mobile, GSTIN,
@@ -180,11 +181,7 @@ function EditSellerModal({
 
   return (
     <Modal open title={`Edit ${profile.firm}`} onClose={onClose}>
-      <form
-        onSubmit={handleSubmit}
-        noValidate
-        className="grid max-h-[75vh] grid-cols-2 gap-4 overflow-y-auto pr-1"
-      >
+      <form onSubmit={handleSubmit} noValidate className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <Input
           label="Firm"
           required
@@ -227,7 +224,7 @@ function EditSellerModal({
           onChange={(ev) => setMargPartyCode(ev.target.value.toUpperCase())}
           error={e.margPartyCode}
         />
-        <div className="col-span-2">
+        <div className="col-span-full">
           <LocationBlock
             required
             value={location}
@@ -242,18 +239,18 @@ function EditSellerModal({
           />
         </div>
         {save.formError && (
-          <p role="alert" className="col-span-2 text-sm text-danger-500">
+          <p role="alert" className="col-span-full text-sm text-danger-500">
             {save.formError}
           </p>
         )}
-        <div className="col-span-2 flex gap-2">
+        <FormActions>
           <Button type="submit" loading={save.submitting} disabled={!location.tehsilId}>
             Save
           </Button>
           <Button type="button" variant="ghost" onClick={onClose}>
             Cancel
           </Button>
-        </div>
+        </FormActions>
       </form>
     </Modal>
   );

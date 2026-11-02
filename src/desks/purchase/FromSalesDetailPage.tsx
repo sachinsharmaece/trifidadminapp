@@ -18,6 +18,7 @@ import { useFormSubmit } from '../../lib/useFormSubmit';
 import { useAuth } from '../../auth/AuthContext';
 import { formatDate } from '../../lib/dates';
 import { CompanyPicker } from './CompanyPicker';
+import { FormActions } from '../../components/ui/FormActions';
 
 /**
  * Phase 6 — one buyer pushed from Sales. The receiver does the first call
@@ -225,7 +226,7 @@ function CompleteForm({ push, onSaved }: { push: PushDetailDto; onSaved: () => v
         push.status === 'submitted' ? 'Seller details (sent for approval)' : 'Complete as a seller'
       }
     >
-      <form onSubmit={handleSubmit} noValidate className="grid grid-cols-2 gap-4">
+      <form onSubmit={handleSubmit} noValidate className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         {!push.gstin && (
           <Input
             label="GSTIN"
@@ -250,7 +251,7 @@ function CompleteForm({ push, onSaved }: { push: PushDetailDto; onSaved: () => v
           onChange={(ev) => setMargPartyCode(ev.target.value.toUpperCase())}
           error={e.margPartyCode}
         />
-        <div className="col-span-2">
+        <div className="col-span-full">
           <p className="mb-1 text-sm font-medium text-slate-700">His own place</p>
           <LocationBlock
             required
@@ -268,7 +269,7 @@ function CompleteForm({ push, onSaved }: { push: PushDetailDto; onSaved: () => v
         {references.map((reference, i) => (
           <fieldset
             key={i}
-            className="col-span-2 grid grid-cols-2 gap-3 rounded-md border border-slate-200 p-3"
+            className="col-span-full grid grid-cols-1 sm:grid-cols-2 gap-3 rounded-md border border-slate-200 p-3"
           >
             <legend className="px-1 text-sm font-medium text-slate-700">Referee {i + 1}</legend>
             <Input
@@ -302,15 +303,15 @@ function CompleteForm({ push, onSaved }: { push: PushDetailDto; onSaved: () => v
             />
           </fieldset>
         ))}
-        {e.references && <p className="col-span-2 text-sm text-danger-500">{e.references}</p>}
-        <div className="col-span-2">
+        {e.references && <p className="col-span-full text-sm text-danger-500">{e.references}</p>}
+        <div className="col-span-full">
           <p className="mb-1 text-sm font-medium text-slate-700">Bank account for payouts</p>
           <p className="mb-2 text-sm text-slate-500">
             {needsBank
               ? 'The firm has no bank account on file — a seller is paid, so add one.'
               : 'The firm already has a bank account on file. Add one only if he is paid elsewhere.'}
           </p>
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <Input
               label="Account number"
               required={needsBank}
@@ -334,7 +335,7 @@ function CompleteForm({ push, onSaved }: { push: PushDetailDto; onSaved: () => v
             />
           </div>
         </div>
-        <div className="col-span-2">
+        <div className="col-span-full">
           <p className="mb-1 text-sm font-medium text-slate-700">Companies he deals in</p>
           {fromBuyer && (
             <p className="mb-2 text-sm text-slate-500">
@@ -344,7 +345,7 @@ function CompleteForm({ push, onSaved }: { push: PushDetailDto; onSaved: () => v
           )}
           <CompanyPicker value={companyIds} onChange={setCompanyIds} />
         </div>
-        <div className="col-span-2">
+        <div className="col-span-full">
           <Textarea
             label="Call note"
             required
@@ -355,15 +356,15 @@ function CompleteForm({ push, onSaved }: { push: PushDetailDto; onSaved: () => v
           />
         </div>
         {save.formError && (
-          <p role="alert" className="col-span-2 text-sm text-danger-500">
+          <p role="alert" className="col-span-full text-sm text-danger-500">
             {save.formError}
           </p>
         )}
-        <div className="col-span-2">
+        <FormActions>
           <Button type="submit" loading={save.submitting} disabled={!location.tehsilId}>
             {push.status === 'submitted' ? 'Save changes' : 'Send for approval'}
           </Button>
-        </div>
+        </FormActions>
       </form>
     </Card>
   );

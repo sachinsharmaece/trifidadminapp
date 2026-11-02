@@ -9,8 +9,12 @@ import type { ReactNode, ThHTMLAttributes, TdHTMLAttributes } from 'react';
  */
 export function Table({ children, className = '' }: { children: ReactNode; className?: string }) {
   return (
-    <div className="overflow-x-auto rounded-md border border-slate-200">
-      <table className={`w-full border-collapse text-sm ${className}`}>{children}</table>
+    <div className="overflow-x-auto rounded-md border border-slate-200 bg-white">
+      <table
+        className={`w-full border-collapse text-sm [&_tbody_tr]:transition-colors [&_tbody_tr:hover]:bg-slate-50/70 ${className}`}
+      >
+        {children}
+      </table>
     </div>
   );
 }
@@ -28,7 +32,7 @@ export function Th({
 }: ThHTMLAttributes<HTMLTableCellElement> & NumericProp) {
   return (
     <th
-      className={`border-b border-slate-200 bg-slate-50 px-3 py-2 font-medium text-slate-600 ${
+      className={`border-b border-slate-200 bg-slate-50 px-3 py-2.5 font-medium whitespace-nowrap text-slate-600 ${
         numeric ? 'text-right' : 'text-left'
       } ${className}`}
       {...rest}

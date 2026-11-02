@@ -17,6 +17,7 @@ import {
 } from '../../components/location/LocationBlock';
 import { AssigneeSelect } from '../../components/buyer/BuyerFields';
 import { CompanyPicker } from './CompanyPicker';
+import { FormActions } from '../../components/ui/FormActions';
 
 const FIELDS = [
   'mobile',
@@ -215,12 +216,16 @@ export function AddSellerPage() {
           and referees can be left for later; without bank detail he cannot be paid until it is
           added (DEC-069).
         </p>
-        <form onSubmit={handleSubmit} noValidate className="grid max-w-3xl grid-cols-2 gap-4">
+        <form
+          onSubmit={handleSubmit}
+          noValidate
+          className="grid max-w-3xl grid-cols-1 sm:grid-cols-2 gap-4"
+        >
           {text('Mobile', mobile, setMobile, 'mobile', { inputMode: 'tel', maxLength: 14 })}
           {text('Firm', firm, setFirm, 'firm')}
           {text('GSTIN', gstin, (v) => setGstin(v.toUpperCase()), 'gstin', { maxLength: 15 })}
           {text('Proprietor name', ownerName, setOwnerName, 'ownerName')}
-          <div className="col-span-2">
+          <div className="col-span-full">
             <LocationBlock
               required
               value={location}
@@ -279,7 +284,7 @@ export function AddSellerPage() {
           {text('Referee 2 — phone', refPhone2, setRefPhone2, 'references.1.phone', {
             maxLength: 10,
           })}
-          <div className="col-span-2">
+          <div className="col-span-full">
             <span className="mb-1 block text-sm font-medium text-slate-700">
               Companies he deals in
             </span>
@@ -288,7 +293,7 @@ export function AddSellerPage() {
             </p>
             <CompanyPicker value={dealershipIds} onChange={setDealershipIds} />
           </div>
-          <div className="col-span-2">
+          <div className="col-span-full">
             <Textarea
               label="Call note"
               hint="Who called, what was agreed."
@@ -301,7 +306,7 @@ export function AddSellerPage() {
               required
             />
           </div>
-          <div className="col-span-2">
+          <div className="col-span-full">
             <label className="flex items-center gap-2 text-sm text-slate-700">
               <input
                 type="checkbox"
@@ -321,7 +326,7 @@ export function AddSellerPage() {
             )}
           </div>
           {save.duplicate && (
-            <p role="alert" className="col-span-2 text-sm text-danger-500">
+            <p role="alert" className="col-span-full text-sm text-danger-500">
               That{' '}
               {save.duplicate.field === 'gstin'
                 ? 'GSTIN'
@@ -336,18 +341,18 @@ export function AddSellerPage() {
             </p>
           )}
           {save.formError && !save.duplicate && (
-            <p role="alert" className="col-span-2 text-sm text-danger-500">
+            <p role="alert" className="col-span-full text-sm text-danger-500">
               {save.formError}
             </p>
           )}
           {save.successMessage && (
-            <p className="col-span-2 text-sm text-success-600">{save.successMessage}</p>
+            <p className="col-span-full text-sm text-success-600">{save.successMessage}</p>
           )}
-          <div className="col-span-2">
+          <FormActions>
             <Button type="submit" loading={save.submitting} icon={<FiPhoneCall />}>
               Register seller
             </Button>
-          </div>
+          </FormActions>
         </form>
       </Card>
     </div>

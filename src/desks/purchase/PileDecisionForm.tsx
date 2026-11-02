@@ -47,7 +47,7 @@ export function PileDecisionForm({
 
   return (
     <div className="flex flex-col gap-3 py-2">
-      <div className="grid max-w-xl grid-cols-3 gap-3">
+      <div className="grid max-w-xl grid-cols-1 sm:grid-cols-3 gap-3">
         <Input
           id={`ps-boxes-${pileId}`}
           label="Boxes he can send"

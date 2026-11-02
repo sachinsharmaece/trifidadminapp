@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react';
-import { NavLink } from 'react-router-dom';
 import {
   getActiveDemandList,
   getPilesAwaitingDecision,
@@ -13,6 +12,7 @@ import {
 import { countPendingRegistrations } from '../../api/onboarding';
 import { listPurchasePushes } from '../../api/push';
 import { useAuth } from '../../auth/AuthContext';
+import { DeskTabs } from '../../components/DeskTabs';
 
 interface NavCounts {
   demand: number;
@@ -113,31 +113,14 @@ const ITEMS: Array<{ to: string; label: string; end?: boolean; countKey?: keyof 
 export function PurchaseNav() {
   const counts = useNavCounts();
   return (
-    <nav className="mb-6 flex flex-wrap gap-1 border-b border-slate-200 pb-2">
-      {ITEMS.map((item) => {
-        const count = item.countKey ? counts[item.countKey] : undefined;
-        return (
-          <NavLink
-            key={item.to}
-            to={item.to}
-            end={item.end}
-            className={({ isActive }) =>
-              `flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
-                isActive
-                  ? 'bg-brand-50 text-brand-700'
-                  : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
-              }`
-            }
-          >
-            {item.label}
-            {!!count && (
-              <span className="rounded-full bg-slate-200 px-1.5 text-xs font-semibold text-slate-700">
-                {count}
-              </span>
-            )}
-          </NavLink>
-        );
-      })}
-    </nav>
+    <DeskTabs
+      label="Purchase screens"
+      items={ITEMS.map((item) => ({
+        to: item.to,
+        label: item.label,
+        end: item.end,
+        count: item.countKey ? counts[item.countKey] : undefined,
+      }))}
+    />
   );
 }

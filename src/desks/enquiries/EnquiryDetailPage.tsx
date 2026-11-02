@@ -987,7 +987,7 @@ function EditEnquiryModal({
     <Modal open={open} title={`Edit — ${enquiry.enquiryNo}`} onClose={onClose}>
       <div className="flex max-h-[70vh] flex-col gap-4 overflow-y-auto">
         {isProspect && (
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Input label="Firm" value={firm} onChange={(e) => setFirm(e.target.value)} required />
             <Input
               label="Contact name"
@@ -1455,7 +1455,7 @@ function PileStatusForm({ enquiry, onDone }: { enquiry: EnquiryDetail; onDone: (
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <Input
           label="Can send (boxes)"
           type="number"

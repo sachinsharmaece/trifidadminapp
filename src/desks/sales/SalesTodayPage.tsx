@@ -289,7 +289,7 @@ function PaymentAllocationSection() {
         A buyer&apos;s claim, not yet money — it touches no bank book and no ledger until Accounts
         posts it against exactly the SO picked here (BR-012, INV-15).
       </p>
-      <p className="mb-4 rounded border border-amber-300 bg-amber-50 p-3 text-sm text-slate-700">
+      <p className="mb-4 rounded border border-warning-500/40 bg-warning-50 p-3 text-sm text-slate-700">
         <strong>One receipt, one order (QR-057).</strong> A receipt cannot be split across orders.
         If the buyer&apos;s one bank transfer pays two orders, record it as two separate receipts
         against the same bank credit, one per order. The system refuses more than one order here.

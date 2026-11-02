@@ -99,7 +99,7 @@ function FunnelRow({
             </p>
           )}
           {metric.caveat && (
-            <p className="mt-2 rounded border border-amber-300 bg-amber-50 p-3 text-sm text-slate-700">
+            <p className="mt-2 rounded border border-warning-500/40 bg-warning-50 p-3 text-sm text-slate-700">
               {metric.caveat}
             </p>
           )}

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import {
@@ -146,7 +146,7 @@ const NAV_ITEMS: NavItem[] = [
 ];
 
 const navLinkClasses = ({ isActive }: { isActive: boolean }) =>
-  `flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors ${
+  `flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand-600 ${
     isActive
       ? 'bg-brand-50 text-brand-700'
       : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
@@ -173,7 +173,7 @@ function NavGroup({
         type="button"
         onClick={() => setOpen((current) => !current)}
         aria-expanded={open}
-        className={`flex w-full items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors ${
+        className={`flex w-full items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand-600 ${
           containsActiveChild
             ? 'text-brand-700'
             : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
@@ -279,7 +279,7 @@ function SalesQuickCallControl() {
         if (matches.length === 1) go(matches[0].buyerId);
       }}
     >
-      <div className="relative">
+      <div className="relative min-w-0 flex-1 sm:flex-none">
         <input
           type="text"
           value={text}
@@ -294,10 +294,10 @@ function SalesQuickCallControl() {
           onBlur={() => setOpen(false)}
           placeholder="Firm, owner, mobile or GSTIN"
           aria-label="Find a buyer to log a call"
-          className="w-64 rounded-md border border-slate-300 bg-white px-2.5 py-1.5 text-sm text-slate-900 placeholder:text-slate-400 focus:border-brand-500 focus:outline focus:outline-2 focus:outline-brand-500/30"
+          className="w-full rounded-md border border-slate-300 bg-white px-2.5 py-1.5 text-sm text-slate-900 placeholder:text-slate-400 focus:border-brand-500 focus:outline focus:outline-2 focus:outline-brand-500/30 sm:w-64"
         />
         {open && needle && (
-          <ul className="absolute right-0 z-20 mt-1 max-h-72 w-80 overflow-auto rounded-md border border-slate-200 bg-white py-1 text-sm shadow-lg">
+          <ul className="absolute right-0 z-30 mt-1 max-h-72 w-full overflow-auto sm:w-80 rounded-md border border-slate-200 bg-white py-1 text-sm shadow-lg">
             {buyers === null ? (
               <li className="px-3 py-2 text-slate-500">Loading…</li>
             ) : matches.length === 0 ? (
@@ -331,7 +331,7 @@ function SalesQuickCallControl() {
         type="submit"
         disabled={matches.length !== 1}
         title={matches.length === 1 ? undefined : 'Pick a buyer from the list'}
-        className="inline-flex items-center gap-1.5 rounded-md bg-brand-500 px-3 py-1.5 text-sm font-medium text-white hover:bg-brand-600 disabled:cursor-not-allowed disabled:bg-brand-500/50"
+        className="inline-flex shrink-0 items-center gap-1.5 rounded-md bg-brand-500 px-3 py-1.5 text-sm font-medium text-white hover:bg-brand-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600 disabled:cursor-not-allowed disabled:bg-brand-500/50"
       >
         <FiPhoneCall aria-hidden />
         Log a call
@@ -351,11 +351,25 @@ export function AppShell({ children }: { children: ReactNode }) {
   // The Accounts desk brings its own rail and padding and uses the full width (accounts.css).
   const fullBleed = useLocation().pathname.startsWith('/accounts');
 
+  useEffect(() => {
+    if (!mobileOpen) return;
+    const { overflow } = document.body.style;
+    document.body.style.overflow = 'hidden';
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key === 'Escape') setMobileOpen(false);
+    }
+    window.addEventListener('keydown', onKeyDown);
+    return () => {
+      window.removeEventListener('keydown', onKeyDown);
+      document.body.style.overflow = overflow;
+    };
+  }, [mobileOpen]);
+
   return (
     <ToastProvider>
       <div className="flex min-h-screen bg-slate-50">
         {/* Desktop sidebar */}
-        <aside className="hidden w-60 shrink-0 flex-col border-r border-slate-200 bg-white md:flex">
+        <aside className="sticky top-0 hidden h-screen w-60 shrink-0 flex-col border-r border-slate-200 bg-white md:flex">
           <div className="flex items-center justify-between border-b border-slate-200 px-4 py-4">
             <span className="text-lg font-semibold text-brand-600">TriFid</span>
             <NoticeBell />
@@ -375,7 +389,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         </aside>
 
         {/* Mobile top bar */}
-        <div className="fixed inset-x-0 top-0 z-30 flex items-center justify-between border-b border-slate-200 bg-white px-4 py-3 md:hidden">
+        <div className="fixed inset-x-0 top-0 z-30 flex h-14 items-center justify-between gap-1 border-b border-slate-200 bg-white px-4 md:hidden">
           <span className="text-lg font-semibold text-brand-600">TriFid</span>
           <div className="flex-1" />
           <NoticeBell />
@@ -397,7 +411,12 @@ export function AppShell({ children }: { children: ReactNode }) {
               onClick={() => setMobileOpen(false)}
               aria-hidden
             />
-            <div className="absolute inset-y-0 left-0 flex w-64 flex-col bg-white shadow-lg">
+            <div
+              role="dialog"
+              aria-modal="true"
+              aria-label="Menu"
+              className="absolute inset-y-0 left-0 flex w-72 max-w-[85vw] flex-col bg-white shadow-xl"
+            >
               <div className="flex items-center justify-between border-b border-slate-200 px-4 py-4">
                 <span className="text-lg font-semibold text-brand-600">TriFid</span>
                 <button
@@ -410,7 +429,8 @@ export function AppShell({ children }: { children: ReactNode }) {
                 </button>
               </div>
               <SidebarLinks onNavigate={() => setMobileOpen(false)} />
-              <div className="border-t border-slate-200 p-3">
+              <div className="border-t border-slate-200 p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+                <div className="mb-2 truncate px-3 text-xs text-slate-500">{me?.email}</div>
                 <button
                   type="button"
                   onClick={() => void logout()}
@@ -429,7 +449,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             fullBleed ? '' : 'px-4 py-6 pt-20 md:px-8 md:py-8 md:pt-8'
           }`}
         >
-          <div className={fullBleed ? '' : 'mx-auto max-w-5xl'}>
+          <div className={fullBleed ? '' : 'mx-auto max-w-7xl'}>
             <SalesQuickCallControl />
             {children}
           </div>

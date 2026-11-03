@@ -185,9 +185,10 @@ function MarginEditor({
   return (
     <Card title="Product margin (₹)">
       <p className="mb-4 text-sm text-slate-500">
-        This product&apos;s own margin in rupees, per litre, kg or piece, GST included — so every
-        pack size of it gets the same amount. Where a client type is left blank, the class margin %
-        from Margin matrix applies. Changes apply to future orders only.
+        This product&apos;s own margin in rupees per litre, kg or piece, added to the seller&apos;s
+        quoted rate (GST included) — so every pack size gets the same amount. A ₹150 quote with ₹2
+        here shows the buyer ₹152. Where a client type is left blank, the class margin % from Margin
+        matrix applies. Changes apply to future orders only.
       </p>
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
         <Table>

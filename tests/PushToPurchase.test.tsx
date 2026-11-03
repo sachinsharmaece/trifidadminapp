@@ -2,7 +2,13 @@ import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { useAuth } from '../src/auth/AuthContext';
-import { getPush, getPushStatus, pushToPurchase, type PushDetailDto } from '../src/api/push';
+import {
+  completePush,
+  getPush,
+  getPushStatus,
+  pushToPurchase,
+  type PushDetailDto,
+} from '../src/api/push';
 import { listNotices } from '../src/api/notices';
 import { PushToPurchaseCard } from '../src/components/push/PushToPurchaseCard';
 import { FromSalesDetailPage } from '../src/desks/purchase/FromSalesDetailPage';
@@ -86,6 +92,26 @@ describe('Phase 6 — Push to Purchase on the buyer file', () => {
     expect(key).toBeTruthy();
   });
 
+  it('3 Nov — the note is optional: the field says so, and the push goes without it', async () => {
+    vi.mocked(getPushStatus).mockResolvedValue(status);
+    vi.mocked(pushToPurchase).mockResolvedValue({
+      pushId: 'p1',
+      receiver: { employeeId: 'l1', person: 'Leela Leader' },
+    });
+    render(
+      <MemoryRouter>
+        <PushToPurchaseCard buyerId="b1" firm="Arun Agro" />
+      </MemoryRouter>,
+    );
+    fireEvent.click(await screen.findByRole('button', { name: /Push to Purchase/ }));
+    expect(screen.getByLabelText('What can he supply? (optional)')).not.toBeRequired();
+    const push = screen.getAllByRole('button', { name: /Push to Purchase/ }).at(-1)!;
+    expect(push).toBeEnabled();
+    fireEvent.click(push);
+    await waitFor(() => expect(pushToPurchase).toHaveBeenCalled());
+    expect(vi.mocked(pushToPurchase).mock.calls[0]![2]).toEqual({ note: '' });
+  });
+
   it('is off with a link when he is already a seller', async () => {
     vi.mocked(getPushStatus).mockResolvedValue({
       ...status,
@@ -131,6 +157,7 @@ const detail: PushDetailDto = {
   receiver: { employeeId: 'l1', person: 'Leela Leader' },
   draft: null,
   buyerCompanies: [],
+  buyerMargPartyCode: null,
   firmHasBankDetail: false,
   needsGstin: true,
   canComplete: false,
@@ -215,5 +242,107 @@ describe('Phase 6 — the bell', () => {
     const bell = await screen.findByRole('button', { name: 'Notices, 2 unread' });
     fireEvent.click(bell);
     expect(screen.getByText('Arun Agro is now a seller')).toBeTruthy();
+  });
+});
+
+describe('3 Nov — Complete as a seller: the licence, referees, bank account and call note are optional', () => {
+  const completable: PushDetailDto = {
+    ...detail,
+    status: 'pending',
+    canComplete: true,
+    canDecide: false,
+    gstin: '23AAAAA0000A1Z5',
+    needsGstin: false,
+    note: '',
+    licenceNo: null,
+    location: {
+      address: '1 Road, Market',
+      pincode: '452001',
+      stateId: 's1',
+      districtId: 'd1',
+      tehsilId: 't1',
+      tehsil: 'Indore',
+      district: 'Indore',
+      state: 'Madhya Pradesh',
+    },
+  };
+
+  function renderComplete(over: Partial<PushDetailDto> = {}) {
+    vi.mocked(getPush).mockResolvedValue({ ...completable, ...over });
+    vi.mocked(completePush).mockReset().mockResolvedValue(completable);
+    render(
+      <MemoryRouter initialEntries={['/purchase/from-sales/p1']}>
+        <Routes>
+          <Route path="/purchase/from-sales/:pushId" element={<FromSalesDetailPage />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+  }
+
+  it('sends for approval with only the address block filled, and marks nothing in red', async () => {
+    renderComplete();
+    const send = await screen.findByRole('button', { name: 'Send for approval' });
+    expect(screen.getByLabelText(/Insecticide licence no/)).not.toBeRequired();
+    expect(screen.getByLabelText('Call note (optional)')).not.toBeRequired();
+    expect(screen.getByLabelText('Account number')).not.toBeRequired();
+    expect(screen.queryByText(/a seller is paid, so add one/)).toBeNull();
+    fireEvent.click(send);
+    await waitFor(() => expect(completePush).toHaveBeenCalledTimes(1));
+    const input = vi.mocked(completePush).mock.calls[0]![2];
+    expect(input).toMatchObject({
+      licenceNo: undefined,
+      references: [],
+      callNote: '',
+      location: { address: '1 Road, Market', tehsilId: 't1' },
+    });
+    expect(input).not.toHaveProperty('bankDetail');
+  });
+
+  it('a referee row that was started is sent; the untouched one is not', async () => {
+    renderComplete();
+    await screen.findByRole('button', { name: 'Send for approval' });
+    fireEvent.change(screen.getAllByLabelText('Firm')[0]!, { target: { value: 'Ravi Traders' } });
+    fireEvent.change(screen.getAllByLabelText('Phone')[0]!, { target: { value: '9876543210' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Send for approval' }));
+    await waitFor(() => expect(completePush).toHaveBeenCalledTimes(1));
+    expect(vi.mocked(completePush).mock.calls[0]![2].references).toEqual([
+      { firm: 'Ravi Traders', phone: '9876543210', relationship: 'Supplier', whatTheySaid: '' },
+    ]);
+  });
+
+  it('bank fields are sent together when any one is filled', async () => {
+    renderComplete();
+    await screen.findByRole('button', { name: 'Send for approval' });
+    fireEvent.change(screen.getByLabelText('IFSC'), { target: { value: 'hdfc0001234' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Send for approval' }));
+    await waitFor(() => expect(completePush).toHaveBeenCalledTimes(1));
+    expect(vi.mocked(completePush).mock.calls[0]![2].bankDetail).toEqual({
+      accountNumber: '',
+      ifsc: 'HDFC0001234',
+      accountName: '',
+    });
+  });
+
+  it('his Marg party code is his buyer code, shown and not editable', async () => {
+    renderComplete({ buyerMargPartyCode: 'BUY-77' });
+    const marg = (await screen.findByLabelText('Marg party code')) as HTMLInputElement;
+    expect(marg.value).toBe('BUY-77');
+    expect(marg.readOnly).toBe(true);
+    expect(screen.getByText('Same as his buyer code.')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Send for approval' }));
+    await waitFor(() => expect(completePush).toHaveBeenCalled());
+    expect(vi.mocked(completePush).mock.calls[0]![2].margPartyCode).toBe('BUY-77');
+  });
+
+  it('with no Marg code on the buyer the field stays open to type one', async () => {
+    renderComplete({ buyerMargPartyCode: null });
+    const marg = (await screen.findByLabelText('Marg party code')) as HTMLInputElement;
+    expect(marg.readOnly).toBe(false);
+    expect(marg.value).toBe('');
+  });
+
+  it('an old note is shown, and an empty one shows a dash', async () => {
+    renderComplete({ note: 'Seeds and fertiliser' });
+    expect(await screen.findByText('Seeds and fertiliser')).toBeInTheDocument();
   });
 });

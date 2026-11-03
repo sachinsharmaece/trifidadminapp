@@ -168,8 +168,7 @@ function PushDialog({
           </p>
         )}
         <Textarea
-          label="What can he supply?"
-          required
+          label="What can he supply? (optional)"
           value={note}
           onChange={(ev) => setNote(ev.target.value)}
           error={save.fieldErrors.note}
@@ -183,7 +182,7 @@ function PushDialog({
           <Button
             type="submit"
             loading={save.submitting}
-            disabled={!note.trim() || (status.canChooseReceiver && !receiver)}
+            disabled={status.canChooseReceiver && !receiver}
           >
             Push to Purchase
           </Button>

@@ -1,4 +1,5 @@
 import type { AssignableSalesPerson } from './dto';
+import type { HoldingInfo } from './holding';
 import { apiFetch, apiFetchPage } from './client';
 
 export interface SalesWorkItem {
@@ -324,6 +325,8 @@ export interface BuyerListRow {
   lastCalledAt: string | null;
   lastCalledBy: string | null;
   rateViews: number;
+  /** LOCK-34 — present only while the holding rules are on and he is held. */
+  holding?: HoldingInfo;
   ownerName: string | null; // Sales employee whose book he is in.
   contactName: string | null; // The firm's own owner.
   mobile: string | null;

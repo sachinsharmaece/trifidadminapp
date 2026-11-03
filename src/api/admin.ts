@@ -47,6 +47,8 @@ export interface EmployeeInput {
   reportsToPurchaseLeaderId: string | null;
   worksForTeamLeaderIds: string[];
   worksForAllTeams: boolean;
+  /** LOCK-34 — left out keeps what is on record (on for a new employee). */
+  receivingLeads?: boolean;
   /** Left out on Edit keeps what is on record (an employee with no HR details yet). */
   hr?: EmployeeHrInput;
 }

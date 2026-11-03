@@ -11,6 +11,7 @@ import { ManufacturersPage } from '../desks/admin/ManufacturersPage';
 import { TehsilsPage } from '../desks/admin/TehsilsPage';
 import { PincodesPage } from '../desks/admin/PincodesPage';
 import { MarginMatrixPage } from '../desks/admin/MarginMatrixPage';
+import { DormantPolicyPage } from '../desks/admin/DormantPolicyPage';
 import { RegistrationsPage } from '../desks/admin/RegistrationsPage';
 // ChainDeskPage — only used by the commented-out /chain route below; restore
 // this import alongside it.
@@ -145,6 +146,16 @@ export function App() {
             <RequireAuth permission={PERMISSIONS.MARGIN_MATRIX_READ}>
               <AppShell>
                 <MarginMatrixPage />
+              </AppShell>
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/manage/dormant-policy"
+          element={
+            <RequireAuth permission={PERMISSIONS.CONFIG_WRITE}>
+              <AppShell>
+                <DormantPolicyPage />
               </AppShell>
             </RequireAuth>
           }

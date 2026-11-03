@@ -118,3 +118,13 @@ const IFSC_SHAPE = /^[A-Z]{4}0[A-Z0-9]{6}$/;
 export function isValidIfsc(ifsc: string): boolean {
   return IFSC_SHAPE.test(ifsc);
 }
+
+/**
+ * LOCK-34 §12.1 — the Marg party master was loaded with 9999999991 and upward for a party with
+ * no known mobile. Such a number is shown as "No mobile", never as a phone number.
+ */
+export function isPlaceholderMobile(raw: string | null | undefined): boolean {
+  if (!raw) return false;
+  const digits = normalizeMobile(raw);
+  return /^\d{10}$/.test(digits) && Number(digits) >= 9999999991;
+}

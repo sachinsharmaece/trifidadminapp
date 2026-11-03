@@ -27,6 +27,7 @@ const POSITION_SHORT: Record<Position, string> = {
   SALES_LEADER: 'Sales Leader',
   PURCHASE_LEADER: 'Purchase Leader',
   SALES_EXEC: 'Sales Exec',
+  SR_SALES_EXEC: 'Sr. Sales Exec',
   PURCHASE_EXEC: 'Purchase Exec',
 };
 

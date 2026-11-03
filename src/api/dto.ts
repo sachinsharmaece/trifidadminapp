@@ -13,7 +13,8 @@ export interface StaffMeDto {
   mfaEnabled: boolean;
 }
 
-export type Position = 'SALES_LEADER' | 'PURCHASE_LEADER' | 'SALES_EXEC' | 'PURCHASE_EXEC';
+export type Position =
+  'SALES_LEADER' | 'PURCHASE_LEADER' | 'SALES_EXEC' | 'SR_SALES_EXEC' | 'PURCHASE_EXEC';
 export type EducationLevel = '10th' | '12th' | 'graduate' | 'post_graduate' | 'other';
 
 export interface EmployeeRef {
@@ -34,6 +35,8 @@ export interface EmployeeListItem {
   reportsToPurchaseLeader: EmployeeRef | null;
   worksForTeams: EmployeeRef[];
   worksForAllTeams: boolean;
+  /** LOCK-34 — whether new leads are dealt to him (callers only). */
+  receivingLeads?: boolean;
   laneKeys: string[];
   active: boolean;
   mfaEnabled: boolean;

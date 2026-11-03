@@ -227,6 +227,19 @@ export interface BoardForBuyerLine {
   moqBand: string;
   deliveryBand: string;
   provenance: string;
+  /** 2 Nov — why it takes no more requests (BR-136); null when it takes them. */
+  closed: 'confirmed' | 'short' | 'requoted' | 'declined' | 'sold_out' | null;
+  /** 2 Nov — a pool is open for this offer, so fewer boxes than its minimum can still join it. */
+  poolOpen: boolean;
+  /** 2 Nov — his place in the pool this offer opened; `canChange` is false once binding (BR-154). */
+  inPool: {
+    poolId: string;
+    boxes: number;
+    committedBoxes: number;
+    moq: number;
+    status: string;
+    canChange: boolean;
+  } | null;
 }
 
 export interface BoardForBuyerProduct {
@@ -404,7 +417,11 @@ export interface BuyerFileOpenAsk {
   askId: string;
   productId: string | null;
   skuId: string | null;
+  /** Boxes still wanted; `filledQty` is what was already ordered (a short fill leaves it open). */
   qty: number;
+  filledQty: number;
+  /** Nothing is listed and nobody has quoted it: it waits on Purchase to find a seller. */
+  waitingOnPurchase: boolean;
   state: string;
   brand: string;
   technical: string;
@@ -458,6 +475,25 @@ export interface SalesOrderRow {
   claimedAmountPaise: number | null;
   placedAt: string;
   updatedAt: string;
+}
+
+/** A deal given to him when the seller confirmed the pile he is on — his to take or walk away from. */
+export interface BuyerFilePileOffer {
+  requestId: string;
+  productId: string | null;
+  brand: string;
+  packLabel: string | null;
+  /** The boxes offered — fewer than he asked on a short pile. */
+  boxes: number;
+  askedBoxes: number;
+  /** His own rate; null while the margin matrix has no cell for him. */
+  ratePaise: number | null;
+  /** The expiry the seller fixed: a year, or month and year. */
+  expiryExact: string | null;
+  expiryBand: string;
+  deliveryBand: string;
+  offeredAt: string;
+  holdUntil: string;
 }
 
 export interface BuyerFileLiveQuote {
@@ -528,6 +564,8 @@ export interface BuyerFileDto {
   openAsks: BuyerFileOpenAsk[];
   waitingOnSeller: BuyerFileWaitingOnSeller[];
   liveQuotes: BuyerFileLiveQuote[];
+  /** 2 Nov — BR-378: deals given to him when a seller confirmed his pile, held 24 hours for his word. */
+  pileOffers: BuyerFilePileOffer[];
   callLogs: CallLogDto[];
   orders: SalesOrderRow[];
   ordersByStage: BuyerFileOrdersByStage;
@@ -758,4 +796,54 @@ export function cancelUnpaidOrder(
 /** Phase 3 — who the caller may assign a buyer to (himself; his team; Admin: all Sales). */
 export function getAssignableSalesPeople(accessToken: string): Promise<AssignableSalesPerson[]> {
   return apiFetch('/staff/sales/assignees', { accessToken });
+}
+
+// ---------------------------------------------------------------------------
+// Short piles — BR-134. The seller can send fewer boxes than the buyers on a pile asked for; Sales
+// divides what he can send between them.
+// ---------------------------------------------------------------------------
+
+export interface ShortPileRequest {
+  pileRequestId: string;
+  buyerId: string;
+  firm: string;
+  boxes: number;
+  requestedAt: string;
+}
+
+export interface ShortPile {
+  pileId: string;
+  brand: string;
+  packLabel: string;
+  /** What the seller confirmed he can send. */
+  canSend: number;
+  /** What the buyers asked for, together. */
+  asked: number;
+  decidedAt: string | null;
+  /** In the order they asked. */
+  requests: ShortPileRequest[];
+}
+
+export function getShortPiles(accessToken: string): Promise<ShortPile[]> {
+  return apiFetch('/staff/sales/short-piles', { accessToken });
+}
+
+export interface ResolveShortPileResult {
+  /** Boxes now offered to the buyers, each to take or walk away from (BR-378). */
+  offeredBoxes: number;
+  backOnAskBoxes: number;
+  lineQty: number;
+}
+
+export function resolveShortPile(
+  accessToken: string,
+  pileId: string,
+  input: { allocations: Array<{ pileRequestId: string; boxes: number }>; reason: string },
+): Promise<ResolveShortPileResult> {
+  return apiFetch(`/staff/sales/short-piles/${pileId}/resolve`, {
+    method: 'POST',
+    body: input,
+    accessToken,
+    idempotencyKey: stageKey(),
+  });
 }

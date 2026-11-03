@@ -482,6 +482,9 @@ function PileRow({
               pileId={pile.pileId}
               sellerCounterpartyId={pile.sellerCounterpartyId}
               boxes={pile.boxes}
+              lineQty={pile.lineQty}
+              listedExpiry={pile.listedExpiry}
+              provenance={pile.provenance}
               onDecided={onDecided}
             />
           </Td>

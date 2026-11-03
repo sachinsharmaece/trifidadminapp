@@ -120,6 +120,9 @@ function PileRow({ item, onDecided }: { item: PileAwaitingDecisionItem; onDecide
               pileId={item.pileId}
               sellerCounterpartyId={item.sellerCounterpartyId}
               boxes={item.boxes}
+              lineQty={item.lineQty}
+              listedExpiry={item.listedExpiry}
+              provenance={item.provenance}
               onDecided={onDecided}
             />
           </Td>

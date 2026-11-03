@@ -51,7 +51,7 @@ export function useAsyncData<T>(
   loader: () => Promise<T>,
   isEmpty: (data: T) => boolean,
   deps: unknown[],
-): { state: AsyncState<T>; retry: () => void } {
+): { state: AsyncState<T>; retry: () => void; refresh: () => void } {
   const [state, setState] = useState<AsyncState<T>>({ status: 'loading' });
   const [retryCount, setRetryCount] = useState(0);
 
@@ -72,5 +72,15 @@ export function useAsyncData<T>(
 
   const retry = useCallback(() => setRetryCount((count) => count + 1), []);
 
-  return { state, retry };
+  // Loads again without going back to "loading": the screen stays as it is (open panels, scroll)
+  // and the new data replaces the old when it arrives. A failure leaves what is shown as it was.
+  const refresh = useCallback(() => {
+    loader()
+      .then((data) => {
+        setState(isEmpty(data) ? { status: 'empty' } : { status: 'success', data });
+      })
+      .catch(() => undefined);
+  }, [...deps]);
+
+  return { state, retry, refresh };
 }

@@ -30,6 +30,7 @@ import { Table, Th, Td } from '../../components/ui/Table';
 import { Badge } from '../../components/ui/Badge';
 import { Button } from '../../components/ui/Button';
 import { formatRupees } from '../../lib/labels';
+import { PileOffersTable } from './PileOfferActions';
 import { timeAgo, useMinuteClock } from '../../lib/timeAgo';
 import { formatDate, formatDateTime } from '../../lib/dates';
 
@@ -186,7 +187,14 @@ export function SalesBuyerFilePage() {
                                 </ul>
                               )}
                             </Td>
-                            <Td numeric>{a.qty}</Td>
+                            <Td numeric>
+                              {a.qty}
+                              {a.filledQty > 0 && (
+                                <div className="text-xs text-slate-500">
+                                  {a.filledQty} of {a.filledQty + a.qty} ordered
+                                </div>
+                              )}
+                            </Td>
                             <Td numeric>
                               {a.expectedRatePaise != null
                                 ? formatRupees(a.expectedRatePaise)
@@ -200,6 +208,11 @@ export function SalesBuyerFilePage() {
                               >
                                 Asked {timeAgo(a.askedAt, now)}
                               </div>
+                              {a.waitingOnPurchase && (
+                                <div className="mt-1 text-xs text-slate-500">
+                                  No seller carries it yet — Purchase is finding one.
+                                </div>
+                              )}
                             </Td>
                             <Td>
                               <div className="flex flex-wrap justify-end gap-1">
@@ -300,11 +313,12 @@ export function SalesBuyerFilePage() {
                 <DropdownCard
                   {...sectionProps('rate')}
                   title="Rate given"
-                  count={file.liveQuotes.length}
+                  count={file.liveQuotes.length + file.pileOffers.length}
                 >
-                  {file.liveQuotes.length === 0 ? (
+                  {file.liveQuotes.length === 0 && file.pileOffers.length === 0 && (
                     <p className="text-sm text-slate-500">No live rate on any of his asks.</p>
-                  ) : (
+                  )}
+                  {file.liveQuotes.length > 0 && (
                     <Table>
                       <thead>
                         <tr>
@@ -366,6 +380,12 @@ export function SalesBuyerFilePage() {
                       </tbody>
                     </Table>
                   )}
+                  <PileOffersTable
+                    offers={file.pileOffers}
+                    counterpartyId={file.counterpartyId}
+                    now={now}
+                    onDone={retry}
+                  />
                 </DropdownCard>
 
                 <DropdownCard

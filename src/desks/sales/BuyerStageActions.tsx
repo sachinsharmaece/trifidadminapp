@@ -1,6 +1,12 @@
 import { useEffect, useState } from 'react';
 import { ActionModal, ActionRefused, errorText, useAction } from '../../components/ActionModal';
-import { proxyAcceptAskFill, proxyDeclineAsk, proxyWantsIt } from '../../api/proxy';
+import {
+  proxyAcceptAskFill,
+  proxyDeclineAsk,
+  proxyPoolChange,
+  proxyPoolWithdraw,
+  proxyWantsIt,
+} from '../../api/proxy';
 import {
   cancelUnpaidOrder,
   dispatchOrder,
@@ -40,6 +46,7 @@ export function HeWantsItButton({
   direction,
   onDone,
   notApproved = false,
+  poolOnly = false,
 }: {
   line: BoardForBuyerLine;
   counterpartyId: string;
@@ -48,6 +55,8 @@ export function HeWantsItButton({
   onDone: () => void;
   /** 1 Nov — he is not approved yet, so no order could be made for him. */
   notApproved?: boolean;
+  /** 2 Nov — the seller has answered this line, so only the pool (fewer than its minimum) is open. */
+  poolOnly?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const [qty, setQty] = useState('');
@@ -87,6 +96,12 @@ export function HeWantsItButton({
           {line.packLabel} at {formatRupees(line.ratePaise)} — {expiryBandLabel(line.expiryBand)},{' '}
           {deliveryBandLabel(line.deliveryBand)}.
         </p>
+        {poolOnly && (
+          <p className="text-xs text-slate-500">
+            The seller has already answered this offer. Only fewer boxes than its minimum order can
+            still join its pool.
+          </p>
+        )}
         <p className="text-xs text-slate-500">
           It goes to the seller to confirm (Purchase → Confirmations)
           {line.moqBand !== '1'
@@ -104,6 +119,191 @@ export function HeWantsItButton({
         />
       </ActionModal>
     </>
+  );
+}
+
+// 2 Nov — BR-136: a decided line opens its next group once the orders are made, so "closed" only
+// means something is still in flight, or the seller said no, or it is sold out.
+const CLOSED_LABEL = {
+  confirmed: 'Confirmation in progress',
+  short: 'Short — boxes to be divided',
+  requoted: 'Seller revised — awaiting buyers',
+  declined: 'Seller declined — closed',
+  sold_out: 'Sold out',
+} as const;
+
+/**
+ * 2 Nov — what Sales can do with one offer on his board: "He wants it" while it is open; nothing
+ * once the seller has answered it (a line has one request group for life, BR-135), said so up
+ * front instead of after a refusal; and, when he already holds a place in the offer's pool, that
+ * place with Change boxes / Withdraw (free while not binding, BR-154).
+ */
+export function OfferAction({
+  line,
+  counterpartyId,
+  direction,
+  onDone,
+  notApproved = false,
+}: {
+  line: BoardForBuyerLine;
+  counterpartyId: string;
+  direction?: 'in' | 'out';
+  onDone: () => void;
+  notApproved?: boolean;
+}) {
+  const closedBadge = line.closed ? (
+    <Badge tone="neutral">{CLOSED_LABEL[line.closed]}</Badge>
+  ) : null;
+  // His place in the pool comes first: the pool is separate from the seller's decision on the
+  // line, so he can still be changed or withdrawn even when the line is closed.
+  if (line.inPool) {
+    return (
+      <div className="flex flex-wrap items-center justify-end gap-2">
+        {closedBadge}
+        <PoolPlace
+          place={line.inPool}
+          counterpartyId={counterpartyId}
+          direction={direction}
+          onDone={onDone}
+        />
+      </div>
+    );
+  }
+  if (line.closed && !line.poolOpen) {
+    return (
+      <div className="flex items-center gap-2">
+        {closedBadge}
+        <Button
+          size="sm"
+          variant="secondary"
+          disabled
+          title="This offer takes no more requests right now."
+        >
+          He wants it
+        </Button>
+      </div>
+    );
+  }
+  if (line.closed) {
+    // Closed, but its pool is still open: fewer boxes than the minimum can still join it.
+    return (
+      <div className="flex items-center gap-2">
+        {closedBadge}
+        <HeWantsItButton
+          line={line}
+          counterpartyId={counterpartyId}
+          direction={direction}
+          onDone={onDone}
+          notApproved={notApproved}
+          poolOnly
+        />
+      </div>
+    );
+  }
+  return (
+    <HeWantsItButton
+      line={line}
+      counterpartyId={counterpartyId}
+      direction={direction}
+      onDone={onDone}
+      notApproved={notApproved}
+    />
+  );
+}
+
+function PoolPlace({
+  place,
+  counterpartyId,
+  direction,
+  onDone,
+}: {
+  place: NonNullable<BoardForBuyerLine['inPool']>;
+  counterpartyId: string;
+  direction?: 'in' | 'out';
+  onDone: () => void;
+}) {
+  const [changing, setChanging] = useState(false);
+  const [withdrawing, setWithdrawing] = useState(false);
+  const [qty, setQty] = useState(String(place.boxes));
+  const parsedQty = Number(qty);
+  const qtyOk = Number.isInteger(parsedQty) && parsedQty >= 1 && parsedQty !== place.boxes;
+  const change = useAction(async (token, callNote) => {
+    await proxyPoolChange(token, place.poolId, {
+      buyerCounterpartyId: counterpartyId,
+      qty: parsedQty,
+      callNote,
+      ...(direction ? { direction } : {}),
+    });
+    return `Changed to ${parsedQty} ${parsedQty === 1 ? 'box' : 'boxes'} in the pool.`;
+  }, onDone);
+  const withdraw = useAction(async (token, callNote) => {
+    await proxyPoolWithdraw(token, place.poolId, {
+      buyerCounterpartyId: counterpartyId,
+      callNote,
+      ...(direction ? { direction } : {}),
+    });
+    return 'Withdrawn from the pool.';
+  }, onDone);
+  return (
+    <div className="flex flex-wrap items-center justify-end gap-2">
+      <span className="text-xs text-slate-600">
+        In the pool with {place.boxes} {place.boxes === 1 ? 'box' : 'boxes'} ({place.committedBoxes}{' '}
+        of {place.moq})
+      </span>
+      {place.canChange ? (
+        <>
+          <Button
+            size="sm"
+            variant="secondary"
+            onClick={() => {
+              setQty(String(place.boxes));
+              setChanging(true);
+            }}
+          >
+            Change boxes
+          </Button>
+          <Button size="sm" variant="secondary" onClick={() => setWithdrawing(true)}>
+            Withdraw
+          </Button>
+        </>
+      ) : (
+        <Badge tone="neutral">Binding — can&apos;t be changed</Badge>
+      )}
+      <ActionModal
+        open={changing}
+        title="Change his boxes in the pool"
+        submitLabel="Change boxes"
+        canSubmit={qtyOk}
+        onClose={() => setChanging(false)}
+        onSubmit={change}
+      >
+        <p className="text-sm text-slate-600">
+          He is in this offer&apos;s pool with {place.boxes} {place.boxes === 1 ? 'box' : 'boxes'}.
+        </p>
+        <Input
+          label="Boxes he wants"
+          type="number"
+          min={1}
+          required
+          value={qty}
+          onChange={(event) => setQty(event.target.value)}
+        />
+      </ActionModal>
+      <ActionModal
+        open={withdrawing}
+        title="Withdraw him from the pool"
+        submitLabel="Withdraw"
+        danger
+        onClose={() => setWithdrawing(false)}
+        onSubmit={withdraw}
+      >
+        <p className="text-sm text-slate-600">
+          He leaves this offer&apos;s pool and his {place.boxes}{' '}
+          {place.boxes === 1 ? 'box comes' : 'boxes come'} out of it. Free, as it is not binding
+          yet.
+        </p>
+      </ActionModal>
+    </div>
   );
 }
 
@@ -296,14 +496,23 @@ export function ConfirmRateButton({
   onDone: () => void;
 }) {
   const [open, setOpen] = useState(false);
+  // 2 Nov — a quote for fewer boxes than he asked for leaves the rest of the ask open (BR-127),
+  // unless Sales unticks this.
+  const short = quote.qtyAvailable < quote.askQty;
+  const left = quote.askQty - quote.qtyAvailable;
+  const [keepOpen, setKeepOpen] = useState(true);
   const submit = useAction(async (token, callNote) => {
     const result = await proxyAcceptAskFill(token, quote.askId, {
       buyerCounterpartyId: counterpartyId,
-      option: quote.qtyAvailable < quote.askQty ? 'partial' : 'full',
+      option: short ? 'partial' : 'full',
       quoteIds: [quote.quoteId],
       callNote,
+      ...(short ? { keepRemainderOpen: keepOpen } : {}),
     });
-    return result.soIds.length > 0 ? 'Order raised — now in Payment pending.' : 'Confirmed.';
+    if (result.soIds.length === 0) return 'Confirmed.';
+    return result.remainingBoxes > 0 && keepOpen
+      ? `Order raised for ${result.filledBoxes} boxes — now in Payment pending. ${result.remainingBoxes} still open under He asked.`
+      : 'Order raised — now in Payment pending.';
   }, onDone);
   return (
     <>
@@ -322,6 +531,21 @@ export function ConfirmRateButton({
           {quote.packLabel ? ` · ${quote.packLabel}` : ''}, {quote.qtyAvailable} available. This
           raises his order and starts his 24-hour payment window.
         </p>
+        {short && (
+          <label className="flex items-start gap-2 text-sm text-slate-700">
+            <input
+              type="checkbox"
+              className="mt-1 h-4 w-4 rounded border-slate-300"
+              checked={keepOpen}
+              onChange={(event) => setKeepOpen(event.target.checked)}
+            />
+            <span>
+              Keep the remaining {left} {left === 1 ? 'box' : 'boxes'} open. He asked for{' '}
+              {quote.askQty} and this covers {quote.qtyAvailable}; Purchase goes on looking for the
+              rest. Untick to close the ask with what is ordered.
+            </span>
+          </label>
+        )}
       </ActionModal>
     </>
   );

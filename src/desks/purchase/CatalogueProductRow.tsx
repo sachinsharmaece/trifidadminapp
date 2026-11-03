@@ -4,22 +4,30 @@ import type { SellerCatalogueItem } from '../../api/purchase';
 import { Badge } from '../../components/ui/Badge';
 import { Button } from '../../components/ui/Button';
 import { listBlockedReason } from './listBlockedReason';
+import { InlineListingPanel } from './InlineListingPanel';
 
 /**
  * One company on the seller file's "What he sells": the company name is the
  * dropdown, its products come inside it. A seller dealing in several big
  * companies carries dozens of products, so each company folds away.
+ * 2 Nov — "Add to listing" opens the listing rows right on the product's card.
  */
 export function CatalogueCompanyGroup({
   name,
   items,
   defaultOpen,
-  onAddToListing,
+  sellerCounterpartyId,
+  onListed,
+  onMoreOptions,
 }: {
   name: string;
   items: SellerCatalogueItem[];
   defaultOpen: boolean;
-  onAddToListing: (productId: string) => void;
+  sellerCounterpartyId: string;
+  /** A listing was put on the board: reload the seller's file. */
+  onListed: () => void;
+  /** The full form, for what the rows leave out (My stock, another delivery). */
+  onMoreOptions: (productId: string) => void;
 }) {
   const [open, setOpen] = useState(defaultOpen);
   const panelId = `cat-company-${name.replace(/\W+/g, '-')}`;
@@ -51,7 +59,9 @@ export function CatalogueCompanyGroup({
             <CatalogueProductCard
               key={item.entryId ?? `dealership-${item.productId}`}
               item={item}
-              onAddToListing={() => onAddToListing(item.productId)}
+              sellerCounterpartyId={sellerCounterpartyId}
+              onListed={onListed}
+              onMoreOptions={() => onMoreOptions(item.productId)}
             />
           ))}
         </ul>
@@ -62,12 +72,17 @@ export function CatalogueCompanyGroup({
 
 function CatalogueProductCard({
   item,
-  onAddToListing,
+  sellerCounterpartyId,
+  onListed,
+  onMoreOptions,
 }: {
   item: SellerCatalogueItem;
-  onAddToListing: () => void;
+  sellerCounterpartyId: string;
+  onListed: () => void;
+  onMoreOptions: () => void;
 }) {
   const blocked = listBlockedReason(item);
+  const [listing, setListing] = useState(false);
   return (
     <li className="rounded-md border border-slate-200 p-3">
       <div className="flex items-center justify-between gap-3">
@@ -84,7 +99,14 @@ function CatalogueProductCard({
             </span>
           )}
         </span>
-        <Button size="sm" variant="secondary" icon={<FiPlus />} onClick={onAddToListing}>
+        <Button
+          size="sm"
+          variant="secondary"
+          icon={<FiPlus />}
+          disabled={blocked !== null}
+          aria-expanded={listing}
+          onClick={() => setListing((v) => !v)}
+        >
           Add to listing
         </Button>
       </div>
@@ -92,6 +114,15 @@ function CatalogueProductCard({
         <p className="mt-1 text-right text-xs text-slate-400">Can’t be listed yet — {blocked}.</p>
       )}
       <p className="text-xs text-slate-500">{item.technical}</p>
+      {listing && !blocked && (
+        <InlineListingPanel
+          sellerCounterpartyId={sellerCounterpartyId}
+          item={item}
+          onListed={onListed}
+          onClose={() => setListing(false)}
+          onMoreOptions={onMoreOptions}
+        />
+      )}
       <div className="mt-2 flex flex-wrap items-center gap-1">
         {item.packs.length === 0 ? (
           <span className="text-xs italic text-slate-400">No pack in the master yet.</span>

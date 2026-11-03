@@ -66,6 +66,38 @@ export function proxyWantsIt(
   });
 }
 
+/** 2 Nov — Sales changes how many boxes he holds in a pool (free while not binding, BR-154). */
+export function proxyPoolChange(
+  accessToken: string,
+  poolId: string,
+  input: {
+    buyerCounterpartyId: string;
+    qty: number;
+    callNote: string;
+    direction?: 'in' | 'out';
+  },
+): Promise<{ poolId: string; previousQty: number; qty: number }> {
+  return apiFetch(`/staff/proxy/buyer/pools/${poolId}/change`, {
+    method: 'POST',
+    body: input,
+    accessToken,
+    idempotencyKey: idempotencyKey(),
+  });
+}
+
+export function proxyPoolWithdraw(
+  accessToken: string,
+  poolId: string,
+  input: { buyerCounterpartyId: string; callNote: string; direction?: 'in' | 'out' },
+): Promise<{ poolId: string }> {
+  return apiFetch(`/staff/proxy/buyer/pools/${poolId}/withdraw`, {
+    method: 'POST',
+    body: input,
+    accessToken,
+    idempotencyKey: idempotencyKey(),
+  });
+}
+
 /**
  * One entry per submitted line, by position. 29 Oct — a product on his board goes on the
  * cheapest offer (`pile` / `pool`, Purchase → Confirmations); one that is not becomes an
@@ -128,8 +160,10 @@ export function proxyAcceptAskFill(
     quoteIds: string[];
     callNote: string;
     direction?: 'in' | 'out';
+    /** 2 Nov — when the quotes cover fewer boxes than asked, keep the rest open (default) or close. */
+    keepRemainderOpen?: boolean;
   },
-): Promise<{ soIds: string[] }> {
+): Promise<{ soIds: string[]; filledBoxes: number; remainingBoxes: number }> {
   return apiFetch(`/staff/proxy/buyer/asks/${askId}/accept`, {
     method: 'POST',
     body: input,
@@ -237,7 +271,8 @@ export function proxyConfirmPile(
   input: {
     sellerCounterpartyId: string;
     canSendBoxes: number;
-    expiryExact: string;
+    /** A year, or month and year. Left out, the expiry on his listing stands. */
+    expiryExact?: string;
     batch?: string;
     callNote: string;
   },
@@ -271,5 +306,33 @@ export function proxyDeclinePile(
     method: 'POST',
     body: input,
     accessToken,
+  });
+}
+
+// BR-378 — the deal given to a buyer when the seller confirmed his pile: Sales takes it, or walks
+// away from it, on the buyer's word.
+export function proxyAcceptPileOffer(
+  accessToken: string,
+  requestId: string,
+  input: { buyerCounterpartyId: string; callNote: string; direction?: 'in' | 'out' },
+): Promise<{ soId: string; boxes: number }> {
+  return apiFetch(`/staff/proxy/buyer/pile-offers/${requestId}/accept`, {
+    method: 'POST',
+    body: input,
+    accessToken,
+    idempotencyKey: idempotencyKey(),
+  });
+}
+
+export function proxyDeclinePileOffer(
+  accessToken: string,
+  requestId: string,
+  input: { buyerCounterpartyId: string; callNote: string; direction?: 'in' | 'out' },
+): Promise<{ released: boolean }> {
+  return apiFetch(`/staff/proxy/buyer/pile-offers/${requestId}/decline`, {
+    method: 'POST',
+    body: input,
+    accessToken,
+    idempotencyKey: idempotencyKey(),
   });
 }

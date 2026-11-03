@@ -3,7 +3,7 @@ import type { FormEvent } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { FiArrowLeft, FiChevronDown, FiPhoneCall, FiPlus } from 'react-icons/fi';
 import { proxyRaiseAsks } from '../../api/proxy';
-import { HeWantsItButton } from './BuyerStageActions';
+import { OfferAction } from './BuyerStageActions';
 import { CallLineFields } from './CallLineFields';
 import {
   getSalesBuyerFile,
@@ -334,7 +334,7 @@ function BoardProductBlock({
                 </Badge>
                 <span className="text-xs text-slate-500">qty {line.qty}</span>
               </div>
-              <HeWantsItButton
+              <OfferAction
                 line={line}
                 counterpartyId={counterpartyId}
                 direction={direction}

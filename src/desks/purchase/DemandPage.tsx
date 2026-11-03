@@ -184,6 +184,11 @@ function AskRows({
             {open ? '▾ ' : '▸ '}
             {askLabel(item)}
             <span className="ml-2 text-xs text-slate-500">asked {timeAgo(item.createdAt)}</span>
+            {item.filledQty > 0 && (
+              <span className="ml-2 text-xs text-slate-500">
+                {item.filledQty} of {item.filledQty + item.qty} already ordered
+              </span>
+            )}
           </span>
         </Td>
         <Td numeric>{item.qty}</Td>
@@ -207,6 +212,34 @@ function AskRows({
       )}
     </>
   );
+}
+
+/**
+ * 2 Nov — the boxes a seller quoted against the boxes still wanted, said every time a quote is in:
+ * short ("Short: offered 5 of 11 boxes", in red), exact ("Offers all 11 boxes"), or above the demand
+ * ("Offers 20 boxes — 9 more than the 11 asked"). An order is never larger than what is asked
+ * (BR-374), so the extra is only ever headroom.
+ */
+function quantityNote(s: AskSellerStateItem): { text: string; short: boolean } | null {
+  if (s.qtyAvailable === null) return null;
+  if (s.qtyAvailable < s.askQty) {
+    return { text: `Short: offered ${s.qtyAvailable} of ${s.askQty} boxes`, short: true };
+  }
+  if (s.qtyAvailable === s.askQty) return { text: `Offers all ${s.askQty} boxes`, short: false };
+  const extra = s.qtyAvailable - s.askQty;
+  return {
+    text: `Offers ${s.qtyAvailable} boxes — ${extra} more than the ${s.askQty} asked`,
+    short: false,
+  };
+}
+
+/** The other gaps a quote has (rate, expiry, delivery…); quantity is said by `quantityNote`. */
+function gapText(s: AskSellerStateItem): string | null {
+  const others = s.gapCodes.filter((code) => code !== 'short_on_quantity');
+  if (s.qtyAvailable === null && s.gapCodes.includes('short_on_quantity')) {
+    others.unshift('short on quantity'); // No numbers to say it with.
+  }
+  return others.length > 0 ? others.map((c) => c.replaceAll('_', ' ')).join(' · ') : null;
 }
 
 const SELLER_STATE_LABEL: Record<
@@ -291,9 +324,12 @@ function SellerStateRow({
       {s.ratePaise !== null && (
         <span className="text-slate-500">₹{(s.ratePaise / 100).toFixed(2)}</span>
       )}
-      {s.gapCodes.length > 0 && (
-        <span className="text-danger-500">short: {s.gapCodes.join(', ').replaceAll('_', ' ')}</span>
+      {quantityNote(s) && (
+        <span className={quantityNote(s)!.short ? 'text-danger-500' : 'text-slate-600'}>
+          {quantityNote(s)!.text}
+        </span>
       )}
+      {gapText(s) && <span className="text-danger-500">{gapText(s)}</span>}
       {canSeeLedger && (
         <Link
           to={`/accounts/party/${s.sellerId}`}

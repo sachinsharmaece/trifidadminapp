@@ -27,7 +27,7 @@ export function SellerFilePage() {
   const { callApi } = useAuth();
   const navigate = useNavigate();
   const loader = useCallback(() => callApi((token) => getSellerFile(token, id!)), [callApi, id]);
-  const { state, retry } = useAsyncData(loader, () => false, [loader]);
+  const { state, retry, refresh } = useAsyncData(loader, () => false, [loader]);
   // Bumped when something on this page changes the seller's funnel (a quote raised for him).
   const [funnelRefresh, setFunnelRefresh] = useState(0);
 
@@ -125,7 +125,9 @@ export function SellerFilePage() {
                             items={entries}
                             // One company: nothing to fold away, so show its products at once.
                             defaultOpen={groups.length === 1}
-                            onAddToListing={(productId) =>
+                            sellerCounterpartyId={file.counterpartyId}
+                            onListed={refresh}
+                            onMoreOptions={(productId) =>
                               navigate(`/purchase/sellers/${id}/listing/new?productId=${productId}`)
                             }
                           />

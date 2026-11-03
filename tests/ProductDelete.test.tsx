@@ -16,6 +16,12 @@ import { ProductsPage } from '../src/desks/admin/ProductsPage';
 
 vi.mock('../src/auth/AuthContext', () => ({ useAuth: vi.fn() }));
 vi.mock('../src/components/dev/DevNote', () => ({ DevNote: () => null }));
+// The product margin card (rupee margin) loads its own data; these tests are not about it.
+vi.mock('../src/api/pricing', () => ({
+  getProductMargin: vi.fn().mockResolvedValue([]),
+  getProductMarginHistory: vi.fn().mockResolvedValue([]),
+  setProductMargin: vi.fn(),
+}));
 vi.mock('../src/api/catalog', () => ({
   getProductById: vi.fn(),
   getAdminSkus: vi.fn(),

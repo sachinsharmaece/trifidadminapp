@@ -11,6 +11,7 @@ import {
 } from '../../api/sales';
 import { listRegistrationsPage } from '../../api/onboarding';
 import { useDebounced, usePagedList } from '../../lib/usePagedList';
+import { useListParams } from '../../lib/useListParams';
 import { ListFooter } from '../../components/ListFooter';
 import { Loader } from '../../components/ui/Loader';
 import { ErrorState } from '../../components/ui/ErrorState';
@@ -31,10 +32,33 @@ import { timeAgo, useMinuteClock } from '../../lib/timeAgo';
 type BookQueueTab = 'book' | 'queue';
 type Tab = BookQueueTab | 'waiting';
 
+const TABS: readonly Tab[] = ['book', 'queue', 'waiting'];
+
+/**
+ * 3 Nov (My view sheet) — the tab, the search and the filters live in the URL (`?tab=queue&q=Sharma`
+ * …), so opening a buyer and pressing Back shows the same list. There is no page number: the list
+ * loads 50 at a time as you scroll, so Back returns to the top of the same filtered list.
+ */
+const BUYER_LIST_DEFAULTS = {
+  tab: 'book',
+  q: '',
+  category: '',
+  district: '',
+  assigned: '',
+  sort: 'firm',
+  dir: 'asc',
+} as const;
+type BuyerListParams = ReturnType<typeof useListParams<keyof typeof BUYER_LIST_DEFAULTS>>;
+
 /** Buyers — Book/Queue (live `/staff/sales/buyers`) plus a read-only Waiting tab onto Registrations. */
 export function SalesBuyersPage() {
   const navigate = useNavigate();
-  const [tab, setTab] = useState<Tab>('book');
+  const params = useListParams('salesBuyers', BUYER_LIST_DEFAULTS);
+  if (params.restoring) return null;
+  const tab = (TABS as readonly string[]).includes(params.values.tab)
+    ? (params.values.tab as Tab)
+    : 'book';
+  const setTab = (next: Tab): void => params.reset({ tab: next }, { push: true });
 
   return (
     <div className="flex flex-col gap-6">
@@ -82,27 +106,48 @@ export function SalesBuyersPage() {
         // tabbed screen in this codebase (e.g. SupplyMatrixPage) avoids this
         // by mounting a separate component per tab; `key` gets the same
         // effect here without duplicating the component.
-        <BuyerListTab key={tab} tab={tab} />
+        <BuyerListTab key={tab} tab={tab} params={params} />
       )}
     </div>
   );
 }
 
-function BuyerListTab({ tab }: { tab: BookQueueTab }) {
+function BuyerListTab({ tab, params }: { tab: BookQueueTab; params: BuyerListParams }) {
   const { callApi } = useAuth();
   const navigate = useNavigate();
+  const { values } = params;
   // 29 Oct — searched, filtered and paged on the server (50 at a time; the
   // next page loads as you scroll, or "Load more"). It used to load every
   // buyer and filter in the browser.
-  const [searchText, setSearchText] = useState('');
+  // 3 Nov — the box keeps what is typed at once; the URL follows once typing settles.
+  const [searchText, setSearchText] = useState(values.q);
   const q = useDebounced(searchText.trim());
-  const [filters, setFilters] = useState<BuyerFilterValue>({
-    category: '',
-    districtId: '',
-    assignedTo: '',
-    sort: 'firm',
-    dir: 'asc',
-  });
+  const urlQuery = values.q;
+  const setParams = params.set;
+  const settled = q === searchText.trim();
+  useEffect(() => {
+    if (settled && q !== urlQuery) setParams({ q });
+  }, [settled, q, urlQuery, setParams]);
+  const sort = SORTS.some((s) => s.value === values.sort) ? (values.sort as BuyerListSort) : 'firm';
+  const dir = values.dir === 'desc' ? 'desc' : 'asc';
+  const filters = useMemo<BuyerFilterValue>(
+    () => ({
+      category: values.category,
+      districtId: values.district,
+      assignedTo: values.assigned,
+      sort,
+      dir,
+    }),
+    [values.category, values.district, values.assigned, sort, dir],
+  );
+  const setFilters = (next: BuyerFilterValue): void =>
+    setParams({
+      category: next.category,
+      district: next.districtId,
+      assigned: next.assignedTo,
+      sort: next.sort,
+      dir: next.dir,
+    });
   const [assigning, setAssigning] = useState<{ buyerId: string; firm: string } | null>(null);
   const loadPage = useCallback(
     async (cursor?: string) => {
@@ -131,6 +176,10 @@ function BuyerListTab({ tab }: { tab: BookQueueTab }) {
     if (next) setFacets((current) => current ?? next);
   }, [list.meta]);
   const filtering = Boolean(q || filters.category || filters.districtId || filters.assignedTo);
+  const clearFilters = (): void => {
+    setSearchText('');
+    params.reset({ tab });
+  };
 
   return (
     <div className="flex flex-col gap-4">
@@ -141,6 +190,13 @@ function BuyerListTab({ tab }: { tab: BookQueueTab }) {
         onChange={(e) => setSearchText(e.target.value)}
       />
       <BuyerFilters facets={facets} tab={tab} value={filters} onChange={setFilters} />
+      {filtering && (
+        <div>
+          <Button variant="secondary" size="sm" onClick={clearFilters}>
+            Clear filters
+          </Button>
+        </div>
+      )}
       {list.status === 'loading' && <Loader />}
       {list.status === 'error' && (
         <ErrorState message={list.error ?? 'Could not load.'} onRetry={() => void list.reload()} />

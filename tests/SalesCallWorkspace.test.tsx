@@ -359,3 +359,63 @@ describe('Call page — a closed offer and his place in a pool (2 Nov)', () => {
     expect(screen.queryByRole('button', { name: 'Withdraw' })).toBeNull();
   });
 });
+
+describe('Call page — call notes are optional (3 Nov, My view sheet)', () => {
+  it('"He wants it" goes through with no note, and the field says it is optional', async () => {
+    renderPage();
+    fireEvent.click(await screen.findByRole('button', { name: 'He wants it' }, { timeout: 5000 }));
+    const dialog = await screen.findByRole('dialog');
+    expect(within(dialog).getByLabelText('Call note (optional)')).not.toBeRequired();
+    fireEvent.change(within(dialog).getByLabelText(/^Boxes he wants/), { target: { value: '2' } });
+    fireEvent.click(within(dialog).getByRole('button', { name: /put him on this offer/i }));
+
+    await waitFor(() => expect(proxyWantsIt).toHaveBeenCalled());
+    expect(vi.mocked(proxyWantsIt).mock.calls[0]![2]).toMatchObject({ qty: 2, callNote: '' });
+    expect(await screen.findByText(/Sent to the seller to confirm/)).toBeInTheDocument();
+  });
+
+  it('"Record an update" is logged with no note', async () => {
+    vi.mocked(createCallLog).mockResolvedValue({} as never);
+    renderPage();
+    const value = await screen.findByLabelText(/^New value/, {}, { timeout: 5000 });
+    expect(screen.getByLabelText('Note (optional)')).not.toBeRequired();
+    fireEvent.change(value, { target: { value: '9876543210' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Log the update' }));
+
+    await waitFor(() => expect(createCallLog).toHaveBeenCalledTimes(1));
+    expect(vi.mocked(createCallLog).mock.calls[0]![1]).toMatchObject({
+      kind: 'update_request',
+      updateValue: '9876543210',
+      note: '',
+    });
+    expect(await screen.findByText('Update request logged.')).toBeInTheDocument();
+  });
+
+  it('a call-history row with no note shows a dash', async () => {
+    vi.mocked(listCallLogsForBuyer).mockResolvedValueOnce([
+      {
+        callLogId: 'cl1',
+        buyerId: 'b1',
+        employeeId: 'e1',
+        employeeName: 'Rep',
+        direction: 'out',
+        at: '2026-11-03T05:00:00.000Z',
+        kind: 'call',
+        outcome: 'no_answer',
+        note: '',
+        producedAskId: null,
+        listingLineId: null,
+        updateKind: null,
+        updateValue: null,
+        promiseDueAt: null,
+        promiseFulfilledAt: null,
+      },
+    ]);
+    renderPage();
+    const history = (await screen.findByText('Call history', {}, { timeout: 5000 })).closest(
+      'div',
+    )!.parentElement!;
+    const row = await within(history).findByText('no answer');
+    expect(within(row.closest('tr')!).getByText('—')).toBeInTheDocument();
+  });
+});

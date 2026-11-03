@@ -89,6 +89,7 @@ export function HeWantsItButton({
         title="He wants it"
         submitLabel="Put him on this offer"
         canSubmit={qtyOk}
+        noteOptional
         onClose={() => setOpen(false)}
         onSubmit={submit}
       >
@@ -523,6 +524,7 @@ export function ConfirmRateButton({
         open={open}
         title="He confirms the rate"
         submitLabel="Confirm and raise the order"
+        noteOptional
         onClose={() => setOpen(false)}
         onSubmit={submit}
       >

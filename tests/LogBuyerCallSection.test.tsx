@@ -130,6 +130,18 @@ describe('Log a buyer call — several products in one call', () => {
     expect(screen.getByLabelText(/call note/i)).toHaveValue('');
   });
 
+  it('logs the call with no note (3 Nov — the note is optional)', async () => {
+    vi.mocked(proxyRaiseAsks).mockResolvedValue({
+      results: [{ index: 0, kind: 'ask', askId: 'ask-a' }],
+    });
+    render(<LogBuyerCallSection buyerCounterpartyId="cp-1" />);
+    expect(screen.getByLabelText('Call note (optional)')).not.toBeRequired();
+    pickPacks('sku-1');
+    fireEvent.click(screen.getByRole('button', { name: /^log call$/i }));
+    await waitFor(() => expect(proxyRaiseAsks).toHaveBeenCalledTimes(1));
+    expect(vi.mocked(proxyRaiseAsks).mock.calls[0]![1]).toMatchObject({ callNote: '' });
+  });
+
   it('counts a line added to an ask he already had open apart from new asks (30 Oct, BR-371)', async () => {
     vi.mocked(proxyRaiseAsks).mockResolvedValue({
       results: [

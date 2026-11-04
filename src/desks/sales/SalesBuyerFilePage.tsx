@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { FiArrowLeft, FiPhoneIncoming, FiPhoneOutgoing } from 'react-icons/fi';
 import {
   getSalesBuyerFile,
+  requestRateChange,
   type BuyerFileDto,
   type BuyerFunnelStage,
   type SalesOrderRow,
@@ -18,6 +19,7 @@ import { BoardForHimBody, NotApprovedNote } from './SalesCallWorkspacePage';
 import {
   CancelAskButton,
   CancelOrderButton,
+  ChangeRateButton,
   ConfirmRateButton,
   DispatchButton,
   GiveRateButton,
@@ -25,6 +27,8 @@ import {
   MarkDeliveredButton,
   MarkPaidButton,
   paidWaitingOn,
+  RateChangeActions,
+  RateChangeNote,
 } from './BuyerStageActions';
 import { Table, Th, Td } from '../../components/ui/Table';
 import { Badge } from '../../components/ui/Badge';
@@ -336,6 +340,7 @@ export function SalesBuyerFilePage() {
                             <Td>
                               {q.brand}
                               {q.packLabel ? ` · ${q.packLabel}` : ''}
+                              {q.rateChange && <RateChangeNote change={q.rateChange} />}
                             </Td>
                             <Td numeric>
                               {q.ratePaise !== null ? formatRupees(q.ratePaise) : '—'}
@@ -353,10 +358,30 @@ export function SalesBuyerFilePage() {
                             </Td>
                             <Td>
                               <div className="flex flex-wrap justify-end gap-1">
-                                <ConfirmRateButton
-                                  quote={q}
-                                  counterpartyId={file.counterpartyId}
+                                {/* 4 Nov — a change waiting for approval holds Confirm back; once it
+                                    is approved, Confirm raises the order at the approved figures. */}
+                                <RateChangeActions
+                                  change={q.rateChange}
                                   onDone={retry}
+                                  confirm={
+                                    <ConfirmRateButton
+                                      quote={q}
+                                      counterpartyId={file.counterpartyId}
+                                      onDone={retry}
+                                    />
+                                  }
+                                  changeButton={
+                                    <ChangeRateButton
+                                      what={`${q.brand}${q.packLabel ? ` · ${q.packLabel}` : ''}`}
+                                      shownPaise={q.ratePaise}
+                                      maxBoxes={Math.min(q.qtyAvailable, q.askQty)}
+                                      holdEnded={Date.parse(q.bindingUntil) <= now}
+                                      send={(token, input) =>
+                                        requestRateChange(token, q.quoteId, input)
+                                      }
+                                      onDone={retry}
+                                    />
+                                  }
                                 />
                                 <CancelAskButton
                                   askId={q.askId}

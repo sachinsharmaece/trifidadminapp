@@ -162,6 +162,8 @@ export function proxyAcceptAskFill(
     direction?: 'in' | 'out';
     /** 2 Nov — when the quotes cover fewer boxes than asked, keep the rest open (default) or close. */
     keepRemainderOpen?: boolean;
+    /** 4 Nov — an approved Rate given → Change: the order is raised at its boxes and rate. */
+    approvalId?: string;
   },
 ): Promise<{ soIds: string[]; filledBoxes: number; remainingBoxes: number }> {
   return apiFetch(`/staff/proxy/buyer/asks/${askId}/accept`, {
@@ -314,7 +316,13 @@ export function proxyDeclinePile(
 export function proxyAcceptPileOffer(
   accessToken: string,
   requestId: string,
-  input: { buyerCounterpartyId: string; callNote: string; direction?: 'in' | 'out' },
+  input: {
+    buyerCounterpartyId: string;
+    callNote: string;
+    direction?: 'in' | 'out';
+    /** 4 Nov — an approved Rate given → Change: the order is at its boxes and rate. */
+    approvalId?: string;
+  },
 ): Promise<{ soId: string; boxes: number }> {
   return apiFetch(`/staff/proxy/buyer/pile-offers/${requestId}/accept`, {
     method: 'POST',

@@ -19,6 +19,7 @@ export function Modal({
   children,
   footer,
   size = 'md',
+  bare = false,
 }: {
   open: boolean;
   title: string;
@@ -28,6 +29,12 @@ export function Modal({
   footer?: ReactNode;
   /** `xl` — a wide dialog, for a long form (e.g. approving a registration). */
   size?: 'md' | 'xl';
+  /**
+   * The dialog does not pad or scroll its body: the child lays out its own scrolling area and
+   * footer. For a form whose buttons live inside it (they need its saving state) yet must stay
+   * put while the fields scroll.
+   */
+  bare?: boolean;
 }) {
   const titleId = useId();
   const panelRef = useRef<HTMLDivElement>(null);
@@ -105,7 +112,11 @@ export function Modal({
             <FiX />
           </button>
         </div>
-        <div className="min-h-0 flex-1 overflow-y-auto px-5 py-5 sm:px-6">{children}</div>
+        {bare ? (
+          <div className="flex min-h-0 flex-1 flex-col">{children}</div>
+        ) : (
+          <div className="min-h-0 flex-1 overflow-y-auto px-5 py-5 sm:px-6">{children}</div>
+        )}
         {footer && (
           <div className="flex shrink-0 flex-wrap items-center justify-end gap-2 border-t border-slate-200 bg-slate-50 px-5 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:rounded-b-xl sm:px-6">
             {footer}

@@ -87,6 +87,8 @@ export const PERMISSIONS = {
   SALES_MARK_BILLED: 'sales:mark_billed',
   SALES_DISPATCH: 'sales:dispatch',
   SALES_SKIP_TO_BILLED: 'sales:skip_to_billed',
+  // 4 Nov — approving a Sales request to confirm a held rate at other boxes or another rate.
+  SALES_APPROVE_RATE_CHANGE: 'sales:approve_rate_change',
   // Enquiry journey — owner, follow-up and notes on an enquiry (DEC-051).
   ENQUIRY_MANAGE: 'enquiry:manage',
 } as const;

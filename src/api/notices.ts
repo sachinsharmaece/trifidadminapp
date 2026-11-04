@@ -3,7 +3,13 @@ import { apiFetch } from './client';
 /** Phase 6 — the bell: a staff member's own in-app notices. */
 export interface StaffNotice {
   noticeId: string;
-  kind: 'push_received' | 'push_approved' | 'push_rejected';
+  kind:
+    | 'push_received'
+    | 'push_approved'
+    | 'push_rejected'
+    | 'rate_change_requested'
+    | 'rate_change_approved'
+    | 'rate_change_rejected';
   title: string;
   body: string;
   link: string | null;

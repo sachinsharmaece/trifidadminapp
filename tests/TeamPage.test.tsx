@@ -66,9 +66,11 @@ beforeEach(() => {
   ]);
 });
 
-function createCard() {
-  const heading = screen.getByRole('heading', { name: 'Create employee' });
-  return within(heading.closest('section') as HTMLElement);
+/** The create form lives in a dialog opened by the "Add employee" button at the top right. */
+async function openCreate() {
+  await screen.findAllByText('Purchase Head');
+  fireEvent.click(screen.getByRole('button', { name: /^add employee$/i }));
+  return within(await screen.findByRole('dialog', { name: 'Add employee' }));
 }
 
 function fillValid(card: ReturnType<typeof within>) {
@@ -92,6 +94,199 @@ function fillValid(card: ReturnType<typeof within>) {
 }
 
 describe('TeamPage (Phase 2)', () => {
+  it('keeps the create form out of the page until "Add employee" opens it, and hides the button without write access', async () => {
+    mockAuth();
+    const { unmount } = render(<TeamPage />);
+    await screen.findAllByText('Purchase Head');
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/^Password/)).not.toBeInTheDocument();
+    const card = await openCreate();
+    expect(card.getByLabelText(/^Password/)).toBeInTheDocument();
+    fireEvent.click(card.getByRole('button', { name: 'Cancel' }));
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    unmount();
+
+    mockAuth([]);
+    render(<TeamPage />);
+    await screen.findAllByText('Purchase Head');
+    expect(screen.queryByRole('button', { name: /^add employee$/i })).not.toBeInTheDocument();
+  });
+
+  it('closes the dialog once the employee is created, and says so on the page', async () => {
+    mockAuth();
+    vi.mocked(createEmployee).mockResolvedValue({ employeeId: 'e2' });
+    render(<TeamPage />);
+    const card = await openCreate();
+    fillValid(card);
+    fireEvent.click(card.getByLabelText(/^Accounts/));
+    fireEvent.click(card.getByRole('button', { name: /create employee/i }));
+
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+    expect(createEmployee).toHaveBeenCalledTimes(1);
+    expect(screen.getByText('Employee created.')).toBeInTheDocument();
+  });
+
+  it('keeps the dialog open when there is an authenticator secret to hand over', async () => {
+    mockAuth();
+    vi.mocked(createEmployee).mockResolvedValue({
+      employeeId: 'e3',
+      mfaSecret: 'JBSWY3DPEHPK3PXP',
+    });
+    render(<TeamPage />);
+    const card = await openCreate();
+    fillValid(card);
+    fireEvent.click(card.getByLabelText(/^Accounts/));
+    fireEvent.click(card.getByRole('button', { name: /create employee/i }));
+
+    expect(await card.findByText(/JBSWY3DPEHPK3PXP/)).toBeInTheDocument();
+    expect(screen.getByRole('dialog', { name: 'Add employee' })).toBeInTheDocument();
+  });
+
+  it('groups the HR details into identity, family, emergency contact and address sections', async () => {
+    mockAuth();
+    render(<TeamPage />);
+    const card = await openCreate();
+    for (const name of [
+      'Account',
+      'Positions',
+      'Roles',
+      'Identity & Statutory Details',
+      'Family Details',
+      'Emergency Contact',
+      'Address Details',
+    ]) {
+      expect(card.getByRole('heading', { name })).toBeInTheDocument();
+    }
+    // One "HR details" heading holds the four HR sections — and nothing from the account block.
+    const hr = within(card.getByRole('group', { name: 'HR details' }));
+    for (const name of [
+      'Identity & Statutory Details',
+      'Family Details',
+      'Emergency Contact',
+      'Address Details',
+    ]) {
+      expect(hr.getByRole('heading', { name })).toBeInTheDocument();
+    }
+    for (const name of ['Account', 'Positions', 'Roles']) {
+      expect(hr.queryByRole('heading', { name })).not.toBeInTheDocument();
+    }
+    // Each field sits in its own section.
+    const section = (name: string) =>
+      within(card.getByRole('heading', { name }).closest('section') as HTMLElement);
+    expect(section('Identity & Statutory Details').getByLabelText(/^PAN/)).toBeInTheDocument();
+    expect(section('Family Details').getByLabelText(/^Father's name/)).toBeInTheDocument();
+    expect(
+      section('Emergency Contact').getByLabelText(/^Emergency contact mobile/),
+    ).toBeInTheDocument();
+    expect(section('Address Details').getByLabelText(/^Permanent address/)).toBeInTheDocument();
+  });
+
+  it('keeps Create and Cancel outside the scrolling fields, so nothing can sit under them', async () => {
+    mockAuth();
+    render(<TeamPage />);
+    const card = await openCreate();
+    const scroller = card.getByLabelText(/^Name/).closest('.overflow-y-auto');
+    expect(scroller).not.toBeNull();
+    expect(scroller).not.toContainElement(card.getByRole('button', { name: /create employee/i }));
+    expect(scroller).not.toContainElement(card.getByRole('button', { name: 'Cancel' }));
+  });
+
+  it('keeps the browser from filling the signed-in admin’s own email and password in', async () => {
+    mockAuth();
+    render(<TeamPage />);
+    const card = await openCreate();
+    expect(card.getByLabelText(/^Password/)).toHaveAttribute('autocomplete', 'new-password');
+    expect(card.getByLabelText(/^Email/)).toHaveAttribute('autocomplete', 'off');
+  });
+
+  it('"Same as permanent address" shows the permanent address it copies, and sends only the flag', async () => {
+    mockAuth();
+    vi.mocked(createEmployee).mockResolvedValue({ employeeId: 'e4' });
+    render(<TeamPage />);
+    const card = await openCreate();
+    fillValid(card); // ticks "Same as permanent address"
+    const current = card.getByLabelText(/^Current local address/) as HTMLTextAreaElement;
+    expect(current).toBeDisabled();
+    expect(current.value).toBe('12 MG Road, Indore');
+
+    // It follows the permanent address as it is edited.
+    fireEvent.change(card.getByLabelText(/^Permanent address/), {
+      target: { value: '14 Palasia, Indore' },
+    });
+    expect((card.getByLabelText(/^Current local address/) as HTMLTextAreaElement).value).toBe(
+      '14 Palasia, Indore',
+    );
+
+    // Unticked, it is an ordinary required field again.
+    fireEvent.click(card.getByLabelText(/same as permanent/i));
+    const typed = card.getByLabelText(/^Current local address/) as HTMLTextAreaElement;
+    expect(typed).not.toBeDisabled();
+    expect(typed.value).toBe('');
+    fireEvent.click(card.getByLabelText(/^Accounts/));
+    fireEvent.click(card.getByRole('button', { name: /create employee/i }));
+    expect(card.getByText(/Enter the current local address/)).toBeInTheDocument();
+    expect(createEmployee).not.toHaveBeenCalled();
+
+    // Ticked again, the same flag is sent with no separate current address.
+    fireEvent.click(card.getByLabelText(/same as permanent/i));
+    fireEvent.click(card.getByRole('button', { name: /create employee/i }));
+    await waitFor(() => expect(createEmployee).toHaveBeenCalledTimes(1));
+    const [, input] = vi.mocked(createEmployee).mock.calls[0]!;
+    expect(input.hr).toMatchObject({
+      permanentAddress: '14 Palasia, Indore',
+      currentSameAsPermanent: true,
+      currentAddress: '',
+    });
+  });
+
+  it('shows a field’s problem when it is left, and clears it once it is put right', async () => {
+    mockAuth();
+    render(<TeamPage />);
+    const card = await openCreate();
+    const mobile = card.getByLabelText(/^Mobile/);
+    fireEvent.change(mobile, { target: { value: '12345' } });
+    expect(card.queryByText(/10-digit number starting 6–9/)).not.toBeInTheDocument();
+    fireEvent.blur(mobile);
+    expect(card.getByText(/10-digit number starting 6–9/)).toBeInTheDocument();
+    // Leaving one field says nothing about the others, and nothing has been sent.
+    expect(card.queryByText('Enter the name.')).not.toBeInTheDocument();
+    expect(card.queryByText(/need attention/)).not.toBeInTheDocument();
+    fireEvent.change(mobile, { target: { value: '9876543210' } });
+    expect(card.queryByText(/10-digit number starting 6–9/)).not.toBeInTheDocument();
+  });
+
+  it('after a failed Save, counts the problems and takes you to the first field to fix', async () => {
+    mockAuth();
+    render(<TeamPage />);
+    const card = await openCreate();
+    fireEvent.click(card.getByRole('button', { name: /create employee/i }));
+    expect(await card.findByText(/fields need attention/)).toBeInTheDocument();
+    await waitFor(() => expect(card.getByLabelText(/^Name/)).toHaveFocus());
+    expect(createEmployee).not.toHaveBeenCalled();
+  });
+
+  it('freezes the form and says "Creating…" while the save is on its way', async () => {
+    mockAuth();
+    let finish: (value: { employeeId: string }) => void = () => undefined;
+    vi.mocked(createEmployee).mockReturnValue(
+      new Promise((resolve) => {
+        finish = resolve;
+      }),
+    );
+    render(<TeamPage />);
+    const card = await openCreate();
+    fillValid(card);
+    fireEvent.click(card.getByLabelText(/^Accounts/));
+    fireEvent.click(card.getByRole('button', { name: /create employee/i }));
+
+    expect(await card.findByRole('button', { name: /creating/i })).toBeDisabled();
+    expect(card.getByRole('button', { name: 'Cancel' })).toBeDisabled();
+    expect(card.getByLabelText(/^Name/)).toBeDisabled();
+
+    finish({ employeeId: 'e5' });
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+  });
+
   it("surfaces the server's lane-board rejection (BR-262), and sends an Idempotency-Key", async () => {
     mockAuth();
     vi.mocked(createEmployee).mockRejectedValue(
@@ -102,9 +297,7 @@ describe('TeamPage (Phase 2)', () => {
       }),
     );
     render(<TeamPage />);
-    await screen.findByRole('heading', { name: 'Create employee' });
-    await screen.findAllByText('Purchase Head');
-    const card = createCard();
+    const card = await openCreate();
     fillValid(card);
     fireEvent.click(card.getByLabelText(/^Accounts/));
     fireEvent.click(card.getByRole('button', { name: /create employee/i }));
@@ -122,9 +315,7 @@ describe('TeamPage (Phase 2)', () => {
   it('ticking Sales Leader ticks and locks Purchase Executive, who reports to Admin (DEC-066)', async () => {
     mockAuth();
     render(<TeamPage />);
-    await screen.findByRole('heading', { name: 'Create employee' });
-    await screen.findAllByText('Purchase Head');
-    const card = createCard();
+    const card = await openCreate();
     fireEvent.click(card.getByLabelText(/^Sales Leader/));
     const purchaseExec = card.getByLabelText(/^Purchase Executive/) as HTMLInputElement;
     expect(purchaseExec.checked).toBe(true);
@@ -148,9 +339,7 @@ describe('TeamPage (Phase 2)', () => {
   it('shows each problem next to its field before sending anything', async () => {
     mockAuth();
     render(<TeamPage />);
-    await screen.findByRole('heading', { name: 'Create employee' });
-    await screen.findAllByText('Purchase Head');
-    const card = createCard();
+    const card = await openCreate();
     fillValid(card);
     fireEvent.change(card.getByLabelText(/^Mobile/), { target: { value: '12345' } });
     fireEvent.change(card.getByLabelText(/^PAN/), { target: { value: 'AAPFU0939F' } });
@@ -212,8 +401,10 @@ describe('TeamPage (Phase 2)', () => {
     render(<TeamPage />);
     fireEvent.click(await screen.findByRole('button', { name: 'Edit' }));
     expect(await screen.findByText(/No HR details on record/)).toBeInTheDocument();
-    // Only the Create form on the page asks for a date of birth.
-    expect(screen.getAllByLabelText(/^Date of birth/)).toHaveLength(1);
+    // The Create dialog is closed, and this Edit form hides its HR fields — no date of birth yet,
+    // and no "HR details" heading over nothing.
+    expect(screen.queryAllByLabelText(/^Date of birth/)).toHaveLength(0);
+    expect(screen.queryByRole('group', { name: 'HR details' })).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: /save changes/i }));
     await waitFor(() => expect(updateEmployee).toHaveBeenCalled());
     const [, , input] = vi.mocked(updateEmployee).mock.calls[0]!;
@@ -222,7 +413,8 @@ describe('TeamPage (Phase 2)', () => {
     // Ticked, the HR fields are back and checked before sending.
     vi.mocked(updateEmployee).mockClear();
     fireEvent.click(screen.getByLabelText(/Add HR details now/));
-    expect(screen.getAllByLabelText(/^Date of birth/)).toHaveLength(2);
+    expect(screen.getAllByLabelText(/^Date of birth/)).toHaveLength(1);
+    expect(screen.getByRole('group', { name: 'HR details' })).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: /save changes/i }));
     expect(await screen.findByText('Enter the PAN.')).toBeInTheDocument();
     expect(updateEmployee).not.toHaveBeenCalled();

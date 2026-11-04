@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { ActionModal, ActionRefused, errorText, useAction } from '../../components/ActionModal';
 import {
   proxyAcceptAskFill,
@@ -9,17 +9,22 @@ import {
 } from '../../api/proxy';
 import {
   cancelUnpaidOrder,
+  decideRateChange,
   dispatchOrder,
   getSalesBoardForBuyer,
   giveRateOnAsk,
   markOrderBilled,
   markOrderDelivered,
   markOrderPaid,
+  RATE_CHANGE_REASONS,
   skipOrderToBilled,
+  withdrawRateChange,
   type BoardForBuyerLine,
   type BoardForBuyerProduct,
   type BuyerFileLiveQuote,
   type BuyerFileOpenAsk,
+  type BuyerFileRateChange,
+  type RateChangeReason,
   type SalesOrderRow,
 } from '../../api/sales';
 import { useAuth } from '../../auth/AuthContext';
@@ -497,10 +502,13 @@ export function ConfirmRateButton({
   onDone: () => void;
 }) {
   const [open, setOpen] = useState(false);
+  // 4 Nov — an approved Change: the order is raised at its boxes and rate, not the quote's.
+  const approved = quote.rateChange?.status === 'approved' ? quote.rateChange : null;
+  const boxes = approved ? approved.boxes : Math.min(quote.qtyAvailable, quote.askQty);
   // 2 Nov — a quote for fewer boxes than he asked for leaves the rest of the ask open (BR-127),
   // unless Sales unticks this.
-  const short = quote.qtyAvailable < quote.askQty;
-  const left = quote.askQty - quote.qtyAvailable;
+  const short = boxes < quote.askQty;
+  const left = quote.askQty - boxes;
   const [keepOpen, setKeepOpen] = useState(true);
   const submit = useAction(async (token, callNote) => {
     const result = await proxyAcceptAskFill(token, quote.askId, {
@@ -509,6 +517,7 @@ export function ConfirmRateButton({
       quoteIds: [quote.quoteId],
       callNote,
       ...(short ? { keepRemainderOpen: keepOpen } : {}),
+      ...(approved ? { approvalId: approved.requestId } : {}),
     });
     if (result.soIds.length === 0) return 'Confirmed.';
     return result.remainingBoxes > 0 && keepOpen
@@ -533,6 +542,14 @@ export function ConfirmRateButton({
           {quote.packLabel ? ` · ${quote.packLabel}` : ''}, {quote.qtyAvailable} available. This
           raises his order and starts his 24-hour payment window.
         </p>
+        {approved && (
+          <p className="rounded-md border border-brand-200 bg-brand-50 p-2 text-sm text-slate-700">
+            Approved by {approved.decidedByName ?? 'his leader'}: the order is raised for{' '}
+            <strong>{approved.boxes} boxes</strong> at{' '}
+            <strong>{formatRupees(approved.ratePaise)}</strong> (he was shown{' '}
+            {formatRupees(approved.shownRatePaise)}).
+          </p>
+        )}
         {short && (
           <label className="flex items-start gap-2 text-sm text-slate-700">
             <input
@@ -543,12 +560,304 @@ export function ConfirmRateButton({
             />
             <span>
               Keep the remaining {left} {left === 1 ? 'box' : 'boxes'} open. He asked for{' '}
-              {quote.askQty} and this covers {quote.qtyAvailable}; Purchase goes on looking for the
-              rest. Untick to close the ask with what is ordered.
+              {quote.askQty} and this covers {boxes}; Purchase goes on looking for the rest. Untick
+              to close the ask with what is ordered.
             </span>
           </label>
         )}
       </ActionModal>
+    </>
+  );
+}
+
+const reasonLabel = (code: RateChangeReason | null): string | null =>
+  RATE_CHANGE_REASONS.find((r) => r.code === code)?.label ?? null;
+
+/**
+ * 4 Nov — Rate given → Change. He wants other boxes or another rate than the one he was shown, so
+ * Sales asks for it. His Sales Leader (or Admin) approves it, and then Confirm raises the order at
+ * the approved figures. The seller's own quote is not touched, and his hold is not extended while it
+ * waits. The rate may go up as well as down.
+ */
+export function ChangeRateButton({
+  what,
+  shownPaise,
+  maxBoxes,
+  boxesHint = 'what the seller can send, and what he still wants',
+  holdEnded = false,
+  send,
+  onDone,
+}: {
+  /** What he was given, for the heading — "ACEMAIN · 1 KG". */
+  what: string;
+  /** His rate as he was shown it; `null` while the margin matrix has no cell for him. */
+  shownPaise: number | null;
+  /** The most the order can take — and what it takes if nothing changes. */
+  maxBoxes: number;
+  boxesHint?: string;
+  /** His 24-hour hold is over: nothing can be asked on it any more. */
+  holdEnded?: boolean;
+  /** The call that sends the request — for a quote, or for a pile deal. */
+  send: (
+    token: string,
+    input: { boxes: number; ratePaise: number; reasonCode?: RateChangeReason; callNote: string },
+  ) => Promise<unknown>;
+  onDone: () => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [boxes, setBoxes] = useState(String(maxBoxes));
+  const [rupees, setRupees] = useState('');
+  const [reason, setReason] = useState<RateChangeReason | ''>('');
+
+  const parsedBoxes = Number(boxes);
+  const boxesOk = Number.isInteger(parsedBoxes) && parsedBoxes >= 1 && parsedBoxes <= maxBoxes;
+  const ratePaise = Math.round(Number(rupees) * 100);
+  const rateOk = rupees.trim() !== '' && Number.isFinite(ratePaise) && ratePaise > 0;
+  const rateChanged = rateOk && ratePaise !== shownPaise;
+  const changed = parsedBoxes !== maxBoxes || rateChanged;
+  const canSubmit = boxesOk && rateOk && changed && (!rateChanged || reason !== '');
+
+  const submit = useAction(async (token, callNote) => {
+    await send(token, {
+      boxes: parsedBoxes,
+      ratePaise,
+      ...(rateChanged && reason ? { reasonCode: reason } : {}),
+      callNote,
+    });
+    return 'Sent for approval — you will be told when it is decided.';
+  }, onDone);
+
+  return (
+    <>
+      {holdEnded && <Badge tone="neutral">Hold ended</Badge>}
+      <Button
+        size="sm"
+        variant="secondary"
+        disabled={shownPaise === null || holdEnded}
+        title={
+          holdEnded
+            ? 'His 24-hour hold has ended, so this can no longer be changed.'
+            : shownPaise === null
+              ? 'No margin is set for his tier on this pack yet.'
+              : undefined
+        }
+        onClick={() => {
+          setBoxes(String(maxBoxes));
+          setRupees(shownPaise !== null ? (shownPaise / 100).toFixed(2) : '');
+          setReason('');
+          setOpen(true);
+        }}
+      >
+        Change
+      </Button>
+      <ActionModal
+        open={open}
+        title="Change the boxes or the rate"
+        submitLabel="Ask for approval"
+        canSubmit={canSubmit}
+        onClose={() => setOpen(false)}
+        onSubmit={submit}
+      >
+        <p className="text-sm text-slate-600">
+          {what} — he was shown {shownPaise !== null ? formatRupees(shownPaise) : '—'} for{' '}
+          {maxBoxes} {maxBoxes === 1 ? 'box' : 'boxes'}.
+        </p>
+        <p className="text-xs text-slate-500">
+          His Sales Leader (or Admin) approves this first; then you Confirm. His 24-hour hold is not
+          extended while it waits.
+        </p>
+        <Input
+          label="Boxes"
+          type="number"
+          min={1}
+          max={maxBoxes}
+          required
+          hint={`Up to ${maxBoxes} — ${boxesHint}.`}
+          value={boxes}
+          onChange={(event) => setBoxes(event.target.value)}
+        />
+        <Input
+          label="Rate (₹)"
+          type="number"
+          min={0}
+          step="0.01"
+          required
+          value={rupees}
+          onChange={(event) => setRupees(event.target.value)}
+        />
+        {rateChanged && (
+          <Select
+            label="Why the rate changes"
+            required
+            value={reason}
+            onChange={(event) => setReason(event.target.value as RateChangeReason | '')}
+          >
+            <option value="">Pick a reason…</option>
+            {RATE_CHANGE_REASONS.map((r) => (
+              <option key={r.code} value={r.code}>
+                {r.label}
+              </option>
+            ))}
+          </Select>
+        )}
+      </ActionModal>
+    </>
+  );
+}
+
+/** What was asked, who asked and who decided — shown under the product while a change stands. */
+export function RateChangeNote({ change }: { change: BuyerFileRateChange }) {
+  const tone =
+    change.status === 'approved' ? 'good' : change.status === 'rejected' ? 'bad' : 'warn';
+  const label =
+    change.status === 'approved'
+      ? 'Change approved'
+      : change.status === 'rejected'
+        ? 'Change rejected'
+        : 'Waiting for approval';
+  const why = reasonLabel(change.reasonCode);
+  return (
+    <div className="mt-2 flex flex-col gap-1 border-l-2 border-brand-200 pl-2 text-xs">
+      <div className="flex flex-wrap items-center gap-2">
+        <Badge tone={tone}>{label}</Badge>
+        <span className="font-semibold text-slate-900">
+          {change.boxes} {change.boxes === 1 ? 'box' : 'boxes'} at {formatRupees(change.ratePaise)}
+        </span>
+        <span className="text-slate-500">(shown {formatRupees(change.shownRatePaise)})</span>
+      </div>
+      <div className="text-slate-500">
+        Asked by {change.requestedByName}
+        {why ? ` — ${why}` : ''}
+        {change.callNote ? `: “${change.callNote}”` : ''}
+      </div>
+      {change.decidedByName && (
+        <div className="text-slate-500">
+          {change.status === 'rejected' ? 'Rejected' : 'Approved'} by {change.decidedByName}
+          {change.decisionNote ? `: “${change.decisionNote}”` : ''}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/** The requester (or Admin) takes a waiting or approved change back — before Confirm has used it. */
+export function WithdrawRateChangeButton({
+  requestId,
+  onDone,
+}: {
+  requestId: string;
+  onDone: () => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const submit = useAction(async (token) => {
+    await withdrawRateChange(token, requestId);
+    return 'Request withdrawn.';
+  }, onDone);
+  return (
+    <>
+      <Button size="sm" variant="ghost" onClick={() => setOpen(true)}>
+        Withdraw request
+      </Button>
+      <ActionModal
+        open={open}
+        title="Take the request back"
+        submitLabel="Withdraw request"
+        danger
+        noteOptional
+        onClose={() => setOpen(false)}
+        onSubmit={submit}
+      >
+        <p className="text-sm text-slate-600">
+          The change is dropped. You can Confirm the rate as he was shown it, or ask again.
+        </p>
+      </ActionModal>
+    </>
+  );
+}
+
+/** His Sales Leader (or Admin) approves or rejects a waiting change; a rejection needs a reason. */
+export function DecideRateChangeButtons({
+  change,
+  onDone,
+}: {
+  change: BuyerFileRateChange;
+  onDone: () => void;
+}) {
+  const [decision, setDecision] = useState<'approved' | 'rejected' | null>(null);
+  const approving = decision === 'approved';
+  const submit = useAction(async (token, note) => {
+    await decideRateChange(token, change.requestId, { decision: decision ?? 'rejected', note });
+    return approving ? 'Approved — Sales can Confirm it now.' : 'Rejected.';
+  }, onDone);
+  const why = reasonLabel(change.reasonCode);
+  return (
+    <>
+      <Button size="sm" variant="secondary" onClick={() => setDecision('approved')}>
+        Approve
+      </Button>
+      <Button size="sm" variant="ghost" onClick={() => setDecision('rejected')}>
+        Reject
+      </Button>
+      <ActionModal
+        open={decision !== null}
+        title={approving ? 'Approve the change' : 'Reject the change'}
+        submitLabel={approving ? 'Approve' : 'Reject'}
+        danger={!approving}
+        noteOptional={approving}
+        onClose={() => setDecision(null)}
+        onSubmit={submit}
+      >
+        <p className="text-sm text-slate-700">
+          {change.requestedByName} asks to confirm <strong>{change.boxes} boxes</strong> at{' '}
+          <strong>{formatRupees(change.ratePaise)}</strong>. He was shown{' '}
+          {formatRupees(change.shownRatePaise)}.{why ? ` Reason: ${why}.` : ''}
+        </p>
+        {change.callNote && <p className="text-xs text-slate-500">“{change.callNote}”</p>}
+        {!approving && (
+          <p className="text-xs text-slate-500">
+            Say why in the note — it goes back to the person who asked.
+          </p>
+        )}
+      </ActionModal>
+    </>
+  );
+}
+
+/**
+ * The buttons on a held rate or a pile deal while a change may stand in front of it. A change
+ * waiting for approval holds Confirm back (its requester can withdraw it, his leader decides it);
+ * once approved, Confirm raises the order at the approved figures; otherwise Confirm sits beside
+ * Change. Shared by the quote rows and the pile-deal rows.
+ */
+export function RateChangeActions({
+  change,
+  confirm,
+  changeButton,
+  onDone,
+}: {
+  change: BuyerFileRateChange | null | undefined;
+  confirm: ReactNode;
+  changeButton: ReactNode;
+  onDone: () => void;
+}) {
+  if (change?.status === 'pending') {
+    return (
+      <>
+        {change.canDecide && <DecideRateChangeButtons change={change} onDone={onDone} />}
+        {change.canWithdraw && (
+          <WithdrawRateChangeButton requestId={change.requestId} onDone={onDone} />
+        )}
+      </>
+    );
+  }
+  return (
+    <>
+      {confirm}
+      {change?.status === 'approved'
+        ? change.canWithdraw && (
+            <WithdrawRateChangeButton requestId={change.requestId} onDone={onDone} />
+          )
+        : changeButton}
     </>
   );
 }

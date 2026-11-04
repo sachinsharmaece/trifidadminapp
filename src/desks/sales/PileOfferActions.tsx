@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { ActionModal, useAction } from '../../components/ActionModal';
 import { proxyAcceptPileOffer, proxyDeclinePileOffer } from '../../api/proxy';
-import type { BuyerFilePileOffer } from '../../api/sales';
+import { requestPileOfferChange, type BuyerFilePileOffer } from '../../api/sales';
+import { ChangeRateButton, RateChangeActions, RateChangeNote } from './BuyerStageActions';
 import { Button } from '../../components/ui/Button';
 import { Table, Td, Th } from '../../components/ui/Table';
 import { formatDateTime } from '../../lib/dates';
@@ -29,10 +30,13 @@ export function AcceptPileOfferButton({
   onDone: () => void;
 }) {
   const [open, setOpen] = useState(false);
+  // 4 Nov — an approved Change: the order is raised at its boxes and rate, not the deal's.
+  const approved = offer.rateChange?.status === 'approved' ? offer.rateChange : null;
   const submit = useAction(async (token, callNote) => {
     await proxyAcceptPileOffer(token, offer.requestId, {
       buyerCounterpartyId: counterpartyId,
       callNote,
+      ...(approved ? { approvalId: approved.requestId } : {}),
     });
     return 'Order raised — now in Payment pending.';
   }, onDone);
@@ -52,6 +56,18 @@ export function AcceptPileOfferButton({
         {offer.boxes < offer.askedBoxes && (
           <p className="mt-1 text-sm text-slate-600">
             He asked for {offer.askedBoxes}; the seller can send {offer.boxes}.
+          </p>
+        )}
+        {approved && (
+          <p className="mt-1 rounded-md border border-brand-200 bg-brand-50 p-2 text-sm text-slate-700">
+            Approved by {approved.decidedByName ?? 'his leader'}: the order is raised for{' '}
+            <strong>{approved.boxes} boxes</strong> at{' '}
+            <strong>{formatRupees(approved.ratePaise)}</strong> (he was shown{' '}
+            {formatRupees(approved.shownRatePaise)}).
+            {approved.boxes < offer.boxes &&
+              ` The other ${offer.boxes - approved.boxes} ${
+                offer.boxes - approved.boxes === 1 ? 'box goes' : 'boxes go'
+              } back on the seller's listing.`}
           </p>
         )}
         <p className="mt-1 text-sm text-slate-600">
@@ -139,6 +155,7 @@ export function PileOffersTable({
                 <Td>
                   {o.brand}
                   {o.packLabel ? ` · ${o.packLabel}` : ''}
+                  {o.rateChange && <RateChangeNote change={o.rateChange} />}
                 </Td>
                 <Td numeric>{o.ratePaise !== null ? formatRupees(o.ratePaise) : '—'}</Td>
                 <Td numeric>
@@ -154,10 +171,28 @@ export function PileOffersTable({
                 </Td>
                 <Td>
                   <div className="flex flex-wrap justify-end gap-1">
-                    <AcceptPileOfferButton
-                      offer={o}
-                      counterpartyId={counterpartyId}
+                    {/* 4 Nov — Change a pile deal's boxes or rate, with approval (BR-379). */}
+                    <RateChangeActions
+                      change={o.rateChange}
                       onDone={onDone}
+                      confirm={
+                        <AcceptPileOfferButton
+                          offer={o}
+                          counterpartyId={counterpartyId}
+                          onDone={onDone}
+                        />
+                      }
+                      changeButton={
+                        <ChangeRateButton
+                          what={`${o.brand}${o.packLabel ? ` · ${o.packLabel}` : ''}`}
+                          shownPaise={o.ratePaise}
+                          maxBoxes={o.boxes}
+                          boxesHint="the boxes the seller confirmed for him; the rest go back on his listing"
+                          holdEnded={Date.parse(o.holdUntil) <= now}
+                          send={(token, input) => requestPileOfferChange(token, o.requestId, input)}
+                          onDone={onDone}
+                        />
+                      }
                     />
                     <WalkAwayPileOfferButton
                       offer={o}

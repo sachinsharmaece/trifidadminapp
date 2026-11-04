@@ -494,6 +494,8 @@ export interface BuyerFilePileOffer {
   deliveryBand: string;
   offeredAt: string;
   holdUntil: string;
+  /** 4 Nov — the change to boxes / rate Sales has asked for on it, if any. */
+  rateChange: BuyerFileRateChange | null;
 }
 
 export interface BuyerFileLiveQuote {
@@ -511,7 +513,40 @@ export interface BuyerFileLiveQuote {
   /** When the rate was given to him. */
   givenAt: string;
   bindingUntil: string;
+  /** 4 Nov — the change to boxes / rate Sales has asked for on it, if any. */
+  rateChange: BuyerFileRateChange | null;
 }
+
+/** 4 Nov — Rate given → Change: asked by Sales, decided by his Sales Leader (or Admin). */
+export interface BuyerFileRateChange {
+  requestId: string;
+  status: 'pending' | 'approved' | 'rejected';
+  boxes: number;
+  ratePaise: number;
+  /** His rate when it was asked — the figure the change is measured against. */
+  shownRatePaise: number;
+  reasonCode: RateChangeReason | null;
+  callNote: string;
+  requestedByName: string;
+  requestedAt: string;
+  decidedByName: string | null;
+  decisionNote: string;
+  /** This user may approve or reject it (and it is still waiting). */
+  canDecide: boolean;
+  /** This user may take it back: the person who asked, or Admin. */
+  canWithdraw: boolean;
+}
+
+// BR-048's fixed dropdown, in the order the rule lists it.
+export const RATE_CHANGE_REASONS = [
+  { code: 'undercutting_local_trader', label: 'Undercutting a local trader' },
+  { code: 'near_expiry', label: 'Near expiry' },
+  { code: 'first_order_with_buyer', label: 'First order with this buyer' },
+  { code: 'freight_unusual', label: 'Freight is unusual' },
+  { code: 'matching_competitor_quote', label: 'Matching a competitor quote' },
+  { code: 'clearing_slow_stock', label: 'Clearing slow stock' },
+] as const;
+export type RateChangeReason = (typeof RATE_CHANGE_REASONS)[number]['code'];
 
 /** 29 Oct — a listed offer he is on, waiting on the seller (a pile request, or a pool place). */
 export interface BuyerFileWaitingOnSeller {
@@ -678,6 +713,59 @@ export function giveRateOnAsk(
     method: 'POST',
     body: input,
     accessToken,
+  });
+}
+
+/**
+ * 4 Nov — Rate given → Change: ask to confirm a held rate at other boxes and/or another rate. It
+ * goes to his Sales Leader (or Admin); Confirm uses it once it is approved.
+ */
+export function requestRateChange(
+  accessToken: string,
+  quoteId: string,
+  input: { boxes: number; ratePaise: number; reasonCode?: RateChangeReason; callNote: string },
+): Promise<{ requestId: string }> {
+  return apiFetch(`/staff/sales/quotes/${quoteId}/rate-change`, {
+    method: 'POST',
+    body: input,
+    accessToken,
+    idempotencyKey: stageKey(),
+  });
+}
+
+/** The same for a deal the seller confirmed for him (BR-378). */
+export function requestPileOfferChange(
+  accessToken: string,
+  requestId: string,
+  input: { boxes: number; ratePaise: number; reasonCode?: RateChangeReason; callNote: string },
+): Promise<{ requestId: string }> {
+  return apiFetch(`/staff/sales/pile-offers/${requestId}/rate-change`, {
+    method: 'POST',
+    body: input,
+    accessToken,
+    idempotencyKey: stageKey(),
+  });
+}
+
+export function withdrawRateChange(accessToken: string, requestId: string): Promise<unknown> {
+  return apiFetch(`/staff/sales/rate-changes/${requestId}/withdraw`, {
+    method: 'POST',
+    body: {},
+    accessToken,
+    idempotencyKey: stageKey(),
+  });
+}
+
+export function decideRateChange(
+  accessToken: string,
+  requestId: string,
+  input: { decision: 'approved' | 'rejected'; note: string },
+): Promise<unknown> {
+  return apiFetch(`/staff/sales/rate-changes/${requestId}/decide`, {
+    method: 'POST',
+    body: input,
+    accessToken,
+    idempotencyKey: stageKey(),
   });
 }
 

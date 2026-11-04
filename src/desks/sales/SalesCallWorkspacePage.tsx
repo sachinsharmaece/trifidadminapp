@@ -395,7 +395,7 @@ function CallHistorySection({
                   <Td>{formatDateTime(c.at)}</Td>
                   <Td>{c.direction === 'in' ? '↓' : c.direction === 'out' ? '↑' : '—'}</Td>
                   <Td>{c.outcome ? humanize(c.outcome) : '—'}</Td>
-                  <Td>{c.note}</Td>
+                  <Td>{c.note || '—'}</Td>
                 </tr>
               ))}
             </tbody>
@@ -459,10 +459,9 @@ function UpdateRequestSection({ buyerId }: { buyerId: string }) {
         />
         <Textarea
           id="ur-note"
-          label="Note"
+          label="Note (optional)"
           value={note}
           onChange={(e) => setNote(e.target.value)}
-          required
         />
         {error && (
           <p role="alert" className="text-sm text-danger-500">
@@ -658,12 +657,11 @@ export function LogBuyerCallSection({
         </div>
         <Textarea
           id="lbc-note"
-          label="Call note"
+          label="Call note (optional)"
           className="max-w-3xl"
-          hint="Who called, what was agreed — mandatory on every staff-assisted action. One note covers every product above."
+          hint="Optional — who called, what was agreed. One note covers every product above."
           value={callNote}
           onChange={(e) => setCallNote(e.target.value)}
-          required
         />
         {error && (
           <p role="alert" className="text-sm text-danger-500">

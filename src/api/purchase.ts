@@ -413,6 +413,10 @@ export interface SupplyMatrixSellerRow {
   carryCount: number;
   listedCount: number;
   manufacturerNames: string[];
+  /** 3 Nov — what the Sellers search looks through, besides the firm, district and companies. */
+  ownerName?: string | null;
+  mobile?: string | null;
+  gstin?: string | null;
 }
 
 export function getSupplyMatrixBySeller(accessToken: string): Promise<SupplyMatrixSellerRow[]> {
@@ -558,6 +562,47 @@ export function getPoQueue(accessToken: string): Promise<PoStageItem[]> {
 
 export function getBilledQueue(accessToken: string): Promise<PoStageItem[]> {
   return apiFetch('/staff/purchase/billed', { accessToken });
+}
+
+/**
+ * 3 Nov (My view sheet) — what the printed purchase order shows. The server only supplies the data
+ * (the seller's own rate and amounts, never a buyer's); the PDF itself is made in the browser.
+ */
+export interface PoPrintLine {
+  brand: string;
+  packLabel: string;
+  boxes: number;
+  baseUnit: 'LTR' | 'KG' | 'PC';
+  baseUnitsPerBox: number;
+  /** Per base unit (litre, kg or piece), before GST. */
+  ratePaise: number;
+  /** Boxes × units per box × rate, before GST. */
+  taxablePaise: number;
+}
+
+export interface PoPrintDto {
+  poNo: string;
+  releasedAt: string;
+  company: { name: string; addressLines: string[]; gstin: string };
+  seller: { firm: string; gstin: string | null; addressLines: string[] };
+  lines: PoPrintLine[];
+  taxablePaise: number;
+  gst: {
+    ratePercent: number;
+    kind: 'intra_state' | 'inter_state';
+    cgstPaise: number;
+    sgstPaise: number;
+    igstPaise: number;
+  };
+  totalPaise: number;
+  /** The seller's same-day dispatch line: his cut-off time on the day the PO released (BR-173/BR-174). */
+  dispatchBy: string;
+  /** Empty until the terms text is supplied; the PDF then has no terms section. */
+  terms: string[];
+}
+
+export function getPoPrintData(accessToken: string, poId: string): Promise<PoPrintDto> {
+  return apiFetch(`/staff/purchase/pos/${encodeURIComponent(poId)}/print`, { accessToken });
 }
 
 export function recordSellerInvoice(

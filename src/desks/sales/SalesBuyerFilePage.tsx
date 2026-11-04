@@ -513,7 +513,7 @@ export function SalesBuyerFilePage() {
                               <Td>{c.employeeName}</Td>
                               <Td>{c.outcome ? humanize(c.outcome) : '—'}</Td>
                               <Td>
-                                {c.note}
+                                {c.note || '—'}
                                 {c.producedAskId && (
                                   <span className="ml-2">
                                     <Badge tone="neutral" variant="chip">
@@ -551,7 +551,7 @@ export function SalesBuyerFilePage() {
                             <div className="text-xs font-semibold text-slate-500">
                               due {formatDate(c.promiseDueAt!)}
                             </div>
-                            <p className="text-slate-700">{c.note}</p>
+                            <p className="text-slate-700">{c.note || '—'}</p>
                           </li>
                         ))}
                       </ul>
@@ -575,7 +575,7 @@ export function SalesBuyerFilePage() {
                             <div className="text-xs font-semibold text-slate-500">
                               {formatDate(c.at)}
                             </div>
-                            <p className="text-slate-700">{c.note}</p>
+                            <p className="text-slate-700">{c.note || '—'}</p>
                           </li>
                         ))}
                       </ul>

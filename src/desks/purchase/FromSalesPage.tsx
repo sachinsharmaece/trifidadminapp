@@ -73,8 +73,8 @@ export function FromSalesPage() {
                     </Badge>
                   </Td>
                   <Td>{row.pushedBy ?? '—'}</Td>
-                  <Td className="max-w-xs truncate" title={row.note}>
-                    {row.note}
+                  <Td className="max-w-xs truncate" title={row.note || undefined}>
+                    {row.note || '—'}
                   </Td>
                   <Td>{formatDate(row.pushedAt)}</Td>
                   <Td>{row.receiver ?? '—'}</Td>

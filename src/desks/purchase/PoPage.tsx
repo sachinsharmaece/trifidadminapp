@@ -7,6 +7,7 @@ import { Card } from '../../components/ui/Card';
 import { Table, Th, Td } from '../../components/ui/Table';
 import { timeAgo, useMinuteClock } from '../../lib/timeAgo';
 import { RecordInvoiceButton } from './StageActions';
+import { PoPdfButton } from './PoPdfButton';
 import { formatDateTime } from '../../lib/dates';
 
 /** PO — released on the buyer's payment; waiting on the seller to bill the goods. */
@@ -53,7 +54,8 @@ export function PoPage() {
                       </span>
                     </Td>
                     <Td>
-                      <div className="flex justify-end">
+                      <div className="flex justify-end gap-2">
+                        <PoPdfButton po={po} />
                         <RecordInvoiceButton po={po} onDone={retry} />
                       </div>
                     </Td>

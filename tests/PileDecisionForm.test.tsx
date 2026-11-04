@@ -1,7 +1,7 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { useAuth } from '../src/auth/AuthContext';
-import { proxyConfirmPile, proxyRequotePile } from '../src/api/proxy';
+import { proxyConfirmPile, proxyDeclinePile, proxyRequotePile } from '../src/api/proxy';
 import { PileDecisionForm } from '../src/desks/purchase/PileDecisionForm';
 
 vi.mock('../src/auth/AuthContext', () => ({ useAuth: vi.fn() }));
@@ -25,6 +25,9 @@ beforeEach(() => {
   });
   vi.mocked(proxyConfirmPile).mockReset().mockResolvedValue({ pileId: 'p1', undoWindowMs: 5000 });
   vi.mocked(proxyRequotePile)
+    .mockReset()
+    .mockResolvedValue(undefined as never);
+  vi.mocked(proxyDeclinePile)
     .mockReset()
     .mockResolvedValue(undefined as never);
 });
@@ -53,10 +56,12 @@ const show = (
   return onDecided;
 };
 const boxesField = () => screen.getByLabelText('Boxes he can send') as HTMLInputElement;
-const expiryField = () => screen.getByLabelText(/^Expiry/) as HTMLInputElement;
+const monthField = () => screen.getByLabelText(/^Expiry month/) as HTMLSelectElement;
+const yearField = () => screen.getByLabelText(/^Expiry year/) as HTMLSelectElement;
 const confirm = () => screen.getByRole('button', { name: 'Confirm' });
 const note = (text = 'ok') =>
   fireEvent.change(screen.getByLabelText(/^Call note/), { target: { value: text } });
+const confirmArgs = () => vi.mocked(proxyConfirmPile).mock.calls[0]![2];
 
 describe('Boxes he can send (2 Nov)', () => {
   it('starts at what he listed when buyers asked for more, and says so', () => {
@@ -71,76 +76,127 @@ describe('Boxes he can send (2 Nov)', () => {
   });
 });
 
-describe('Expiry on the Confirm form (BR-102)', () => {
-  it('is filled from his listing and not required; confirming sends it', async () => {
+describe('Expiry on the Confirm form (3 Nov — optional month and year dropdowns)', () => {
+  it('is filled from his listing; confirming sends it as month/year', async () => {
     show({ listedExpiry: '06/2029' });
-    expect(expiryField().value).toBe('06/2029');
+    expect(monthField().value).toBe('06');
+    expect(yearField().value).toBe('2029');
     expect(
       screen.getByText('From his listing — change it only if it differs.'),
     ).toBeInTheDocument();
     note();
     fireEvent.click(confirm());
     await waitFor(() => expect(proxyConfirmPile).toHaveBeenCalledTimes(1));
-    expect(vi.mocked(proxyConfirmPile).mock.calls[0]![2]).toEqual({
+    expect(confirmArgs()).toEqual({
       sellerCounterpartyId: 'c1',
       canSendBoxes: 25,
       expiryExact: '06/2029',
-      batch: undefined,
       callNote: 'ok',
     });
   });
 
+  it('a listed year alone preselects the year only', () => {
+    show({ listedExpiry: '2029' });
+    expect(monthField().value).toBe('');
+    expect(yearField().value).toBe('2029');
+  });
+
   it('cleared, leaves it to the listing', async () => {
     show({ listedExpiry: '2029' });
-    fireEvent.change(expiryField(), { target: { value: '' } });
-    note();
+    fireEvent.change(yearField(), { target: { value: '' } });
     fireEvent.click(confirm());
     await waitFor(() => expect(proxyConfirmPile).toHaveBeenCalled());
-    expect(vi.mocked(proxyConfirmPile).mock.calls[0]![2].expiryExact).toBeUndefined();
+    expect(confirmArgs().expiryExact).toBeUndefined();
   });
 
-  it('with none listed needs at least the year, and a year alone will do', async () => {
+  it('with none listed and none picked, Confirm is enabled and sends no expiry and no note', async () => {
     show({ listedExpiry: null });
-    note();
-    expect(confirm()).toBeDisabled();
-
-    fireEvent.change(expiryField(), { target: { value: '13/2029' } });
-    expect(screen.getByText(/Give the expiry as a year \(2028\)/)).toBeInTheDocument();
-    expect(confirm()).toBeDisabled();
-
-    fireEvent.change(expiryField(), { target: { value: '2029' } });
     expect(confirm()).toBeEnabled();
     fireEvent.click(confirm());
-    await waitFor(() => expect(proxyConfirmPile).toHaveBeenCalled());
-    expect(vi.mocked(proxyConfirmPile).mock.calls[0]![2].expiryExact).toBe('2029');
+    await waitFor(() => expect(proxyConfirmPile).toHaveBeenCalledTimes(1));
+    expect(confirmArgs()).toEqual({
+      sellerCounterpartyId: 'c1',
+      canSendBoxes: 25,
+      expiryExact: undefined,
+      callNote: '',
+    });
   });
 
-  it('does not hold up a requote', async () => {
+  it('a year alone, or a month and year, is sent in the form the server stores', async () => {
+    const year = String(new Date().getFullYear() + 2);
     show({ listedExpiry: null });
-    note();
-    fireEvent.click(screen.getByRole('button', { name: 'Requote' }));
-    await waitFor(() => expect(proxyRequotePile).toHaveBeenCalledTimes(1));
+    fireEvent.change(yearField(), { target: { value: year } });
+    fireEvent.click(confirm());
+    await waitFor(() => expect(proxyConfirmPile).toHaveBeenCalledTimes(1));
+    expect(confirmArgs().expiryExact).toBe(year);
+
+    fireEvent.change(monthField(), { target: { value: '03' } });
+    fireEvent.click(confirm());
+    await waitFor(() => expect(proxyConfirmPile).toHaveBeenCalledTimes(2));
+    expect(vi.mocked(proxyConfirmPile).mock.calls[1]![2].expiryExact).toBe(`03/${year}`);
+  });
+
+  it('a month without a year is held back, with the reason', () => {
+    show({ listedExpiry: null });
+    fireEvent.change(monthField(), { target: { value: '03' } });
+    expect(screen.getByText('Pick the year as well, or clear the month.')).toBeInTheDocument();
+    expect(confirm()).toBeDisabled();
+    fireEvent.change(monthField(), { target: { value: '' } });
+    expect(confirm()).toBeEnabled();
+  });
+
+  it('offers this year to six years on, and a listed year outside that range too', () => {
+    const thisYear = new Date().getFullYear();
+    show({ listedExpiry: '2020' });
+    const years = Array.from(yearField().options)
+      .map((o) => o.value)
+      .filter(Boolean);
+    expect(years[0]).toBe('2020');
+    expect(years).toContain(String(thisYear));
+    expect(years).toContain(String(thisYear + 6));
+    expect(years).not.toContain(String(thisYear + 7));
   });
 });
 
-describe('Batch on the Confirm form (BR-105)', () => {
-  it('is not shown for company billing, and is not sent', async () => {
-    show({ listedExpiry: '2029', provenance: 'company' });
-    expect(screen.queryByLabelText(/Batch/)).toBeNull();
-    note();
-    fireEvent.click(confirm());
-    await waitFor(() => expect(proxyConfirmPile).toHaveBeenCalled());
-    expect(vi.mocked(proxyConfirmPile).mock.calls[0]![2].batch).toBeUndefined();
+describe('Call note on the pile decision (3 Nov — optional)', () => {
+  it('is labelled optional, and Confirm, Requote and Decline all go without it', async () => {
+    show({ listedExpiry: null });
+    expect(screen.getByLabelText('Call note (optional)')).not.toBeRequired();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Requote' }));
+    await waitFor(() => expect(proxyRequotePile).toHaveBeenCalledTimes(1));
+    expect(vi.mocked(proxyRequotePile).mock.calls[0]![2]).toEqual({
+      sellerCounterpartyId: 'c1',
+      callNote: '',
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Decline' }));
+    await waitFor(() => expect(proxyDeclinePile).toHaveBeenCalledTimes(1));
+    expect(vi.mocked(proxyDeclinePile).mock.calls[0]![2]).toEqual({
+      sellerCounterpartyId: 'c1',
+      callNote: '',
+    });
   });
 
-  it('is asked for, and required, on My stock', async () => {
-    show({ listedExpiry: '2029', provenance: 'auth' });
-    note();
-    expect(confirm()).toBeDisabled();
-    fireEvent.change(screen.getByLabelText(/^Batch/), { target: { value: ' B-7 ' } });
-    expect(confirm()).toBeEnabled();
-    fireEvent.click(confirm());
-    await waitFor(() => expect(proxyConfirmPile).toHaveBeenCalled());
-    expect(vi.mocked(proxyConfirmPile).mock.calls[0]![2].batch).toBe('B-7');
+  it('a typed note is trimmed and sent', async () => {
+    show();
+    note('  spoke to him  ');
+    fireEvent.click(screen.getByRole('button', { name: 'Requote' }));
+    await waitFor(() => expect(proxyRequotePile).toHaveBeenCalled());
+    expect(vi.mocked(proxyRequotePile).mock.calls[0]![2].callNote).toBe('spoke to him');
   });
+});
+
+describe('Batch on the Confirm form (3 Nov — removed)', () => {
+  it.each(['company', 'auth'] as const)(
+    'there is no batch field for %s stock',
+    async (provenance) => {
+      show({ listedExpiry: '2029', provenance });
+      expect(screen.queryByLabelText(/Batch/)).toBeNull();
+      expect(confirm()).toBeEnabled();
+      fireEvent.click(confirm());
+      await waitFor(() => expect(proxyConfirmPile).toHaveBeenCalled());
+      expect(confirmArgs()).not.toHaveProperty('batch');
+    },
+  );
 });

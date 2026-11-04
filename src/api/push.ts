@@ -24,7 +24,7 @@ export function getPushStatus(accessToken: string, buyerId: string): Promise<Pus
 export function pushToPurchase(
   accessToken: string,
   buyerId: string,
-  input: { note: string; receiverEmployeeId?: string },
+  input: { note?: string; receiverEmployeeId?: string },
   idempotencyKey: string,
 ): Promise<{ pushId: string; receiver: { employeeId: string; person: string } }> {
   return apiFetch(`/staff/buyers/${buyerId}/push`, {
@@ -117,6 +117,8 @@ export interface PushDetailDto {
   } | null;
   /** 28 Oct — the companies ticked on his buyer profile (names only); Complete starts with them ticked. */
   buyerCompanies: Array<{ manufacturerId: string; name: string }>;
+  /** 3 Nov — his buyer's Marg party code: his seller code is the same, and not editable. Null when the buyer has none. */
+  buyerMargPartyCode: string | null;
   firmHasBankDetail: boolean;
   needsGstin: boolean;
   canComplete: boolean;
@@ -129,9 +131,10 @@ export function getPush(accessToken: string, pushId: string): Promise<PushDetail
   return apiFetch(`/staff/purchase/pushes/${pushId}`, { accessToken });
 }
 
+/** 3 Nov — the licence, the referees, the bank account and the call note are all optional. */
 export interface CompletePushInput {
   gstin?: string;
-  licenceNo: string;
+  licenceNo?: string;
   location: {
     address: string;
     pincode?: string;
@@ -139,11 +142,11 @@ export interface CompletePushInput {
     districtId: string;
     tehsilId: string;
   };
-  references: PushReference[];
+  references?: PushReference[];
   dealerships?: Array<{ manufacturerId: string }>;
   bankDetail?: { accountNumber: string; ifsc: string; accountName: string };
   margPartyCode?: string;
-  callNote: string;
+  callNote?: string;
 }
 
 export function completePush(

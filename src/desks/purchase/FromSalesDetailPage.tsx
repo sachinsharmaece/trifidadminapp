@@ -56,7 +56,7 @@ export function FromSalesDetailPage() {
                   {formatDate(push.pushedAt)} · with {push.receiver.person ?? '—'}
                 </p>
                 <blockquote className="border-l-2 border-slate-300 pl-3 text-slate-700">
-                  {push.note}
+                  {push.note || '—'}
                 </blockquote>
                 <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1">
                   <dt className="text-slate-500">Proprietor</dt>
@@ -175,9 +175,11 @@ function CompleteForm({ push, onSaved }: { push: PushDetailDto; onSaved: () => v
     draft?.dealershipIds ?? push.buyerCompanies.map((c) => c.manufacturerId),
   );
   const [bank, setBank] = useState({ accountNumber: '', ifsc: '', accountName: '' });
-  const [margPartyCode, setMargPartyCode] = useState(draft?.margPartyCode ?? '');
+  // 3 Nov — his seller Marg code is his buyer code, shown and not editable. A buyer with no code on
+  // file leaves the field open to type one; the server uses the buyer's code whenever there is one.
+  const buyerMargCode = push.buyerMargPartyCode;
+  const [margPartyCode, setMargPartyCode] = useState(buyerMargCode ?? draft?.margPartyCode ?? '');
   const [callNote, setCallNote] = useState(draft?.callNote ?? '');
-  const needsBank = !push.firmHasBankDetail && !draft?.bankDetailGiven;
   const save = useFormSubmit<PushDetailDto>({
     fields: COMPLETE_FIELDS,
     success: 'Saved — he is ready for a Purchase Leader to approve.',
@@ -191,6 +193,11 @@ function CompleteForm({ push, onSaved }: { push: PushDetailDto; onSaved: () => v
   function handleSubmit(event: FormEvent): void {
     event.preventDefault();
     const bankGiven = bank.accountNumber || bank.ifsc || bank.accountName;
+    // 3 Nov — a referee row nobody touched is left out. (The relationship starts as "Supplier", so
+    // it alone does not count as started.)
+    const startedReferences = references.filter(
+      (r) => r.firm.trim() || r.phone.trim() || r.whatTheySaid.trim(),
+    );
     void save.submit((key) =>
       callApi((token) =>
         completePush(
@@ -198,7 +205,7 @@ function CompleteForm({ push, onSaved }: { push: PushDetailDto; onSaved: () => v
           push.pushId,
           {
             ...(gstin ? { gstin: gstin.toUpperCase() } : {}),
-            licenceNo,
+            licenceNo: licenceNo.trim() || undefined,
             location: {
               address: location.address,
               pincode: location.pincode || undefined,
@@ -206,13 +213,13 @@ function CompleteForm({ push, onSaved }: { push: PushDetailDto; onSaved: () => v
               districtId: location.districtId,
               tehsilId: location.tehsilId,
             },
-            references,
+            references: startedReferences,
             ...(companyIds.length
               ? { dealerships: companyIds.map((manufacturerId) => ({ manufacturerId })) }
               : {}),
             ...(bankGiven ? { bankDetail: bank } : {}),
             margPartyCode: margPartyCode || undefined,
-            callNote,
+            callNote: callNote.trim(),
           },
           key,
         ),
@@ -238,16 +245,21 @@ function CompleteForm({ push, onSaved }: { push: PushDetailDto; onSaved: () => v
           />
         )}
         <Input
-          label="Insecticide licence no."
-          required
+          label="Insecticide licence no. (optional)"
           value={licenceNo}
           onChange={(ev) => setLicenceNo(ev.target.value)}
           error={e.licenceNo}
         />
         <Input
           label="Marg party code"
-          hint="His seller ledger in Marg — not the buyer one."
+          hint={
+            buyerMargCode
+              ? 'Same as his buyer code.'
+              : 'His buyer has no Marg code on file — enter his seller code if he has one.'
+          }
           value={margPartyCode}
+          readOnly={Boolean(buyerMargCode)}
+          className={buyerMargCode ? 'bg-slate-50 text-slate-600' : undefined}
           onChange={(ev) => setMargPartyCode(ev.target.value.toUpperCase())}
           error={e.margPartyCode}
         />
@@ -271,17 +283,17 @@ function CompleteForm({ push, onSaved }: { push: PushDetailDto; onSaved: () => v
             key={i}
             className="col-span-full grid grid-cols-1 sm:grid-cols-2 gap-3 rounded-md border border-slate-200 p-3"
           >
-            <legend className="px-1 text-sm font-medium text-slate-700">Referee {i + 1}</legend>
+            <legend className="px-1 text-sm font-medium text-slate-700">
+              Referee {i + 1} (optional)
+            </legend>
             <Input
               label="Firm"
-              required
               value={reference.firm}
               onChange={(ev) => setRef(i, 'firm', ev.target.value)}
               error={e[`references.${i}.firm`]}
             />
             <Input
               label="Phone"
-              required
               maxLength={10}
               value={reference.phone}
               onChange={(ev) => setRef(i, 'phone', ev.target.value)}
@@ -289,14 +301,12 @@ function CompleteForm({ push, onSaved }: { push: PushDetailDto; onSaved: () => v
             />
             <Input
               label="Relationship"
-              required
               value={reference.relationship}
               onChange={(ev) => setRef(i, 'relationship', ev.target.value)}
               error={e[`references.${i}.relationship`]}
             />
             <Input
               label="What they said"
-              required
               value={reference.whatTheySaid}
               onChange={(ev) => setRef(i, 'whatTheySaid', ev.target.value)}
               error={e[`references.${i}.whatTheySaid`]}
@@ -305,30 +315,29 @@ function CompleteForm({ push, onSaved }: { push: PushDetailDto; onSaved: () => v
         ))}
         {e.references && <p className="col-span-full text-sm text-danger-500">{e.references}</p>}
         <div className="col-span-full">
-          <p className="mb-1 text-sm font-medium text-slate-700">Bank account for payouts</p>
+          <p className="mb-1 text-sm font-medium text-slate-700">
+            Bank account for payouts (optional)
+          </p>
           <p className="mb-2 text-sm text-slate-500">
-            {needsBank
-              ? 'The firm has no bank account on file — a seller is paid, so add one.'
-              : 'The firm already has a bank account on file. Add one only if he is paid elsewhere.'}
+            {push.firmHasBankDetail
+              ? 'The firm already has a bank account on file. Add one only if he is paid elsewhere.'
+              : 'Optional for now. If you add one, fill the account number, IFSC and account name.'}
           </p>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <Input
               label="Account number"
-              required={needsBank}
               value={bank.accountNumber}
               onChange={(ev) => setBank({ ...bank, accountNumber: ev.target.value })}
               error={e['bankDetail.accountNumber']}
             />
             <Input
               label="IFSC"
-              required={needsBank}
               value={bank.ifsc}
               onChange={(ev) => setBank({ ...bank, ifsc: ev.target.value.toUpperCase() })}
               error={e['bankDetail.ifsc']}
             />
             <Input
               label="Account name"
-              required={needsBank}
               value={bank.accountName}
               onChange={(ev) => setBank({ ...bank, accountName: ev.target.value })}
               error={e['bankDetail.accountName']}
@@ -347,8 +356,7 @@ function CompleteForm({ push, onSaved }: { push: PushDetailDto; onSaved: () => v
         </div>
         <div className="col-span-full">
           <Textarea
-            label="Call note"
-            required
+            label="Call note (optional)"
             hint="The first call — what he supplies, what was agreed."
             value={callNote}
             onChange={(ev) => setCallNote(ev.target.value)}

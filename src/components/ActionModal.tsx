@@ -25,6 +25,7 @@ export function ActionModal({
   submitLabel,
   danger = false,
   canSubmit = true,
+  noteOptional = false,
   onClose,
   onSubmit,
   children,
@@ -34,6 +35,8 @@ export function ActionModal({
   submitLabel: string;
   danger?: boolean;
   canSubmit?: boolean;
+  /** 3 Nov (My view sheet) — the call note may be left empty on the actions the desks named. */
+  noteOptional?: boolean;
   onClose: () => void;
   onSubmit: (callNote: string) => Promise<void>;
   children?: ReactNode;
@@ -52,7 +55,7 @@ export function ActionModal({
 
   async function handleSubmit(event: FormEvent): Promise<void> {
     event.preventDefault();
-    if (!note.trim()) {
+    if (!noteOptional && !note.trim()) {
       setError('Add a one-line note on what he said.');
       return;
     }
@@ -97,8 +100,8 @@ export function ActionModal({
       >
         {children}
         <Textarea
-          label="Call note"
-          required
+          label={noteOptional ? 'Call note (optional)' : 'Call note'}
+          required={!noteOptional}
           value={note}
           onChange={(event) => setNote(event.target.value)}
           hint="Kept on the record with your name."

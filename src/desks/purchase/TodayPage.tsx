@@ -27,6 +27,7 @@ import { useAuth } from '../../auth/AuthContext';
 import { PERMISSIONS } from '../../lib/permissions';
 import { Card } from '../../components/ui/Card';
 import { Badge } from '../../components/ui/Badge';
+import { Table, Th, Td } from '../../components/ui/Table';
 import { DevNote } from '../../components/dev/DevNote';
 import { FunnelMetricsGrid } from './FunnelMetrics';
 import { formatDateTime } from '../../lib/dates';
@@ -149,16 +150,49 @@ export function TodayPage() {
 
             {s.dispatchOverdue.length > 0 && (
               <Card title="Dispatch overdue">
-                <ul className="flex flex-col gap-2">
-                  {s.dispatchOverdue.map((d) => (
-                    <li key={d.poId} className="flex items-center justify-between text-sm">
-                      <span>{d.poNo}</span>
-                      <Badge tone="bad">
-                        <FiFlag className="inline" /> {Math.abs(Math.round(d.hoursLeft ?? 0))}h over
-                      </Badge>
-                    </li>
-                  ))}
-                </ul>
+                <Table>
+                  <thead>
+                    <tr>
+                      <Th>PO</Th>
+                      <Th>Seller</Th>
+                      <Th>Goods</Th>
+                      <Th>His cut-off</Th>
+                      <Th>Due</Th>
+                      <Th>Status</Th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {s.dispatchOverdue.map((d) => (
+                      <tr key={d.poId}>
+                        <Td className="font-mono">
+                          {d.poNo}
+                          {!d.invoiceRecorded && (
+                            <span className="ml-2 font-sans">
+                              <Badge tone="warn">no invoice on record</Badge>
+                            </span>
+                          )}
+                        </Td>
+                        <Td>{d.sellerFirm}</Td>
+                        <Td>
+                          {d.brand} {d.packLabel} · {d.boxes} boxes
+                        </Td>
+                        <Td>{d.sellerCutoffTime}</Td>
+                        <Td>{formatDateTime(d.dispatchDueDate)}</Td>
+                        <Td>
+                          <Badge tone="bad">
+                            <FiFlag className="inline" /> {Math.abs(Math.round(d.hoursLeft ?? 0))}h
+                            over
+                          </Badge>
+                          {d.noDispatch48h && (
+                            <span className="ml-2">
+                              <Badge tone="bad">48h failure line passed</Badge>
+                            </span>
+                          )}
+                        </Td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </Table>
                 <Link
                   to="/purchase/dispatch"
                   className="mt-3 inline-block rounded-sm text-sm font-medium text-brand-600 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600"

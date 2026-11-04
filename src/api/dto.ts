@@ -251,6 +251,16 @@ export interface MarginMatrixHistoryRowDto extends MarginMatrixCellDto {
   createdAt: string;
 }
 
+/** A product's own rupee margin for one client type. `marginPaise` null = back on the class matrix. */
+export interface ProductMarginRowDto {
+  productMarginId: string;
+  productId: string;
+  tier: 'Distributor' | 'Dealer' | 'Retailer' | 'Trader';
+  marginPaise: number | null;
+  effectiveFrom: string;
+  createdAt: string;
+}
+
 export interface CreateSoResult {
   soId: string;
   soNo: string;

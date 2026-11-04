@@ -24,6 +24,7 @@ import { Modal } from '../../components/ui/Modal';
 import type { ProductDto } from '../../api/dto';
 import { CATEGORY_LABEL } from './productMasters';
 import { ProductForm } from './ProductForm';
+import { ProductMarginCard } from './ProductMarginCard';
 
 /**
  * Manage → Products → Product details: the product and its packs, read-only,
@@ -74,6 +75,7 @@ export function ProductDetailPage() {
                 onDeleted={() => navigate('/manage/products')}
               />
               <PacksCard packs={packs} onChanged={retry} />
+              <ProductMarginCard productId={product.productId} />
             </>
           )
         }

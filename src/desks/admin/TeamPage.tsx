@@ -19,6 +19,8 @@ import { Table, Th, Td } from '../../components/ui/Table';
 import { Input, Select } from '../../components/ui/Input';
 import { Button } from '../../components/ui/Button';
 import { Badge } from '../../components/ui/Badge';
+import { Modal } from '../../components/ui/Modal';
+import { PageHeader } from '../../components/ui/PageHeader';
 import type { EmployeeDetail, EmployeeListItem, LaneBoardItem, Position } from '../../api/dto';
 import { EmployeeForm } from './team/EmployeeForm';
 import { DeactivateDialog } from './team/DeactivateDialog';
@@ -46,6 +48,7 @@ export function TeamPage() {
   const canWrite = hasPermission(PERMISSIONS.EMPLOYEE_WRITE);
   const [status, setStatus] = useState<StatusFilter>('active');
   const [editing, setEditing] = useState<EmployeeDetail | null>(null);
+  const [creating, setCreating] = useState(false);
   const [switchingOff, setSwitchingOff] = useState<EmployeeListItem | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
 
@@ -67,10 +70,12 @@ export function TeamPage() {
   const lanes = useAsyncData(lanesLoader, (items) => items.length === 0, [lanesLoader]);
 
   const [reloadKey, setReloadKey] = useState(0);
+  // The pick lists and lanes reload in place (`refresh`), so a form open over them keeps its
+  // lane and leader options instead of blinking empty while the new data arrives.
   const reloadAll = () => {
     list.retry();
-    active.retry();
-    lanes.retry();
+    active.refresh();
+    lanes.refresh();
     setReloadKey((key) => key + 1);
   };
 
@@ -91,7 +96,22 @@ export function TeamPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <h1 className="text-xl font-semibold text-slate-900">Team</h1>
+      <PageHeader
+        title="Team"
+        actions={
+          canWrite && (
+            <Button
+              icon={<FiUserPlus />}
+              onClick={() => {
+                setNotice(null);
+                setCreating(true);
+              }}
+            >
+              Add employee
+            </Button>
+          )
+        }
+      />
       <DevNote screen="admin_team" />
 
       <Card title="Employees">
@@ -148,8 +168,8 @@ export function TeamPage() {
 
       <Card title="Lane board">
         <p className="mb-4 text-sm text-slate-500">
-          CH §17.12.5 — read-only. Allocation happens by creating an employee with lanes below; a
-          lane moves to someone else when its holder is switched off.
+          CH §17.12.5 — read-only. Allocation happens by creating an employee with lanes (Add
+          employee, top right); a lane moves to someone else when its holder is switched off.
         </p>
         <AsyncBoundary state={lanes.state} onRetry={lanes.retry} emptyMessage="No lanes seeded.">
           {(items) => <LaneTable items={items} />}
@@ -157,15 +177,30 @@ export function TeamPage() {
       </Card>
 
       {canWrite && (
-        <Card title="Create employee">
+        <Modal
+          open={creating}
+          title="Add employee"
+          size="xl"
+          bare
+          onClose={() => setCreating(false)}
+        >
           <EmployeeForm
-            key={`create-${reloadKey}`}
             mode="create"
+            layout="dialog"
             employees={activeEmployees}
             laneOptions={lanes.state.status === 'success' ? lanes.state.data : []}
-            onSaved={reloadAll}
+            onSaved={(result) => {
+              reloadAll();
+              // The authenticator secret is shown once, inside the form — keep the dialog open
+              // until the person has handed it over. Otherwise the save is done: close it.
+              if (!result.mfaSecret) {
+                setCreating(false);
+                setNotice('Employee created.');
+              }
+            }}
+            onCancel={() => setCreating(false)}
           />
-        </Card>
+        </Modal>
       )}
 
       <Card title="Record an absence">

@@ -296,6 +296,8 @@ export interface SellerFileListingItem {
   listingId: string;
   lineId: string;
   skuId: string;
+  brand: string;
+  technical: string;
   packLabel: string;
   ratePaise: number;
   scopeType: string;

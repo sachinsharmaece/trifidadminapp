@@ -155,6 +155,7 @@ export function SellerFilePage() {
                     <Table>
                       <thead>
                         <tr>
+                          <Th>Product</Th>
                           <Th>Pack</Th>
                           <Th numeric>Rate</Th>
                           <Th>Scope</Th>
@@ -164,6 +165,10 @@ export function SellerFilePage() {
                       <tbody>
                         {file.listings.map((l) => (
                           <tr key={l.lineId}>
+                            <Td>
+                              <div className="font-medium">{l.brand}</div>
+                              <div className="text-xs text-slate-500">{l.technical}</div>
+                            </Td>
                             <Td>{l.packLabel}</Td>
                             <Td numeric>₹{(l.ratePaise / 100).toFixed(2)}</Td>
                             <Td className="text-xs text-slate-500">{l.scopeType}</Td>

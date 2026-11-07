@@ -13,6 +13,7 @@ import { Table, Th, Td } from '../../components/ui/Table';
 import { Button } from '../../components/ui/Button';
 import { DevNote } from '../../components/dev/DevNote';
 import { PileDecisionForm } from './PileDecisionForm';
+import { StuckConfirmationsSection } from './StuckConfirmationsSection';
 
 /** Confirmations — buyer demand piling on one seller's listing (BR-133/BR-135). */
 export function ConfirmationsPage() {
@@ -23,6 +24,7 @@ export function ConfirmationsPage() {
   return (
     <div className="flex flex-col gap-6">
       <DevNote screen="purchase_confirmations" />
+      <StuckConfirmationsSection />
       <Card title="Waiting on a seller's decision">
         <p className="mb-4 text-sm text-slate-500">
           He answers once and it covers every buyer on the pile. If he declines, re-source it from

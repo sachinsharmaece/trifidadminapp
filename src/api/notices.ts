@@ -9,7 +9,8 @@ export interface StaffNotice {
     | 'push_rejected'
     | 'rate_change_requested'
     | 'rate_change_approved'
-    | 'rate_change_rejected';
+    | 'rate_change_rejected'
+    | 'pile_stuck';
   title: string;
   body: string;
   link: string | null;

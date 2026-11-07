@@ -576,10 +576,10 @@ export interface PoPrintLine {
   boxes: number;
   baseUnit: 'LTR' | 'KG' | 'PC';
   baseUnitsPerBox: number;
-  /** Per base unit (litre, kg or piece), before GST. */
+  /** Per base unit (litre, kg or piece), GST included. */
   ratePaise: number;
-  /** Boxes × units per box × rate, before GST. */
-  taxablePaise: number;
+  /** Boxes × units per box × rate, GST included. */
+  totalPaise: number;
 }
 
 export interface PoPrintDto {

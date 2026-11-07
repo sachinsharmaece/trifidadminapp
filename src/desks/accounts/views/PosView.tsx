@@ -156,7 +156,7 @@ export function PoView() {
         <div>
           <div className="card">
             <h3 style={{ margin: '0 0 10px' }}>The document</h3>
-            <DocLines doc={p} kind="po" />
+            <DocLines doc={p} />
             <EditBlock
               kind="po"
               doc={p}

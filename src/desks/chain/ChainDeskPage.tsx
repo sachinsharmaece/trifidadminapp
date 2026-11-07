@@ -134,7 +134,7 @@ function CreateSoSection({ onCreated }: { onCreated: (soId: string) => void }) {
         />
         <Input
           id="cs-seller-net"
-          label="Seller net rate, per base unit (₹)"
+          label="Seller rate, per base unit (₹, GST included)"
           type="number"
           step="0.01"
           min="0"

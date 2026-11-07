@@ -35,18 +35,20 @@ const PRINT: PoPrintDto = {
       baseUnit: 'LTR',
       baseUnitsPerBox: 10.5,
       ratePaise: 1_000_000,
-      taxablePaise: 1_050_000_000,
+      totalPaise: 1_050_000_000,
     },
   ],
-  taxablePaise: 1_050_000_000,
+  // The rate includes GST (DEC-077): the total is rate × quantity, and the taxable value and GST
+  // are split out of it.
+  taxablePaise: 889_830_508,
   gst: {
     ratePercent: 18,
     kind: 'intra_state',
-    cgstPaise: 94_500_000,
-    sgstPaise: 94_500_000,
+    cgstPaise: 80_084_746,
+    sgstPaise: 80_084_746,
     igstPaise: 0,
   },
-  totalPaise: 1_239_000_000,
+  totalPaise: 1_050_000_000,
   dispatchBy: '2026-11-03T10:30:00.000Z',
   terms: [],
 };
@@ -65,12 +67,13 @@ describe('buildPoHtml', () => {
     expect(html).toContain('350 ML');
     // 100 boxes × 10.5 L, the rate per litre in rupees with Indian grouping, and the amount.
     expect(html).toContain('1,050 L');
+    expect(html).toContain('Rate (incl. GST)');
     expect(html).toContain('₹10,000.00 / L');
-    expect(html).toContain('₹1,05,00,000.00');
+    expect(html).toContain('₹1,05,00,000.00'); // the line amount, and the total
+    expect(html).toContain('₹88,98,305.08'); // taxable value
     expect(html).toContain('CGST @ 9%');
     expect(html).toContain('SGST @ 9%');
     expect(html).not.toContain('IGST');
-    expect(html).toContain('₹1,23,90,000.00');
     expect(html).toContain('Due by');
   });
 
@@ -82,7 +85,7 @@ describe('buildPoHtml', () => {
         kind: 'inter_state',
         cgstPaise: 0,
         sgstPaise: 0,
-        igstPaise: 189_000_000,
+        igstPaise: 160_169_492,
       },
     });
     expect(html).toContain('IGST @ 18%');

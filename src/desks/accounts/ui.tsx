@@ -198,8 +198,8 @@ export const LogTable = ({ rows }: { rows: AccountsLogEntry[] }) => (
   </div>
 );
 
-/** An SO's rate includes GST (DEC-045); a PO's rate is taxable with GST on top. */
-export function DocLines({ doc, kind }: { doc: AccountsSo | AccountsPo; kind: 'so' | 'po' }) {
+/** An SO's rate and a PO's rate both include GST (DEC-045, DEC-077). */
+export function DocLines({ doc }: { doc: AccountsSo | AccountsPo }) {
   const { m } = useAccounts();
   return (
     <div className="tablewrap">
@@ -208,8 +208,8 @@ export function DocLines({ doc, kind }: { doc: AccountsSo | AccountsPo; kind: 's
           <tr>
             <th>Item</th>
             <th className="num">Qty</th>
-            <th className="num">{kind === 'so' ? 'Rate (incl. GST)' : 'Rate'}</th>
-            <th className="num">{kind === 'so' ? 'Value (incl. GST)' : 'Value'}</th>
+            <th className="num">Rate (incl. GST)</th>
+            <th className="num">Value (incl. GST)</th>
           </tr>
         </thead>
         <tbody>

@@ -47,7 +47,7 @@ export const devNotes = {
   },
   admin_margin_matrix: {
     purpose:
-      'The twelve margin numbers — how much TriFid adds on top of landed cost for each product class (High, Medium, Low) and each type of client (Retailer, Dealer, Distributor, Trader). Change any of them, pick the date they start applying, and save.',
+      'The twelve margin numbers — how much TriFid adds on top of the quoted seller rate (GST included, none added on top) for each product class (High, Medium, Low) and each type of client (Retailer, Dealer, Distributor, Trader). Change any of them, pick the date they start applying, and save.',
     tradeContext:
       'Orders already placed never change when a margin is edited; only orders from the chosen date onward use the new numbers. Until all twelve are entered, the system will not price an order for a missing combination.',
   },

@@ -75,7 +75,7 @@ export function buildPoHtml(po: PoPrintDto): string {
         <td class="num">${plainNumber(line.boxes)}</td>
         <td class="num">${plainNumber(quantity)} ${escapeHtml(unit)}</td>
         <td class="num">${escapeHtml(formatRupees(line.ratePaise))} / ${escapeHtml(unit)}</td>
-        <td class="num">${escapeHtml(formatRupees(line.taxablePaise))}</td>
+        <td class="num">${escapeHtml(formatRupees(line.totalPaise))}</td>
       </tr>`;
     })
     .join('');
@@ -131,7 +131,7 @@ export function buildPoHtml(po: PoPrintDto): string {
     <thead>
       <tr>
         <th class="num">#</th><th>Product</th><th>Pack</th><th class="num">Boxes</th>
-        <th class="num">Quantity</th><th class="num">Rate (ex-GST)</th><th class="num">Amount</th>
+        <th class="num">Quantity</th><th class="num">Rate (incl. GST)</th><th class="num">Amount (incl. GST)</th>
       </tr>
     </thead>
     <tbody>${rows}</tbody>

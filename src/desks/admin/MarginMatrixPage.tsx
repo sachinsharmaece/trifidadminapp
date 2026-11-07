@@ -170,8 +170,9 @@ function MatrixEditor({
   return (
     <Card>
       <p className="mb-4 text-sm text-slate-500">
-        Margin % added on landed cost, by product class (rows) and client type (columns). Changes
-        apply to future orders only — orders already placed keep the margin they were priced with.
+        Margin % added on the seller&apos;s quoted rate (GST included — nothing is added on top), by
+        product class (rows) and client type (columns). Changes apply to future orders only — orders
+        already placed keep the margin they were priced with.
       </p>
       {unsetCount > 0 && (
         <p

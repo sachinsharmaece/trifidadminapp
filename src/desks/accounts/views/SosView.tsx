@@ -162,7 +162,7 @@ export function SoView() {
         <div>
           <div className="card">
             <h3 style={{ margin: '0 0 10px' }}>The document</h3>
-            <DocLines doc={s} kind="so" />
+            <DocLines doc={s} />
             <EditBlock
               kind="so"
               doc={s}

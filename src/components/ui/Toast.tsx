@@ -5,6 +5,8 @@ import { FiX } from 'react-icons/fi';
 
 interface ToastOptions {
   undo?: () => void;
+  /** How long it stays up. A toast that asks for attention (a stuck confirmation) needs longer than 2.5 s. */
+  durationMs?: number;
 }
 
 interface ToastState {
@@ -40,7 +42,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     setToast({ message, undo: opts?.undo });
     timeoutRef.current = setTimeout(
       () => setToast(null),
-      opts?.undo ? UNDO_DURATION_MS : DEFAULT_DURATION_MS,
+      opts?.durationMs ?? (opts?.undo ? UNDO_DURATION_MS : DEFAULT_DURATION_MS),
     );
   }, []);
 

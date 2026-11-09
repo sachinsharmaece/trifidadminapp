@@ -4,32 +4,73 @@ import { FiBell } from 'react-icons/fi';
 import { listNotices, markAllNoticesRead, markNoticeRead, type StaffNotice } from '../api/notices';
 import { useAuth } from '../auth/AuthContext';
 import { timeAgo } from '../lib/timeAgo';
+import { useOptionalToast } from './ui/Toast';
 
 const POLL_MS = 60_000;
+// Long enough to read and act on: a toast here says something is waiting on the person.
+const NEW_NOTICE_TOAST_MS = 8000;
+
+/**
+ * The notices each person has already been told about in this tab. One list for every bell on
+ * purpose: the shell mounts one in the sidebar and another in the phone top bar at the same time,
+ * and a notice must toast once, not twice. A person's first load only records what is already
+ * there, so signing in never toasts old notices.
+ */
+const toldAbout = new Map<string, Set<string>>();
+
+/** Unread notices that have arrived since this person's last load, newest first. */
+function arrivedSinceLastLoad(employeeId: string, items: StaffNotice[]): StaffNotice[] {
+  const known = toldAbout.get(employeeId);
+  if (!known) {
+    toldAbout.set(employeeId, new Set(items.map((notice) => notice.noticeId)));
+    return [];
+  }
+  const arrived = items.filter((notice) => !notice.read && !known.has(notice.noticeId));
+  for (const notice of items) known.add(notice.noticeId);
+  return arrived;
+}
 
 /**
  * Phase 6 — the bell: this staff member's own notices (a push received,
- * approved, rejected). Best-effort — if it fails to load it shows nothing
- * and never blocks the shell.
+ * approved, rejected, a confirmation stuck). Best-effort — if it fails to
+ * load it shows nothing and never blocks the shell. A notice that arrives
+ * while the app is open also pops up as a toast.
  */
 export function NoticeBell() {
   const { callApi, me } = useAuth();
   const navigate = useNavigate();
+  const toast = useOptionalToast();
   const [items, setItems] = useState<StaffNotice[]>([]);
   const [unread, setUnread] = useState(0);
   const [open, setOpen] = useState(false);
   const panel = useRef<HTMLDivElement>(null);
   const isStaff = me?.actorType === 'staff';
+  const employeeId = me?.employeeId;
+  // Kept in a ref so a toast showing (which re-renders the provider) does not restart the polling.
+  const showToast = useRef(toast?.show);
+  useEffect(() => {
+    showToast.current = toast?.show;
+  }, [toast]);
 
   const load = useCallback(async () => {
     try {
       const result = await callApi((token) => listNotices(token));
       setItems(result.items);
       setUnread(result.unread);
+      if (employeeId) {
+        const arrived = arrivedSinceLastLoad(employeeId, result.items);
+        const newest = arrived[0];
+        if (newest) {
+          showToast.current?.(
+            arrived.length === 1 ? newest.title : `${arrived.length} new notices: ${newest.title}`,
+            { durationMs: NEW_NOTICE_TOAST_MS },
+          );
+        }
+      }
     } catch {
       // A bell that cannot load stays quiet.
     }
-  }, [callApi]);
+  }, [callApi, employeeId]);
 
   useEffect(() => {
     if (!isStaff) return;

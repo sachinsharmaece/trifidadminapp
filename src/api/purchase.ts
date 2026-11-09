@@ -452,6 +452,32 @@ export function getPilesAwaitingDecision(accessToken: string): Promise<PileAwait
   return apiFetch('/staff/purchase/piles', { accessToken });
 }
 
+/**
+ * A pile the seller (or Purchase on his behalf) confirmed, but the buyers have not been given their
+ * deal. The server retries it every 5 minutes for 24 hours; after that it needs a decision.
+ */
+export interface PileNotCompletedItem {
+  pileId: string;
+  sellerId: string;
+  sellerFirm: string;
+  packLabel: string;
+  brand: string;
+  boxes: number;
+  buyers: number;
+  confirmedAt: string;
+  minutesSinceConfirmed: number;
+  /** The last error a retry hit; null before the first retry. */
+  lastError: string | null;
+  /** False once it is past its 24 hours and no longer retried. */
+  retrying: boolean;
+}
+
+export function getPilesConfirmedNotCompleted(
+  accessToken: string,
+): Promise<PileNotCompletedItem[]> {
+  return apiFetch('/staff/purchase/piles/not-completed', { accessToken });
+}
+
 export function postPileChase(accessToken: string, pileId: string): Promise<{ logged: true }> {
   return apiFetch(`/staff/purchase/piles/${pileId}/chase`, { method: 'POST', accessToken });
 }
@@ -576,10 +602,10 @@ export interface PoPrintLine {
   boxes: number;
   baseUnit: 'LTR' | 'KG' | 'PC';
   baseUnitsPerBox: number;
-  /** Per base unit (litre, kg or piece), before GST. */
+  /** Per base unit (litre, kg or piece), GST included. */
   ratePaise: number;
-  /** Boxes × units per box × rate, before GST. */
-  taxablePaise: number;
+  /** Boxes × units per box × rate, GST included. */
+  totalPaise: number;
 }
 
 export interface PoPrintDto {

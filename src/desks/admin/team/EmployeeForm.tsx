@@ -43,8 +43,13 @@ const POSITION_OPTIONS: Array<{ key: Position; label: string }> = [
   { key: 'SALES_LEADER', label: 'Sales Leader' },
   { key: 'PURCHASE_LEADER', label: 'Purchase Leader' },
   { key: 'SALES_EXEC', label: 'Sales Executive' },
+  { key: 'SR_SALES_EXEC', label: 'Sr. Sales Executive' },
   { key: 'PURCHASE_EXEC', label: 'Purchase Executive' },
 ];
+
+/** A Sales Executive or Sr. Sales Executive: sits in a Sales team and makes the calls. */
+const isSalesCaller = (positions: Position[]): boolean =>
+  positions.includes('SALES_EXEC') || positions.includes('SR_SALES_EXEC');
 
 const ROLE_LABEL: Record<string, string> = {
   purchase: 'Purchase',
@@ -67,6 +72,7 @@ const EDUCATION_OPTIONS: Array<{ value: EducationLevel; label: string }> = [
 const POSITION_ROLE: Record<Position, string> = {
   SALES_LEADER: 'sales',
   SALES_EXEC: 'sales',
+  SR_SALES_EXEC: 'sales',
   PURCHASE_LEADER: 'purchase',
   PURCHASE_EXEC: 'purchase',
 };
@@ -82,6 +88,7 @@ interface FormState {
   reportsToPurchaseLeaderId: string;
   worksForTeamLeaderIds: string[];
   worksForAllTeams: boolean;
+  receivingLeads: boolean;
   laneKeys: string[];
   dob: string;
   pan: string;
@@ -111,6 +118,7 @@ const EMPTY: FormState = {
   reportsToPurchaseLeaderId: '',
   worksForTeamLeaderIds: [],
   worksForAllTeams: false,
+  receivingLeads: true,
   laneKeys: [],
   dob: '',
   pan: '',
@@ -143,6 +151,7 @@ function fromDetail(detail: EmployeeDetail): FormState {
     reportsToPurchaseLeaderId: self(detail.reportsToPurchaseLeader),
     worksForTeamLeaderIds: detail.worksForTeams.map((t) => t.employeeId),
     worksForAllTeams: detail.worksForAllTeams,
+    receivingLeads: detail.receivingLeads ?? true,
     dob: detail.hr?.dob ?? '',
     fatherName: detail.hr?.fatherName ?? '',
     fatherMobile: detail.hr?.fatherMobile ?? '',
@@ -196,7 +205,7 @@ function checkLocally(
   if (mode === 'create' && form.password.length < 8)
     errors.password = 'Enter a password of at least 8 characters.';
   const positions = withImplied(form.positions);
-  if (positions.includes('SALES_EXEC') && !form.reportsToSalesLeaderId) {
+  if (isSalesCaller(positions) && !form.reportsToSalesLeaderId) {
     errors.reportsToSalesLeaderId = 'Pick the Sales Leader this person reports to.';
   }
   if (
@@ -258,15 +267,14 @@ function toInput(form: FormState, withHr: boolean): EmployeeInput {
     mobile: normalizeMobile(form.mobile),
     roleKeys: form.roleKeys,
     positions,
-    reportsToSalesLeaderId: positions.includes('SALES_EXEC')
-      ? form.reportsToSalesLeaderId || null
-      : null,
+    reportsToSalesLeaderId: isSalesCaller(positions) ? form.reportsToSalesLeaderId || null : null,
     reportsToPurchaseLeaderId:
       positions.includes('PURCHASE_EXEC') && !purchaseReportsToAdmin(positions)
         ? form.reportsToPurchaseLeaderId || null
         : null,
     worksForTeamLeaderIds: form.worksForAllTeams ? [] : form.worksForTeamLeaderIds,
     worksForAllTeams: form.worksForAllTeams,
+    receivingLeads: form.receivingLeads,
     ...(withHr ? { hr: hrInput(form) } : {}),
   };
 }
@@ -766,7 +774,17 @@ export function EmployeeForm({
           })}
           <FieldError message={errors.positions} />
         </div>
-        {positions.includes('SALES_EXEC') && leaderSelect('sales', salesLeaders, 'SALES_LEADER')}
+        {isSalesCaller(positions) && leaderSelect('sales', salesLeaders, 'SALES_LEADER')}
+        {isSalesCaller(positions) && (
+          <div className="col-span-full">
+            <Check
+              label="Receiving leads"
+              checked={form.receivingLeads}
+              hint="Switch off while he is on leave: new leads skip him, what he holds stays with him."
+              onChange={() => set('receivingLeads', !form.receivingLeads)}
+            />
+          </div>
+        )}
         {positions.includes('PURCHASE_EXEC') &&
           (purchaseReportsToAdmin(positions) ? (
             <p className="self-end rounded-md bg-slate-50 px-3 py-2 text-sm text-slate-600">

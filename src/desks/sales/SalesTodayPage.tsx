@@ -13,6 +13,7 @@ import { Input } from '../../components/ui/Input';
 import { Button } from '../../components/ui/Button';
 import { formatDateTime } from '../../lib/dates';
 import { ShortPilesSection } from './ShortPilesSection';
+import { ClocksGroup } from '../../components/holding/ClocksGroup';
 
 const BUCKET_ORDER: SalesWorkItem['bucket'][] = ['money', 'promised', 'he_asked', 'market'];
 
@@ -54,6 +55,7 @@ export function SalesTodayPage() {
 
   return (
     <div className="flex flex-col gap-6">
+      <ClocksGroup />
       <ShortPilesSection />
       <AsyncBoundary
         state={worklistState}

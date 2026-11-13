@@ -69,6 +69,11 @@ const NAV_ITEMS: NavItem[] = [
         label: 'Margin matrix',
         permission: PERMISSIONS.MARGIN_MATRIX_READ,
       },
+      {
+        to: '/manage/dormant-policy',
+        label: 'Dormant policy',
+        permission: PERMISSIONS.CONFIG_WRITE,
+      },
     ],
   },
   {

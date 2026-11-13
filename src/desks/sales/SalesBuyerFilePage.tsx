@@ -37,6 +37,7 @@ import { formatRupees } from '../../lib/labels';
 import { PileOffersTable } from './PileOfferActions';
 import { timeAgo, useMinuteClock } from '../../lib/timeAgo';
 import { formatDate, formatDateTime } from '../../lib/dates';
+import { isPlaceholderMobile } from '../../lib/validators';
 
 function humanize(value: string): string {
   return value.replace(/_/g, ' ');
@@ -87,7 +88,9 @@ export function SalesBuyerFilePage() {
               <div>
                 <h2 className="text-lg font-semibold text-slate-900">{file.firm}</h2>
                 <p className="text-sm text-slate-500">
-                  <span className="font-mono">{file.mobile}</span>
+                  <span className="font-mono">
+                    {isPlaceholderMobile(file.mobile) ? 'No mobile' : file.mobile}
+                  </span>
                   {file.gstin && (
                     <>
                       {' · '}

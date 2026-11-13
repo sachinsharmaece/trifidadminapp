@@ -28,6 +28,9 @@ import { Button } from '../../components/ui/Button';
 import { Modal } from '../../components/ui/Modal';
 import { formatDate, formatDateTime } from '../../lib/dates';
 import { timeAgo, useMinuteClock } from '../../lib/timeAgo';
+import { useHoldingStatus } from '../../lib/useHoldingStatus';
+import { PoolTab } from '../../components/holding/PoolTab';
+import { KIND_LABEL, clockText } from '../../components/holding/holdingFormat';
 
 type BookQueueTab = 'book' | 'queue';
 type Tab = BookQueueTab | 'waiting';
@@ -54,6 +57,8 @@ type BuyerListParams = ReturnType<typeof useListParams<keyof typeof BUYER_LIST_D
 export function SalesBuyersPage() {
   const navigate = useNavigate();
   const params = useListParams('salesBuyers', BUYER_LIST_DEFAULTS);
+  // LOCK-34 — with the holding rules on, the Queue tab becomes the Pool.
+  const holding = useHoldingStatus();
   if (params.restoring) return null;
   const tab = (TABS as readonly string[]).includes(params.values.tab)
     ? (params.values.tab as Tab)
@@ -84,7 +89,7 @@ export function SalesBuyersPage() {
           size="sm"
           onClick={() => setTab('queue')}
         >
-          Queue
+          {holding.enabled ? 'Pool' : 'Queue'}
         </Button>
         <Button
           variant={tab === 'waiting' ? 'primary' : 'secondary'}
@@ -97,6 +102,8 @@ export function SalesBuyersPage() {
 
       {tab === 'waiting' ? (
         <WaitingTab />
+      ) : holding.enabled && tab === 'queue' ? (
+        <PoolTab status={holding} />
       ) : (
         // B-53 — `BuyerListTab` stays mounted across a Book/Queue switch and
         // only reacts via `tab` in its `useAsyncData` deps; a fetch already
@@ -453,10 +460,16 @@ function BuyerTable({
   onAssignToMe: (target: { buyerId: string; firm: string }) => void;
 }) {
   const now = useMinuteClock();
+  // LOCK-34 — with the holding rules on, each held buyer shows how he is held and his clock,
+  // and what has not been called yet comes first.
+  const showHolding = items.some((b) => b.holding);
   const filtered = useMemo(() => {
     const needle = q.trim().toLowerCase();
-    if (!needle) return items;
-    return items.filter((b) =>
+    const ordered = items.some((b) => b.holding)
+      ? [...items].sort((a, b) => Number(!!b.holding?.uncalled) - Number(!!a.holding?.uncalled))
+      : items;
+    if (!needle) return ordered;
+    return ordered.filter((b) =>
       [b.firm, b.contactName, b.mobile, b.gstin, b.pan, b.tehsil, b.district, b.ownerName].some(
         (field) => field?.toLowerCase().includes(needle),
       ),
@@ -484,6 +497,7 @@ function BuyerTable({
           <Th>Last called</Th>
           <Th numeric>Rate views</Th>
           <Th>Assigned to</Th>
+          {showHolding && <Th>Held as</Th>}
           <Th />
         </tr>
       </thead>
@@ -529,6 +543,27 @@ function BuyerTable({
               {b.rateViews}
             </Td>
             <Td>{b.ownerName ?? <Badge tone="warn">queue</Badge>}</Td>
+            {showHolding && (
+              <Td>
+                {b.holding ? (
+                  <div className="flex flex-col items-start gap-1">
+                    <span className="flex flex-wrap gap-1">
+                      <Badge tone="neutral" variant="chip">
+                        {KIND_LABEL[b.holding.kind]}
+                      </Badge>
+                      {b.holding.uncalled && <Badge tone="warn">Uncalled</Badge>}
+                    </span>
+                    <span className="text-xs text-slate-500">
+                      {b.holding.windowOpenedAt
+                        ? 'Giving a reason'
+                        : clockText(b.holding.clockEndsAt, b.holding.backlog, now)}
+                    </span>
+                  </div>
+                ) : (
+                  '—'
+                )}
+              </Td>
+            )}
             <Td>
               <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
                 {!b.ownerName && (

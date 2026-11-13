@@ -11,7 +11,7 @@ import type { BuyerProfileDto } from '../../api/dto';
 import { useAuth } from '../../auth/AuthContext';
 import { useAsyncData } from '../../lib/useAsyncData';
 import { useFormSubmit } from '../../lib/useFormSubmit';
-import { normalizeMobile } from '../../lib/validators';
+import { isPlaceholderMobile, normalizeMobile } from '../../lib/validators';
 import { AsyncBoundary } from '../AsyncBoundary';
 import { Card } from '../ui/Card';
 import { Badge } from '../ui/Badge';
@@ -57,10 +57,14 @@ export function BuyerDetailsCard({ buyerId, onSaved }: { buyerId: string; onSave
               <dd>{profile.ownerName ?? '—'}</dd>
               <dt className="text-slate-500">Mobile</dt>
               <dd>
-                {profile.contactMobile ?? '—'}
-                {!profile.loginMobile && profile.contactMobile && (
-                  <span className="text-xs text-slate-500"> (shared — no app login)</span>
-                )}
+                {isPlaceholderMobile(profile.contactMobile)
+                  ? 'No mobile'
+                  : (profile.contactMobile ?? '—')}
+                {!profile.loginMobile &&
+                  profile.contactMobile &&
+                  !isPlaceholderMobile(profile.contactMobile) && (
+                    <span className="text-xs text-slate-500"> (shared — no app login)</span>
+                  )}
               </dd>
               <dt className="text-slate-500">GSTIN</dt>
               <dd className="font-mono">

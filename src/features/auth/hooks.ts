@@ -1,6 +1,6 @@
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { currentUserKey, queryClient } from '@/services/query/queryClient';
-import { fetchCurrentUser, login, logout } from './api';
+import { changePassword, fetchCurrentUser, login, logout } from './api';
 
 /** The signed-in user: `undefined` while loading, `null` when signed out. */
 export function useCurrentUser() {
@@ -15,6 +15,15 @@ export function useLogin() {
     mutationFn: (credentials: { email: string; password: string }) =>
       login(credentials.email, credentials.password),
     // Saving the user is what makes the app switch from the login page to the dashboard.
+    onSuccess: (user) => queryClient.setQueryData(currentUserKey, user),
+  });
+}
+
+export function useChangePassword() {
+  return useMutation({
+    mutationFn: (passwords: { currentPassword: string; newPassword: string }) =>
+      changePassword(passwords.currentPassword, passwords.newPassword),
+    // The returned user has mustChangePassword = false, so the rest of the app opens up.
     onSuccess: (user) => queryClient.setQueryData(currentUserKey, user),
   });
 }

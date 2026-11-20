@@ -29,6 +29,8 @@ Full commands, layout and recipes: `README.md`.
   the API omits hidden fields.
 - Sign-in lives in `features/auth/` (`api.ts`, `hooks.ts`, `RequireAuth.tsx`, `UserMenu.tsx`). "Who is signed in" is the
   TanStack Query entry `['me']`; `null` means signed out. Pages that need a user go inside `RequireAuth` in the router.
-- Not yet built: role-based menus, MFA, change password.
+- Staff management lives in `features/staff/`; the page is `pages/staff/StaffPage.tsx`. A menu entry can be limited to
+  roles with `roles: [...]` in `app/navigation.ts` (only hides the link; the API is what enforces access).
+- Not yet built: MFA, other role-specific screens.
 - Do not add: Redux, Zustand, React Hook Form, TanStack Table, analytics, auth/PDF libraries, paid UI kits
   (unless the task says so).

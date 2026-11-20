@@ -9,6 +9,8 @@ const userSchema = z.object({
   email: z.string(),
   name: z.string(),
   role: z.enum(ROLES),
+  /** true while the person is still on a temporary password. */
+  mustChangePassword: z.boolean(),
 });
 const userResponseSchema = z.object({ user: userSchema });
 
@@ -17,6 +19,18 @@ export type CurrentUser = z.infer<typeof userSchema>;
 /** POST /auth/login. On success the server also sets the session cookie. */
 export async function login(email: string, password: string): Promise<CurrentUser> {
   const { data } = await apiClient.post<unknown>('/auth/login', { email, password });
+  return userResponseSchema.parse(data).user;
+}
+
+/** POST /auth/password. The server ends every other session and sends a fresh cookie. */
+export async function changePassword(
+  currentPassword: string,
+  newPassword: string,
+): Promise<CurrentUser> {
+  const { data } = await apiClient.post<unknown>('/auth/password', {
+    currentPassword,
+    newPassword,
+  });
   return userResponseSchema.parse(data).user;
 }
 

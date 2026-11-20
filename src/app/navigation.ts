@@ -6,4 +6,5 @@ import type { MenuItem } from '@/types/navigation';
  */
 export const NAV_ITEMS: readonly MenuItem[] = [
   { label: 'Dashboard', path: '/', icon: 'dashboard' },
+  { label: 'Staff', path: '/staff', icon: 'users', roles: ['FOUNDER', 'ADMIN'] },
 ];

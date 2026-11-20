@@ -56,8 +56,8 @@ src/
     molecules/    FormField, SearchInput, PasswordField, Pagination, ErrorState, PageSpinner
     organisms/    Header, Sidebar, NavigationMenu, DataTableToolbar
     templates/    AuthLayout, DashboardLayout, PageLayout
-  pages/        Thin screens: LoginPage, DashboardPage, NotFoundPage, RouteErrorPage
-  features/     Business modules, one folder each (auth today)
+  pages/        Thin screens: LoginPage, ChangePasswordPage, StaffPage, DashboardPage, NotFoundPage, RouteErrorPage
+  features/     Business modules, one folder each (auth, staff today)
   services/     api/ (Axios client, ApiError, error envelope, system status)  query/ (QueryClient)
   schemas/      UI-only form validation (Zod)
   hooks/ lib/ utils/ types/ assets/ styles/
@@ -77,6 +77,15 @@ Rules of thumb:
 saved in the query cache (`['me']`). `RequireAuth` (in `router.tsx`) sends anyone else to `/login`; `UserMenu` in the
 header shows the name and the Sign out button. If any call later answers 401 `UNAUTHENTICATED` (session timed out), the
 user is forgotten and the login page appears.
+
+A person on a temporary password (new account or reset) is sent to `/change-password` and cannot open anything else until
+they choose their own. Anyone can open the same page later from "Change password" in the header.
+
+## Staff (features/staff)
+
+`/staff` (menu entry shown to Founder and Admin) lists staff and lets them add a person, change a role, turn an account
+off or on, and reset a password. The server makes up a temporary password and returns it once; the page shows it in a
+yellow box to hand over privately. The API enforces who may do what; the page only hides what would be refused.
 
 ## Recipes
 
@@ -98,4 +107,4 @@ and parses the result with a Zod schema.
 
 ## Not built yet (on purpose)
 
-Role-based menus, MFA, change password, and all business modules.
+MFA and all business modules (masters, parties, orders, …).

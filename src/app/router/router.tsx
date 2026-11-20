@@ -1,7 +1,9 @@
 import { createBrowserRouter } from 'react-router';
 import { RequireAuth } from '@/features/auth/RequireAuth';
+import { ChangePasswordPage } from '@/pages/auth/ChangePasswordPage';
 import { LoginPage } from '@/pages/auth/LoginPage';
 import { DashboardPage } from '@/pages/dashboard/DashboardPage';
+import { StaffPage } from '@/pages/staff/StaffPage';
 import { NotFoundPage } from '@/pages/NotFoundPage';
 import { RouteErrorPage } from '@/pages/RouteErrorPage';
 import { AppShell } from './AppShell';
@@ -17,6 +19,8 @@ export const router = createBrowserRouter([
         // Everything below needs a signed-in user; anyone else is sent to /login.
         element: <RequireAuth />,
         children: [
+          // Outside the app frame, so a person on a temporary password sees only this page.
+          { path: '/change-password', element: <ChangePasswordPage /> },
           {
             element: <AppShell />,
             children: [
@@ -25,6 +29,7 @@ export const router = createBrowserRouter([
                 errorElement: <RouteErrorPage />,
                 children: [
                   { index: true, element: <DashboardPage /> },
+                  { path: '/staff', element: <StaffPage /> },
                   { path: '*', element: <NotFoundPage /> },
                 ],
               },

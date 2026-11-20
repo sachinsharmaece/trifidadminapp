@@ -4,4 +4,4 @@ One folder per business module (for example `orders/`, `accounts/`). Each module
 components, API calls (`api.ts`), TanStack Query hooks and Zod schemas for the data it reads.
 
 Today: `auth/` (sign-in, route guard, user menu, change password), `staff/` (staff accounts), and the masters:
-`manufacturers/`, `technicals/`, `hsnCodes/` and `products/` (products with their packs).
+`company/`, `manufacturers/`, `technicals/`, `hsnCodes/`, `products/` (products with their packs), `tehsils/` and `reasonCodes/`.

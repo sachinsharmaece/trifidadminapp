@@ -56,8 +56,8 @@ src/
     molecules/    FormField, SearchInput, PasswordField, Pagination, ErrorState, ErrorAlert, PageSpinner
     organisms/    Header, Sidebar, NavigationMenu, DataTableToolbar
     templates/    AuthLayout, DashboardLayout, PageLayout
-  pages/        Thin screens: login, staff, masters/ (manufacturers, technicals, HSN codes), products/, dashboard
-  features/     Business modules, one folder each (auth, staff, manufacturers, technicals, hsnCodes, products)
+  pages/        Thin screens: login, staff, masters/ (company, manufacturers, technicals, HSN codes, tehsils, reason codes), products/, dashboard
+  features/     Business modules, one folder each (auth, staff, company, manufacturers, technicals, hsnCodes, products, tehsils, reasonCodes)
   services/     api/ (Axios client, ApiError, error envelope, system status)  query/ (QueryClient)
   schemas/      UI-only form validation (Zod)
   hooks/ lib/ utils/ types/ assets/ styles/
@@ -87,12 +87,13 @@ they choose their own. Anyone can open the same page later from "Change password
 off or on, and reset a password. The server makes up a temporary password and returns it once; the page shows it in a
 yellow box to hand over privately. The API enforces who may do what; the page only hides what would be refused.
 
-## Masters (features/manufacturers, technicals, hsnCodes, products)
+## Masters (features/manufacturers, technicals, hsnCodes, products, tehsils, reasonCodes, company)
 
-Menu: Products, Manufacturers, Technicals, HSN codes. Everyone can look; the add / edit / turn-off buttons show only to
+Menu: Products, Manufacturers, Technicals, HSN codes, Tehsils, Reason codes, Company. Everyone can look; the add / edit / turn-off buttons show only to
 Founder and Admin (`useCanEditMasters()`; the API enforces it too). Each feature folder has the same shape: `api.ts`
-(Zod-parsed calls), `hooks.ts` (TanStack Query), a form and a table. The three small masters load their whole list and
-search it in the browser; **Products** is searched and paged by the server (`/products?q&page`).
+(Zod-parsed calls), `hooks.ts` (TanStack Query), a form and a table. The small masters (manufacturers, technicals, HSN
+codes, reason codes) load their whole list and search it in the browser; **Products** and **Tehsils** (thousands of
+rows) are searched and paged by the server (`?q&page`).
 
 - A form is checked with a function from `schemas/` (`checkForm` gives either clean data or one message per field).
   GST is typed as a percentage ("18", "2.5") and sent as basis points (1800, 250): see `percentToBp` in `schemas/fields.ts`.
@@ -100,6 +101,14 @@ search it in the browser; **Products** is searched and paged by the server (`/pr
 - `/products/new` creates a product with its first pack(s) in one request. `/products/:id` shows the details and the packs
   (add, edit, turn off). Picking an HSN code fills in its GST rate; the person can still change it for that product.
 - Products store ids; `useProductLookups()` loads the three lists so screens can show names.
+- **Tehsils**: the pincodes are typed in one box, separated by spaces, commas or new lines; each must be 6 digits.
+  Search accepts a pincode or part of the state / district / tehsil name.
+- **Company** (`/company`): one form, not a table. Founder and Admin edit it; everyone else sees a read-only summary.
+  The bank account number box is always empty: the server never sends the saved number, only its last 4 digits (shown
+  as `•••• •••• 4321`). Leave it empty to keep the saved number, or type a new one to replace it. The GSTIN is checked
+  with the same check-character rule as the server (`schemas/ids.ts`), ready for the buyer and seller forms later.
+- **Reason codes**: the "Used for" choice starts empty on purpose (no default context) and, with the code, is locked
+  after the reason is created. The filter above the table narrows the list to one context.
 
 ## Recipes
 
@@ -121,4 +130,4 @@ and parses the result with a Zod schema.
 
 ## Not built yet (on purpose)
 
-MFA, company profile, tehsils, reason codes, margin matrix, and the business modules after masters (parties, orders, …).
+MFA, margin matrix, and the business modules after masters (parties, orders, …).

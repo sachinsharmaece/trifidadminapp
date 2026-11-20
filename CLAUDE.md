@@ -31,9 +31,11 @@ Full commands, layout and recipes: `README.md`.
   TanStack Query entry `['me']`; `null` means signed out. Pages that need a user go inside `RequireAuth` in the router.
 - Staff management lives in `features/staff/`; the page is `pages/staff/StaffPage.tsx`. A menu entry can be limited to
   roles with `roles: [...]` in `app/navigation.ts` (only hides the link; the API is what enforces access).
-- Masters live in `features/manufacturers|technicals|hsnCodes|products/` with pages in `pages/masters/` and
+- Masters live in `features/company|manufacturers|technicals|hsnCodes|products|tehsils|reasonCodes/` with pages in `pages/masters/` and
   `pages/products/`. Hide edit buttons with `useCanEditMasters()` (the API is what enforces it). Forms are validated with
   `checkForm(schema, values)` from `schemas/fields.ts`; GST is typed as percent and sent as basis points.
-- Not yet built: MFA, company profile, tehsils, reason codes, margin matrix, other role-specific screens.
+- The bank account number is never in the browser: the form's number box starts empty and the API returns only the last
+  4 digits (`maskedAccount()` in `utils/format.ts`).
+- Not yet built: MFA, margin matrix, other role-specific screens.
 - Do not add: Redux, Zustand, React Hook Form, TanStack Table, analytics, auth/PDF libraries, paid UI kits
   (unless the task says so).

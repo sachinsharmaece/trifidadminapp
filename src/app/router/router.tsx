@@ -3,9 +3,12 @@ import { RequireAuth } from '@/features/auth/RequireAuth';
 import { ChangePasswordPage } from '@/pages/auth/ChangePasswordPage';
 import { LoginPage } from '@/pages/auth/LoginPage';
 import { DashboardPage } from '@/pages/dashboard/DashboardPage';
+import { CompanyPage } from '@/pages/masters/CompanyPage';
 import { HsnCodesPage } from '@/pages/masters/HsnCodesPage';
 import { ManufacturersPage } from '@/pages/masters/ManufacturersPage';
+import { ReasonCodesPage } from '@/pages/masters/ReasonCodesPage';
 import { TechnicalsPage } from '@/pages/masters/TechnicalsPage';
+import { TehsilsPage } from '@/pages/masters/TehsilsPage';
 import { NewProductPage } from '@/pages/products/NewProductPage';
 import { ProductPage } from '@/pages/products/ProductPage';
 import { ProductsPage } from '@/pages/products/ProductsPage';
@@ -41,6 +44,9 @@ export const router = createBrowserRouter([
                   { path: '/manufacturers', element: <ManufacturersPage /> },
                   { path: '/technicals', element: <TechnicalsPage /> },
                   { path: '/hsn-codes', element: <HsnCodesPage /> },
+                  { path: '/tehsils', element: <TehsilsPage /> },
+                  { path: '/reason-codes', element: <ReasonCodesPage /> },
+                  { path: '/company', element: <CompanyPage /> },
                   { path: '/staff', element: <StaffPage /> },
                   { path: '*', element: <NotFoundPage /> },
                 ],

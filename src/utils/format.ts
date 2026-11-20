@@ -11,6 +11,11 @@ export function formatDate(isoDate: string): string {
   }).format(date);
 }
 
+/** A bank account number hidden except its last 4 digits: "4321" -> "•••• •••• 4321". */
+export function maskedAccount(last4: string): string {
+  return `•••• •••• ${last4}`;
+}
+
 /** Basis points as a plain number of percent: 1800 -> "18", 250 -> "2.5". */
 export function bpToPercentText(basisPoints: number): string {
   return String(basisPoints / 100);

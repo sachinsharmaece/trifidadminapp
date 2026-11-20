@@ -11,5 +11,8 @@ export const NAV_ITEMS: readonly MenuItem[] = [
   { label: 'Manufacturers', path: '/manufacturers', icon: 'briefcase' },
   { label: 'Technicals', path: '/technicals', icon: 'droplet' },
   { label: 'HSN codes', path: '/hsn-codes', icon: 'tag' },
+  { label: 'Tehsils', path: '/tehsils', icon: 'map-pin' },
+  { label: 'Reason codes', path: '/reason-codes', icon: 'list' },
+  { label: 'Company', path: '/company', icon: 'building' },
   { label: 'Staff', path: '/staff', icon: 'users', roles: ['FOUNDER', 'ADMIN'] },
 ];

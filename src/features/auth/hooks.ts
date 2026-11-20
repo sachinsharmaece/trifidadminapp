@@ -10,6 +10,15 @@ export function useCurrentUser() {
   });
 }
 
+/**
+ * Whether the signed-in person may add or change products, manufacturers, technicals and HSN codes.
+ * It only hides the buttons: the server enforces the same rule (modules/masters/permissions.ts).
+ */
+export function useCanEditMasters(): boolean {
+  const { data: me } = useCurrentUser();
+  return me?.role === 'FOUNDER' || me?.role === 'ADMIN';
+}
+
 export function useLogin() {
   return useMutation({
     mutationFn: (credentials: { email: string; password: string }) =>

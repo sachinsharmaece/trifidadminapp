@@ -52,12 +52,12 @@ taken, Vite silently moves to 5174 and every API call is then blocked by CORS (t
 src/
   app/          App.tsx, providers/ (QueryClient, error boundary), router/ (routes + AppShell), navigation.ts (menu)
   components/   UI only. Knows nothing about the business.
-    atoms/        Button, Input, Label, Badge, Spinner, Icon
-    molecules/    FormField, SearchInput, PasswordField, Pagination, ErrorState, PageSpinner
+    atoms/        Button, Input, Select, Label, Badge, ActiveBadge, Spinner, Icon
+    molecules/    FormField, SearchInput, PasswordField, Pagination, ErrorState, ErrorAlert, PageSpinner
     organisms/    Header, Sidebar, NavigationMenu, DataTableToolbar
     templates/    AuthLayout, DashboardLayout, PageLayout
-  pages/        Thin screens: LoginPage, ChangePasswordPage, StaffPage, DashboardPage, NotFoundPage, RouteErrorPage
-  features/     Business modules, one folder each (auth, staff today)
+  pages/        Thin screens: login, staff, masters/ (manufacturers, technicals, HSN codes), products/, dashboard
+  features/     Business modules, one folder each (auth, staff, manufacturers, technicals, hsnCodes, products)
   services/     api/ (Axios client, ApiError, error envelope, system status)  query/ (QueryClient)
   schemas/      UI-only form validation (Zod)
   hooks/ lib/ utils/ types/ assets/ styles/
@@ -87,6 +87,20 @@ they choose their own. Anyone can open the same page later from "Change password
 off or on, and reset a password. The server makes up a temporary password and returns it once; the page shows it in a
 yellow box to hand over privately. The API enforces who may do what; the page only hides what would be refused.
 
+## Masters (features/manufacturers, technicals, hsnCodes, products)
+
+Menu: Products, Manufacturers, Technicals, HSN codes. Everyone can look; the add / edit / turn-off buttons show only to
+Founder and Admin (`useCanEditMasters()`; the API enforces it too). Each feature folder has the same shape: `api.ts`
+(Zod-parsed calls), `hooks.ts` (TanStack Query), a form and a table. The three small masters load their whole list and
+search it in the browser; **Products** is searched and paged by the server (`/products?q&page`).
+
+- A form is checked with a function from `schemas/` (`checkForm` gives either clean data or one message per field).
+  GST is typed as a percentage ("18", "2.5") and sent as basis points (1800, 250): see `percentToBp` in `schemas/fields.ts`.
+- Add and edit share one form: pass the record to edit it, leave it out to add (`ManufacturerForm`, `TechnicalForm`, ...).
+- `/products/new` creates a product with its first pack(s) in one request. `/products/:id` shows the details and the packs
+  (add, edit, turn off). Picking an HSN code fills in its GST rate; the person can still change it for that product.
+- Products store ids; `useProductLookups()` loads the three lists so screens can show names.
+
 ## Recipes
 
 **Add a page**: create it in `pages/` (or `features/<name>/` if it belongs to a module), add a route in
@@ -107,4 +121,4 @@ and parses the result with a Zod schema.
 
 ## Not built yet (on purpose)
 
-MFA and all business modules (masters, parties, orders, …).
+MFA, company profile, tehsils, reason codes, margin matrix, and the business modules after masters (parties, orders, …).

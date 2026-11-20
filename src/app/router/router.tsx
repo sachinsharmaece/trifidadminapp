@@ -3,6 +3,12 @@ import { RequireAuth } from '@/features/auth/RequireAuth';
 import { ChangePasswordPage } from '@/pages/auth/ChangePasswordPage';
 import { LoginPage } from '@/pages/auth/LoginPage';
 import { DashboardPage } from '@/pages/dashboard/DashboardPage';
+import { HsnCodesPage } from '@/pages/masters/HsnCodesPage';
+import { ManufacturersPage } from '@/pages/masters/ManufacturersPage';
+import { TechnicalsPage } from '@/pages/masters/TechnicalsPage';
+import { NewProductPage } from '@/pages/products/NewProductPage';
+import { ProductPage } from '@/pages/products/ProductPage';
+import { ProductsPage } from '@/pages/products/ProductsPage';
 import { StaffPage } from '@/pages/staff/StaffPage';
 import { NotFoundPage } from '@/pages/NotFoundPage';
 import { RouteErrorPage } from '@/pages/RouteErrorPage';
@@ -29,6 +35,12 @@ export const router = createBrowserRouter([
                 errorElement: <RouteErrorPage />,
                 children: [
                   { index: true, element: <DashboardPage /> },
+                  { path: '/products', element: <ProductsPage /> },
+                  { path: '/products/new', element: <NewProductPage /> },
+                  { path: '/products/:id', element: <ProductPage /> },
+                  { path: '/manufacturers', element: <ManufacturersPage /> },
+                  { path: '/technicals', element: <TechnicalsPage /> },
+                  { path: '/hsn-codes', element: <HsnCodesPage /> },
                   { path: '/staff', element: <StaffPage /> },
                   { path: '*', element: <NotFoundPage /> },
                 ],

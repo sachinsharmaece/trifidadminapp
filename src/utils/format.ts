@@ -10,3 +10,13 @@ export function formatDate(isoDate: string): string {
     year: 'numeric',
   }).format(date);
 }
+
+/** Basis points as a plain number of percent: 1800 -> "18", 250 -> "2.5". */
+export function bpToPercentText(basisPoints: number): string {
+  return String(basisPoints / 100);
+}
+
+/** Basis points as a percentage for display: 1800 -> "18%". */
+export function formatPercent(basisPoints: number): string {
+  return `${bpToPercentText(basisPoints)}%`;
+}

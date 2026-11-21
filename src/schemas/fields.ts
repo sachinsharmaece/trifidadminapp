@@ -47,3 +47,34 @@ export const percentToBp = (message: string) =>
     .regex(/^\d{1,3}(\.\d{1,2})?$/, 'Use a number like 18 or 2.5')
     .transform((text) => Math.round(Number(text) * 100))
     .refine((basisPoints) => basisPoints <= 10_000, 'It cannot be more than 100%');
+
+/**
+ * An amount in rupees typed by a person ("600" or "599.50"), turned into whole paise (60000 or 59950) for the API.
+ * Up to two decimals. Done with text, not with decimals, so there is no rounding surprise.
+ */
+export const rupeesToPaise = (message: string, maxRupees: number) =>
+  z
+    .string()
+    .trim()
+    .min(1, message)
+    .regex(/^\d{1,9}(\.\d{1,2})?$/, 'Use an amount like 600 or 599.50')
+    .transform((text) => {
+      const [rupees = '0', paise = ''] = text.split('.');
+      return Number(rupees) * 100 + Number(paise.padEnd(2, '0'));
+    })
+    .refine(
+      (paise) => paise <= maxRupees * 100,
+      `It cannot be more than ₹${maxRupees.toLocaleString('en-IN')}`,
+    );
+
+/** A whole number typed by a person, between `min` and `max`. */
+export const wholeNumber = (message: string, min: number, max: number) =>
+  z
+    .string()
+    .trim()
+    .regex(/^\d+$/, message)
+    .transform(Number)
+    .refine(
+      (value) => value >= min && value <= max,
+      `Use a number from ${min.toLocaleString('en-IN')} to ${max.toLocaleString('en-IN')}`,
+    );

@@ -20,10 +20,11 @@ const productsKey = ['products'] as const;
 /** After any change, reload every product list and detail so the screens show what the server now has. */
 const reloadProducts = () => queryClient.invalidateQueries({ queryKey: productsKey });
 
-export function useProducts(params: ProductListParams) {
+export function useProducts(params: ProductListParams, enabled = true) {
   return useQuery({
     queryKey: [...productsKey, 'list', params],
     queryFn: ({ signal }) => listProducts(params, signal),
+    enabled,
     placeholderData: keepPreviousData, // keep showing the old page while the next one loads
   });
 }

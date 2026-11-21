@@ -3,6 +3,7 @@ import { RequireAuth } from '@/features/auth/RequireAuth';
 import { ChangePasswordPage } from '@/pages/auth/ChangePasswordPage';
 import { LoginPage } from '@/pages/auth/LoginPage';
 import { DashboardPage } from '@/pages/dashboard/DashboardPage';
+import { ListingsPage } from '@/pages/listings/ListingsPage';
 import { CompanyPage } from '@/pages/masters/CompanyPage';
 import { HsnCodesPage } from '@/pages/masters/HsnCodesPage';
 import { ManufacturersPage } from '@/pages/masters/ManufacturersPage';
@@ -42,6 +43,7 @@ export const router = createBrowserRouter([
                   { index: true, element: <DashboardPage /> },
                   { path: '/buyers', element: <BuyersPage /> },
                   { path: '/sellers', element: <SellersPage /> },
+                  { path: '/listings', element: <ListingsPage /> },
                   { path: '/products', element: <ProductsPage /> },
                   { path: '/products/new', element: <NewProductPage /> },
                   { path: '/products/:id', element: <ProductPage /> },

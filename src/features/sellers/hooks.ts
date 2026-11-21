@@ -13,10 +13,11 @@ const sellersKey = ['sellers'] as const;
 /** After any change, reload the list so the table shows what the server now has. */
 const reloadSellers = () => queryClient.invalidateQueries({ queryKey: sellersKey });
 
-export function useSellers(params: SellerListParams) {
+export function useSellers(params: SellerListParams, enabled = true) {
   return useQuery({
     queryKey: [...sellersKey, params],
     queryFn: ({ signal }) => listSellers(params, signal),
+    enabled,
     placeholderData: keepPreviousData, // keep showing the old page while the next one loads
   });
 }

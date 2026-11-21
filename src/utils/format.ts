@@ -25,3 +25,13 @@ export function bpToPercentText(basisPoints: number): string {
 export function formatPercent(basisPoints: number): string {
   return `${bpToPercentText(basisPoints)}%`;
 }
+
+/** Paise as rupees for display, with Indian digit grouping: 60000 -> "₹600.00", 123456700 -> "₹12,34,567.00". */
+export function formatRupees(paise: number): string {
+  return new Intl.NumberFormat('en-IN', {
+    style: 'currency',
+    currency: 'INR',
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(paise / 100);
+}

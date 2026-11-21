@@ -38,6 +38,10 @@ Full commands, layout and recipes: `README.md`.
   4 digits (`maskedAccount()` in `utils/format.ts`).
 - Parties live in `features/sellers` and `features/buyers` with pages in `pages/parties/`; their menu entries are limited
   by `roles` (Sellers: Purchase side, Buyers: Sales side). Use `TehsilPicker` and `ManufacturerChecklist` for those fields.
-- Not yet built: MFA, margin matrix, listings and other role-specific screens.
+- Listings live in `features/listings` with the page in `pages/listings/` (Purchase side, limited by `roles`). The form
+  asks `POST /listings/preview` for the box value, duplicates and rate drops; use `SellerPicker` and `SkuPicker` for the
+  seller and pack. Rupees are typed and sent as paise with `rupeesToPaise()` (`schemas/fields.ts`); show money with
+  `formatRupees()` (`utils/format.ts`).
+- Not yet built: MFA, margin matrix, the Sales-side rate board and other role-specific screens.
 - Do not add: Redux, Zustand, React Hook Form, TanStack Table, analytics, auth/PDF libraries, paid UI kits
   (unless the task says so).

@@ -19,6 +19,13 @@ export const NAV_ITEMS: readonly MenuItem[] = [
     icon: 'store',
     roles: ['PURCHASE', 'CONTROLLER', 'FOUNDER', 'ADMIN'],
   },
+  // Listings are the Purchase team's work (sellers' offers). The API enforces the same wall.
+  {
+    label: 'Listings',
+    path: '/listings',
+    icon: 'trending-up',
+    roles: ['PURCHASE', 'CONTROLLER', 'FOUNDER', 'ADMIN'],
+  },
   // The masters: everyone can look, only Founder and Admin see the add / edit buttons.
   { label: 'Products', path: '/products', icon: 'box' },
   { label: 'Manufacturers', path: '/manufacturers', icon: 'briefcase' },

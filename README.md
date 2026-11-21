@@ -56,8 +56,8 @@ src/
     molecules/    FormField, SearchInput, PasswordField, Pagination, ErrorState, ErrorAlert, PageSpinner
     organisms/    Header, Sidebar, NavigationMenu, DataTableToolbar
     templates/    AuthLayout, DashboardLayout, PageLayout
-  pages/        Thin screens: login, staff, masters/ (company, manufacturers, technicals, HSN codes, tehsils, reason codes), parties/ (sellers, buyers), products/, dashboard
-  features/     Business modules, one folder each (auth, staff, company, manufacturers, technicals, hsnCodes, products, tehsils, reasonCodes, sellers, buyers)
+  pages/        Thin screens: login, staff, masters/ (company, manufacturers, technicals, HSN codes, tehsils, reason codes), parties/ (sellers, buyers), listings/, products/, dashboard
+  features/     Business modules, one folder each (auth, staff, company, manufacturers, technicals, hsnCodes, products, tehsils, reasonCodes, sellers, buyers, listings)
   services/     api/ (Axios client, ApiError, error envelope, system status)  query/ (QueryClient)
   schemas/      UI-only form validation (Zod)
   hooks/ lib/ utils/ types/ assets/ styles/
@@ -127,6 +127,28 @@ and page on the server like Tehsils. Anyone who can open the page can add, edit 
   shown above the form. Form checks are in `schemas/sellerForm.ts` and `schemas/buyerForm.ts`; the trade positions and
   tier names are in `types/party.ts` (a copy of the server enum).
 
+## Listings (features/listings)
+
+Menu: **Listings** (Purchase, Controller, Founder, Admin; any other role gets the API's 403, shown as "Could not load
+listings"). The page (`pages/listings/ListingsPage.tsx`) lists sellers' offers newest first, with a search box (seller or
+product) and a status filter that starts on **Active**. Pausing or withdrawing a listing therefore moves it out of that
+view: choose **Paused** or **All statuses** to see it again.
+
+- **Add listing** opens `ListingForm`. The seller and the pack are chosen with `SellerPicker` (`features/sellers/`) and
+  `SkuPicker` (`features/products/`): type 2 or more characters, and only active sellers, and the active packs of active
+  products, are offered.
+- Rates are typed in rupees (`rupeesToPaise()` in `schemas/fields.ts`, up to 2 decimals) and sent as paise. **FOR Indore**
+  has one rate box; **Ex rate + COL** has the Ex rate per unit and the COL per box.
+- **What this comes to** asks the server (`POST /listings/preview`) once the form is complete and typing has paused. It
+  shows the landed rate per unit, the value of one box and of the minimum order. If the seller already has the same offer
+  live it says so and **Add listing** is disabled. If the rate is lower than the allowed drop it shows the percent and
+  both rates and asks for a tick (**Yes, the lower rate is correct**), which sends `confirmDecrease`. Changing the rate
+  clears the tick.
+- A listing is never edited. The table has **Pause**, **Resume** and **Withdraw** (withdrawing asks first and is final).
+  The seller, pack and rate type are shown in the row; an Ex listing also shows the Ex rate and COL it came from.
+- Form checks are in `schemas/listingForm.ts`; the choices and their labels are in `types/listing.ts` (copies of the server
+  enums: change both together). "Company billing" is the label for the `SOURCED` source.
+
 ## Recipes
 
 **Add a page**: create it in `pages/` (or `features/<name>/` if it belongs to a module), add a route in
@@ -147,4 +169,4 @@ and parses the result with a Zod schema.
 
 ## Not built yet (on purpose)
 
-MFA, margin matrix, and the business modules after masters (parties, orders, …).
+MFA, margin matrix, the Sales-side rate board, and the business modules after listings (orders, trades, …).

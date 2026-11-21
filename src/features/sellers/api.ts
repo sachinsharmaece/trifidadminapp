@@ -37,6 +37,8 @@ export interface SellerListParams {
   q: string;
   page: number;
   pageSize: number;
+  /** true = only sellers that are turned on, false = only turned-off ones. Leave out for all. */
+  active?: boolean | undefined;
 }
 
 export interface SellerInput {

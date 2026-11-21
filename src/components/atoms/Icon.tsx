@@ -60,6 +60,12 @@ const ICONS = {
       <line x1="21" y1="12" x2="9" y2="12" />
     </>
   ),
+  'trending-up': (
+    <>
+      <polyline points="23 6 13.5 15.5 8.5 10.5 1 18" />
+      <polyline points="17 6 23 6 23 12" />
+    </>
+  ),
   'chevron-left': <polyline points="15 18 9 12 15 6" />,
   'chevron-right': <polyline points="9 18 15 12 9 6" />,
   box: (

@@ -1,4 +1,4 @@
-/** "18 Nov 2026" from an ISO date string. Returns the original text if it is not a valid date. */
+/** "18 Nov 2026" from an ISO date string, in Indian time. Returns the original text if it is not a valid date. */
 export function formatDate(isoDate: string): string {
   const date = new Date(isoDate);
   if (Number.isNaN(date.getTime())) {
@@ -8,6 +8,8 @@ export function formatDate(isoDate: string): string {
     day: 'numeric',
     month: 'short',
     year: 'numeric',
+    // The business runs on Indian time: a margin that starts "on 1 Dec" starts at midnight there.
+    timeZone: 'Asia/Kolkata',
   }).format(date);
 }
 

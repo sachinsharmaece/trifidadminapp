@@ -42,6 +42,9 @@ Full commands, layout and recipes: `README.md`.
   asks `POST /listings/preview` for the box value, duplicates and rate drops; use `SellerPicker` and `SkuPicker` for the
   seller and pack. Rupees are typed and sent as paise with `rupeesToPaise()` (`schemas/fields.ts`); show money with
   `formatRupees()` (`utils/format.ts`).
-- Not yet built: MFA, margin matrix, the Sales-side rate board and other role-specific screens.
+- The margin matrix lives in `features/margins` with the page in `pages/masters/MarginMatrixPage.tsx` (Controller, Founder,
+  Admin see it; only Founder/Admin get the change button). Saving asks for the password first (`useCreateMarginCell`
+  calls `confirmPassword()` then saves): copy that pattern for any other step-up action.
+- Not yet built: MFA, the SKU ₹/unit matrix, the Sales-side rate board and other role-specific screens.
 - Do not add: Redux, Zustand, React Hook Form, TanStack Table, analytics, auth/PDF libraries, paid UI kits
   (unless the task says so).

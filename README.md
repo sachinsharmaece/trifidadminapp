@@ -89,7 +89,7 @@ yellow box to hand over privately. The API enforces who may do what; the page on
 
 ## Masters (features/manufacturers, technicals, hsnCodes, products, tehsils, reasonCodes, company)
 
-Menu: Products, Manufacturers, Technicals, HSN codes, Tehsils, Reason codes, Company. Everyone can look; the add / edit / turn-off buttons show only to
+Menu: Products, Manufacturers, Technicals, HSN codes, Tehsils, Reason codes, Company (the Margin matrix has its own section below). Everyone can look; the add / edit / turn-off buttons show only to
 Founder and Admin (`useCanEditMasters()`; the API enforces it too). Each feature folder has the same shape: `api.ts`
 (Zod-parsed calls), `hooks.ts` (TanStack Query), a form and a table. The small masters (manufacturers, technicals, HSN
 codes, reason codes) load their whole list and search it in the browser; **Products** and **Tehsils** (thousands of
@@ -149,6 +149,27 @@ view: choose **Paused** or **All statuses** to see it again.
 - Form checks are in `schemas/listingForm.ts`; the choices and their labels are in `types/listing.ts` (copies of the server
   enums: change both together). "Company billing" is the label for the `SOURCED` source.
 
+## Margin matrix (features/margins)
+
+Menu: **Margin matrix** (Controller, Founder, Admin; any other role would get the API's 403, so the link is hidden from
+them). The page (`pages/masters/MarginMatrixPage.tsx`) has a 3 × 4 grid (class A/B/C down, buyer tier across) showing
+the margin in use now ("since 12 Nov 2026"), and under it a table of every change ever made, newest first, each marked
+**In use**, **Scheduled** or **Replaced**. A box nobody has set shows "Not set": real margins are not entered yet
+(Q-PRC-07; in development, `npm run db:seed-demo` in the server fills them with made-up values), and pricing will say "Rate unavailable: margin cell missing" for a pair with no cell.
+
+- Only Founder and Admin (`useCanEditMasters()`) see **Change a margin** and the small button inside each box. The form
+  (`MarginForm`) takes the class, the tier, the margin as a percent ("12.5", sent as basis points), the date it starts
+  (today or later, in Indian time) and **Your password**.
+- The password is asked every time, even though the server accepts a check made in the last 5 minutes: it is the step-up
+  from SRS-AUTH-05. `useCreateMarginCell()` first calls `confirmPassword()` (`features/auth/api.ts`, `POST
+/auth/step-up`) and then saves the cell. A wrong password stays on the form with "The password is not correct." and
+  does not sign the person out.
+- A margin is never edited: **Change** adds a new cell. If the date is today the new margin is in use at once; a later
+  date shows as "Then 14% from 1 Dec 2026" in the grid. Starting on or before the pair's latest cell is refused by the
+  server (409) and shown above the form.
+- Form checks are in `schemas/marginForm.ts` (`validateMarginForm`); the class and tier lists are in `types/margin.ts`.
+- `formatDate()` (`utils/format.ts`) always shows Indian time, whatever the computer's own time zone is.
+
 ## Recipes
 
 **Add a page**: create it in `pages/` (or `features/<name>/` if it belongs to a module), add a route in
@@ -169,4 +190,4 @@ and parses the result with a Zod schema.
 
 ## Not built yet (on purpose)
 
-MFA, margin matrix, the Sales-side rate board, and the business modules after listings (orders, trades, …).
+MFA, the SKU ₹/unit matrix (P2), the Sales-side rate board, and the business modules after listings (orders, trades, …).

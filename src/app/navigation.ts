@@ -33,6 +33,13 @@ export const NAV_ITEMS: readonly MenuItem[] = [
   { label: 'HSN codes', path: '/hsn-codes', icon: 'tag' },
   { label: 'Tehsils', path: '/tehsils', icon: 'map-pin' },
   { label: 'Reason codes', path: '/reason-codes', icon: 'list' },
+  // TriFid's own margin: Controller, Founder and Admin only. The API enforces the same wall.
+  {
+    label: 'Margin matrix',
+    path: '/margin-matrix',
+    icon: 'percent',
+    roles: ['CONTROLLER', 'FOUNDER', 'ADMIN'],
+  },
   { label: 'Company', path: '/company', icon: 'building' },
   { label: 'Staff', path: '/staff', icon: 'users', roles: ['FOUNDER', 'ADMIN'] },
 ];

@@ -66,6 +66,13 @@ const ICONS = {
       <polyline points="17 6 23 6 23 12" />
     </>
   ),
+  percent: (
+    <>
+      <line x1="19" y1="5" x2="5" y2="19" />
+      <circle cx="6.5" cy="6.5" r="2.5" />
+      <circle cx="17.5" cy="17.5" r="2.5" />
+    </>
+  ),
   'chevron-left': <polyline points="15 18 9 12 15 6" />,
   'chevron-right': <polyline points="9 18 15 12 9 6" />,
   box: (

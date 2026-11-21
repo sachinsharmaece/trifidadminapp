@@ -5,4 +5,4 @@ components, API calls (`api.ts`), TanStack Query hooks and Zod schemas for the d
 
 Today: `auth/` (sign-in, route guard, user menu, change password), `staff/` (staff accounts), and the masters:
 `company/`, `manufacturers/`, `technicals/`, `hsnCodes/`, `products/` (products with their packs), `tehsils/` and `reasonCodes/`;
-the parties: `sellers/` (Purchase side) and `buyers/` (Sales side); and `listings/` (Purchase side).
+the parties: `sellers/` (Purchase side) and `buyers/` (Sales side); `listings/` (Purchase side); and `margins/` (the margin matrix: Controller, Founder, Admin).

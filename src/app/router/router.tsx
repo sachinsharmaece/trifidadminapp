@@ -6,6 +6,7 @@ import { DashboardPage } from '@/pages/dashboard/DashboardPage';
 import { ListingsPage } from '@/pages/listings/ListingsPage';
 import { CompanyPage } from '@/pages/masters/CompanyPage';
 import { HsnCodesPage } from '@/pages/masters/HsnCodesPage';
+import { MarginMatrixPage } from '@/pages/masters/MarginMatrixPage';
 import { ManufacturersPage } from '@/pages/masters/ManufacturersPage';
 import { ReasonCodesPage } from '@/pages/masters/ReasonCodesPage';
 import { TechnicalsPage } from '@/pages/masters/TechnicalsPage';
@@ -48,6 +49,7 @@ export const router = createBrowserRouter([
                   { path: '/products/new', element: <NewProductPage /> },
                   { path: '/products/:id', element: <ProductPage /> },
                   { path: '/manufacturers', element: <ManufacturersPage /> },
+                  { path: '/margin-matrix', element: <MarginMatrixPage /> },
                   { path: '/technicals', element: <TechnicalsPage /> },
                   { path: '/hsn-codes', element: <HsnCodesPage /> },
                   { path: '/tehsils', element: <TehsilsPage /> },

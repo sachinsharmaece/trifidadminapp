@@ -34,6 +34,14 @@ export async function changePassword(
   return userResponseSchema.parse(data).user;
 }
 
+/**
+ * POST /auth/step-up. Before a sensitive action (like changing a margin) the person types their password again.
+ * The server then allows such actions from this session for 5 minutes. A wrong password is an ApiError.
+ */
+export async function confirmPassword(password: string): Promise<void> {
+  await apiClient.post('/auth/step-up', { password });
+}
+
 /** POST /auth/logout. The server deletes the session and the cookie. */
 export async function logout(): Promise<void> {
   await apiClient.post('/auth/logout');

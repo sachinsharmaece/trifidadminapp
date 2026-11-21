@@ -88,6 +88,21 @@ const ICONS = {
       <circle cx="12" cy="10" r="3" />
     </>
   ),
+  cart: (
+    <>
+      <circle cx="9" cy="21" r="1" />
+      <circle cx="20" cy="21" r="1" />
+      <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6" />
+    </>
+  ),
+  store: (
+    <>
+      <path d="M3 9l1.5-5h15L21 9" />
+      <path d="M3 9v11h18V9" />
+      <path d="M3 9a3 3 0 0 0 6 0 3 3 0 0 0 6 0 3 3 0 0 0 6 0" />
+      <path d="M10 20v-6h4v6" />
+    </>
+  ),
   building: (
     <>
       <rect x="4" y="2" width="16" height="20" rx="2" />

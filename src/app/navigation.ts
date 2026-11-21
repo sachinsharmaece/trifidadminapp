@@ -6,6 +6,19 @@ import type { MenuItem } from '@/types/navigation';
  */
 export const NAV_ITEMS: readonly MenuItem[] = [
   { label: 'Dashboard', path: '/', icon: 'dashboard' },
+  // Parties: each team sees only its own side. The API enforces the same wall (modules/parties/permissions.ts).
+  {
+    label: 'Buyers',
+    path: '/buyers',
+    icon: 'cart',
+    roles: ['SALES', 'CONTROLLER', 'FOUNDER', 'ADMIN'],
+  },
+  {
+    label: 'Sellers',
+    path: '/sellers',
+    icon: 'store',
+    roles: ['PURCHASE', 'CONTROLLER', 'FOUNDER', 'ADMIN'],
+  },
   // The masters: everyone can look, only Founder and Admin see the add / edit buttons.
   { label: 'Products', path: '/products', icon: 'box' },
   { label: 'Manufacturers', path: '/manufacturers', icon: 'briefcase' },

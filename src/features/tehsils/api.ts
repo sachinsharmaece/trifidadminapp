@@ -12,6 +12,21 @@ const tehsilSchema = z.object({
 
 export type Tehsil = z.infer<typeof tehsilSchema>;
 
+/** A tehsil's name, district and state: how sellers and buyers show the place they are in. */
+export const tehsilSummarySchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  district: z.string(),
+  state: z.string(),
+});
+
+export type TehsilSummary = z.infer<typeof tehsilSummarySchema>;
+
+/** "Mhow, Indore, Madhya Pradesh" */
+export function tehsilLabel(tehsil: TehsilSummary): string {
+  return `${tehsil.name}, ${tehsil.district}, ${tehsil.state}`;
+}
+
 const listSchema = z.object({
   tehsils: z.array(tehsilSchema),
   total: z.number(),
@@ -24,6 +39,8 @@ export interface TehsilListParams {
   q: string;
   page: number;
   pageSize: number;
+  /** true = only tehsils that are on, false = only those turned off. Leave out for all. */
+  active?: boolean | undefined;
 }
 
 export interface TehsilInput {

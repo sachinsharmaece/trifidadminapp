@@ -56,8 +56,8 @@ src/
     molecules/    FormField, SearchInput, PasswordField, Pagination, ErrorState, ErrorAlert, PageSpinner
     organisms/    Header, Sidebar, NavigationMenu, DataTableToolbar
     templates/    AuthLayout, DashboardLayout, PageLayout
-  pages/        Thin screens: login, staff, masters/ (company, manufacturers, technicals, HSN codes, tehsils, reason codes), products/, dashboard
-  features/     Business modules, one folder each (auth, staff, company, manufacturers, technicals, hsnCodes, products, tehsils, reasonCodes)
+  pages/        Thin screens: login, staff, masters/ (company, manufacturers, technicals, HSN codes, tehsils, reason codes), parties/ (sellers, buyers), products/, dashboard
+  features/     Business modules, one folder each (auth, staff, company, manufacturers, technicals, hsnCodes, products, tehsils, reasonCodes, sellers, buyers)
   services/     api/ (Axios client, ApiError, error envelope, system status)  query/ (QueryClient)
   schemas/      UI-only form validation (Zod)
   hooks/ lib/ utils/ types/ assets/ styles/
@@ -109,6 +109,23 @@ rows) are searched and paged by the server (`?q&page`).
   with the same check-character rule as the server (`schemas/ids.ts`), ready for the buyer and seller forms later.
 - **Reason codes**: the "Used for" choice starts empty on purpose (no default context) and, with the code, is locked
   after the reason is created. The filter above the table narrows the list to one context.
+
+## Parties (features/sellers, buyers)
+
+Menu: **Buyers** (Sales, Controller, Founder, Admin) and **Sellers** (Purchase, Controller, Founder, Admin). The menu
+entry only hides the link: the API answers 403 to the other roles, and the page then shows "Could not load ...". The
+folders have the same shape as the masters (`api.ts`, `hooks.ts`, a form, a table); the pages in `pages/parties/` search
+and page on the server like Tehsils. Anyone who can open the page can add, edit and turn off.
+
+- Two shared pickers: `TehsilPicker` (`features/tehsils/`: nothing is listed until 2 characters are typed, and only tehsils
+  that are turned on can be chosen) and `ManufacturerChecklist` (`features/manufacturers/`: the "dealer of" ticks).
+- **Seller**: the bank account number works like the Company's: the box is empty when editing, empty means "keep the saved
+  number", and the table shows `•••• •••• 9012`. The cut-off is a time box.
+- **Buyer**: mobile numbers go in one box separated by commas (1 to 5). The GSTIN is optional: empty means a consumer, and
+  the server works out the state from the tehsil. The rate tier shows "Indicative" until **Classify now** is clicked.
+- A duplicate (same GSTIN, mobile or bank account) comes back from the server as a message naming the existing party; it is
+  shown above the form. Form checks are in `schemas/sellerForm.ts` and `schemas/buyerForm.ts`; the trade positions and
+  tier names are in `types/party.ts` (a copy of the server enum).
 
 ## Recipes
 

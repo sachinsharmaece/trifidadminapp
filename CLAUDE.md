@@ -36,6 +36,8 @@ Full commands, layout and recipes: `README.md`.
   `checkForm(schema, values)` from `schemas/fields.ts`; GST is typed as percent and sent as basis points.
 - The bank account number is never in the browser: the form's number box starts empty and the API returns only the last
   4 digits (`maskedAccount()` in `utils/format.ts`).
-- Not yet built: MFA, margin matrix, other role-specific screens.
+- Parties live in `features/sellers` and `features/buyers` with pages in `pages/parties/`; their menu entries are limited
+  by `roles` (Sellers: Purchase side, Buyers: Sales side). Use `TehsilPicker` and `ManufacturerChecklist` for those fields.
+- Not yet built: MFA, margin matrix, listings and other role-specific screens.
 - Do not add: Redux, Zustand, React Hook Form, TanStack Table, analytics, auth/PDF libraries, paid UI kits
   (unless the task says so).

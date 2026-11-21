@@ -9,6 +9,8 @@ import { ManufacturersPage } from '@/pages/masters/ManufacturersPage';
 import { ReasonCodesPage } from '@/pages/masters/ReasonCodesPage';
 import { TechnicalsPage } from '@/pages/masters/TechnicalsPage';
 import { TehsilsPage } from '@/pages/masters/TehsilsPage';
+import { BuyersPage } from '@/pages/parties/BuyersPage';
+import { SellersPage } from '@/pages/parties/SellersPage';
 import { NewProductPage } from '@/pages/products/NewProductPage';
 import { ProductPage } from '@/pages/products/ProductPage';
 import { ProductsPage } from '@/pages/products/ProductsPage';
@@ -38,6 +40,8 @@ export const router = createBrowserRouter([
                 errorElement: <RouteErrorPage />,
                 children: [
                   { index: true, element: <DashboardPage /> },
+                  { path: '/buyers', element: <BuyersPage /> },
+                  { path: '/sellers', element: <SellersPage /> },
                   { path: '/products', element: <ProductsPage /> },
                   { path: '/products/new', element: <NewProductPage /> },
                   { path: '/products/:id', element: <ProductPage /> },

@@ -1,9 +1,12 @@
-/** Trade stages and reasons, as the API uses them (server: shared/enums.ts). Built so far: b1–b4, s0–s1. */
+/** Trade stages and reasons, as the API uses them (server: shared/enums.ts). Built so far: b1–b6, s0–s2. */
 export const BUYER_STAGES = [
   'B1_VIEWING',
   'B2_INQUIRY',
   'B3_PENDING_SELLER',
   'B4_SEND_CONFIRMATION',
+  'B5_BUYERS_CALL',
+  'B6_ORDER_CONFIRMED',
+  'X_LEAKAGE',
 ] as const;
 export type BuyerStage = (typeof BUYER_STAGES)[number];
 
@@ -12,14 +15,19 @@ export const BUYER_STAGE_LABELS: Record<BuyerStage, string> = {
   B2_INQUIRY: 'b2 Inquiry',
   B3_PENDING_SELLER: 'b3 Pending seller',
   B4_SEND_CONFIRMATION: 'b4 Send confirmation',
+  B5_BUYERS_CALL: "b5 Buyer's call",
+  B6_ORDER_CONFIRMED: 'b6 Order confirmed',
+  X_LEAKAGE: 'Leakage',
 };
 
-export const SELLER_STAGES = ['S0_DEMAND', 'S1_CONFIRMATION'] as const;
+export const SELLER_STAGES = ['S0_DEMAND', 'S1_CONFIRMATION', 'S2_HOLD', 'S_RELEASED'] as const;
 export type SellerStage = (typeof SELLER_STAGES)[number];
 
 export const SELLER_STAGE_LABELS: Record<SellerStage, string> = {
   S0_DEMAND: 's0 Find a seller',
   S1_CONFIRMATION: 's1 Seller confirmation',
+  S2_HOLD: 's2 Hold for payment',
+  S_RELEASED: 'Released',
 };
 
 export const ASK_REASONS = [
@@ -54,5 +62,10 @@ export const TRADE_ACTION_NAMES = [
   'giveQuote',
   'confirmStock',
   'declineStock',
+  'sendToBuyer',
+  'buyerYes',
+  'buyerNo',
+  'leakAfterOrder',
+  'reopen',
 ] as const;
 export type TradeActionName = (typeof TRADE_ACTION_NAMES)[number];

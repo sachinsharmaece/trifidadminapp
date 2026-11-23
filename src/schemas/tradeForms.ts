@@ -64,6 +64,20 @@ export const validateQuote = (values: QuoteValues) =>
     values,
   );
 
+export interface ReasonValues {
+  reasonCodeId: string;
+  note: string;
+}
+/** "Buyer says no" and "Buyer drops the order": a reason from the reason codes master, and a note. */
+export const validateReason = (values: ReasonValues) =>
+  checkForm(
+    z.object({
+      reasonCodeId: z.string().min(1, 'Choose a reason'),
+      note: optionalText(300),
+    }),
+    values,
+  );
+
 export interface AskValues {
   boxes: string;
   reason: string;

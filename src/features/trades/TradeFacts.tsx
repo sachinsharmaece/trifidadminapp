@@ -1,4 +1,6 @@
 import type { ReactNode } from 'react';
+import { Link } from 'react-router';
+import { SalesOrderStatusBadge } from '@/features/salesOrders/SalesOrderStatusBadge';
 import { Badge } from '@/components/atoms/Badge';
 import { EXPIRY_BAND_LABELS, PROVENANCE_LABELS } from '@/types/listing';
 import { RATE_TIER_LABELS } from '@/types/party';
@@ -71,6 +73,23 @@ export function TradeFacts({ trade }: { trade: Trade }) {
           title="Buyer side"
           rows={[
             ['Buyer', `${trade.buyer.number} · ${trade.buyer.firmName}`],
+            ...(trade.salesOrder
+              ? ([
+                  [
+                    'Sales order',
+                    <span key="so" className="inline-flex flex-wrap items-center gap-2">
+                      <Link
+                        to={`/sales-orders/${trade.salesOrder.id}`}
+                        className="font-medium text-brand-700 hover:underline"
+                      >
+                        {trade.salesOrder.number}
+                      </Link>
+                      <SalesOrderStatusBadge status={trade.salesOrder.status} />
+                      {formatRupees(trade.salesOrder.totalPaise)}
+                    </span>,
+                  ],
+                ] as [string, ReactNode][])
+              : []),
             ...(trade.offer
               ? ([
                   ['Our rate per unit', rateText(trade.offer.buyerRatePaisePerUnit)],
@@ -97,6 +116,13 @@ export function TradeFacts({ trade }: { trade: Trade }) {
                 : []),
           ]}
         >
+          {trade.leakage && (
+            <p className="mt-3 rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700">
+              Lost {formatDateTime(trade.leakage.at)}: {trade.leakage.reasonLabel}
+              {trade.leakage.note ? ` (${trade.leakage.note})` : ''}. Reopen it if the buyer comes
+              back.
+            </p>
+          )}
           {(trade.offer?.indicative ?? trade.boardOffer?.indicative) && (
             <p className="mt-3 text-xs text-slate-500">
               <Badge tone="warning">Indicative</Badge> The buyer is not classified yet, so he is

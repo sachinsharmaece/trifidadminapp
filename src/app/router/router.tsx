@@ -22,6 +22,8 @@ import { NotFoundPage } from '@/pages/NotFoundPage';
 import { RouteErrorPage } from '@/pages/RouteErrorPage';
 import { BuyerFunnelsPage } from '@/pages/trades/BuyerFunnelsPage';
 import { SellerFunnelsPage } from '@/pages/trades/SellerFunnelsPage';
+import { SalesOrderPage } from '@/pages/salesOrders/SalesOrderPage';
+import { SalesOrdersPage } from '@/pages/salesOrders/SalesOrdersPage';
 import { TradePage } from '@/pages/trades/TradePage';
 import { AppShell } from './AppShell';
 
@@ -53,6 +55,8 @@ export const router = createBrowserRouter([
                   { path: '/buyer-funnels', element: <BuyerFunnelsPage /> },
                   { path: '/seller-funnels', element: <SellerFunnelsPage /> },
                   { path: '/trades/:id', element: <TradePage /> },
+                  { path: '/sales-orders', element: <SalesOrdersPage /> },
+                  { path: '/sales-orders/:id', element: <SalesOrderPage /> },
                   { path: '/products', element: <ProductsPage /> },
                   { path: '/products/new', element: <NewProductPage /> },
                   { path: '/products/:id', element: <ProductPage /> },

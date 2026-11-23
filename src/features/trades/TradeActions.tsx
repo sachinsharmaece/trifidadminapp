@@ -3,9 +3,14 @@ import { Button } from '@/components/atoms/Button';
 import { ErrorAlert } from '@/components/molecules/ErrorAlert';
 import type { TradeActionName } from '@/types/trade';
 import {
+  BuyerNoForm,
+  BuyerYesForm,
   ConfirmStockForm,
   DeclineStockForm,
+  LeakAfterOrderForm,
   QuoteForm,
+  ReopenForm,
+  SendToBuyerForm,
   SendToSellerForm,
   WantItForm,
   type ActionFormProps,
@@ -18,7 +23,15 @@ const FORMS: Record<TradeActionName, (props: ActionFormProps) => React.JSX.Eleme
   confirmStock: ConfirmStockForm,
   declineStock: DeclineStockForm,
   giveQuote: QuoteForm,
+  sendToBuyer: SendToBuyerForm,
+  buyerYes: BuyerYesForm,
+  buyerNo: BuyerNoForm,
+  leakAfterOrder: LeakAfterOrderForm,
+  reopen: ReopenForm,
 };
+
+/** The "no" buttons look quieter than the ones that move the trade forward. */
+const QUIET_BUTTONS: TradeActionName[] = ['declineStock', 'buyerNo', 'leakAfterOrder'];
 
 /**
  * The trade's buttons, exactly as the server listed them: a button another desk presses is shown greyed with
@@ -50,7 +63,7 @@ export function TradeActions({ trade }: { trade: Trade }) {
         {trade.actions.map((action) => (
           <span key={action.name} className="inline-flex items-center gap-2">
             <Button
-              variant={action.name === 'declineStock' ? 'secondary' : 'primary'}
+              variant={QUIET_BUTTONS.includes(action.name) ? 'secondary' : 'primary'}
               disabled={!action.allowed || OpenForm !== null}
               onClick={() => {
                 setChangedByOthers(false);

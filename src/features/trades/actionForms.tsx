@@ -4,17 +4,22 @@ import { Input } from '@/components/atoms/Input';
 import { Select } from '@/components/atoms/Select';
 import { FormField, type FieldControlProps } from '@/components/molecules/FormField';
 import { useProduct } from '@/features/products/hooks';
+import { useReasonCodes } from '@/features/reasonCodes/hooks';
 import { SellerPicker, type SellerChoice } from '@/features/sellers/SellerPicker';
 import { serverFieldErrors, type FormErrors } from '@/schemas/fields';
 import {
   validateConfirmStock,
   validateDecline,
   validateQuote,
+  validateReason,
   validateWantIt,
   type ConfirmStockValues,
   type DeclineValues,
   type QuoteValues,
+  type ReasonValues,
 } from '@/schemas/tradeForms';
+import { CONTEXT_LABELS } from '@/types/reasonCode';
+import { formatRupees } from '@/utils/format';
 import { DECLINE_REASONS, DECLINE_REASON_LABELS } from '@/types/trade';
 import { ActionFormShell } from './ActionFormShell';
 import type { Trade } from './api';
@@ -390,5 +395,190 @@ export function QuoteForm({ trade, onDone, onChangedByOthers }: ActionFormProps)
         </FormField>
       </div>
     </ActionFormShell>
+  );
+}
+
+/** b4 → b5: Sales tells the buyer the offer (call or WhatsApp), then waits for his answer. */
+export function SendToBuyerForm({ trade, onDone, onChangedByOthers }: ActionFormProps) {
+  const action = useTradeAction(trade, 'sendToBuyer', onChangedByOthers);
+  const offer = trade.offer;
+  const rate = offer?.buyerRatePaisePerUnit ?? null;
+  return (
+    <ActionFormShell
+      title="Send to buyer"
+      description={
+        offer && rate !== null && offer.boxValuePaise !== null
+          ? `Tell the buyer: ${offer.boxes} boxes at ${formatRupees(rate)} a unit (${formatRupees(offer.boxValuePaise)} a box), expiry ${offer.expiryMonth}. Then wait for his answer; the seller holds the stock meanwhile.`
+          : 'There was no rate when the seller answered: it is worked out now from the margin matrix. Then wait for his answer.'
+      }
+      submitLabel="Mark as sent"
+      pending={action.isPending}
+      error={action.error?.message}
+      onSubmit={() => action.mutate({}, { onSuccess: onDone })}
+      onCancel={onDone}
+    />
+  );
+}
+
+/** b5 → b6: the buyer says yes. The engine raises his sales order and the payment clock starts. */
+export function BuyerYesForm({ trade, onDone, onChangedByOthers }: ActionFormProps) {
+  const action = useTradeAction(trade, 'buyerYes', onChangedByOthers);
+  const offer = trade.offer;
+  const total =
+    offer && offer.boxValuePaise !== null ? formatRupees(offer.boxValuePaise * offer.boxes) : '';
+  return (
+    <ActionFormShell
+      title="Buyer says yes"
+      description={`Raises his sales order${offer ? ` for ${offer.boxes} boxes` : ''}${total ? `, ${total} including GST` : ''}. The payment clock starts and the seller holds the stock until he pays.`}
+      submitLabel="Raise the order"
+      pending={action.isPending}
+      error={action.error?.message}
+      onSubmit={() => action.mutate({}, { onSuccess: onDone })}
+      onCancel={onDone}
+    />
+  );
+}
+
+/** A reason from the master (only this context's, turned on) plus a note: "Buyer says no" and "drops the order". */
+function ReasonForm(props: {
+  context: 'BUYER_NO' | 'B6_LEAK';
+  title: string;
+  description: string;
+  submitLabel: string;
+  pending: boolean;
+  error: string | undefined;
+  serverErrors: FormErrors;
+  onSave: (values: { reasonCodeId: string; note?: string | undefined }) => void;
+  onCancel: () => void;
+}) {
+  const reasons = useReasonCodes();
+  const choices = (reasons.data ?? []).filter(
+    (reason) => reason.context === props.context && reason.active,
+  );
+  const [values, setValues] = useState<ReasonValues>({ reasonCodeId: '', note: '' });
+  const [errors, setErrors] = useState<FormErrors>({});
+  const shown = { ...errors, ...props.serverErrors };
+  const set = (field: keyof ReasonValues, value: string) =>
+    setValues((current) => ({ ...current, [field]: value }));
+
+  function submit() {
+    const result = validateReason(values);
+    if (!result.ok) return setErrors(result.errors);
+    setErrors({});
+    props.onSave(result.data);
+  }
+
+  return (
+    <ActionFormShell
+      title={props.title}
+      description={props.description}
+      submitLabel={props.submitLabel}
+      pending={props.pending}
+      error={props.error}
+      onSubmit={submit}
+      onCancel={props.onCancel}
+    >
+      <div className="grid gap-4 sm:grid-cols-2">
+        <FormField
+          label="Reason"
+          required
+          error={shown.reasonCodeId}
+          hint={
+            reasons.isSuccess && choices.length === 0
+              ? `No reasons yet: Founder or Admin adds them under Reason codes ("${CONTEXT_LABELS[props.context]}").`
+              : undefined
+          }
+        >
+          {(field) => (
+            <Select
+              {...field}
+              value={values.reasonCodeId}
+              onChange={(event) => set('reasonCodeId', event.target.value)}
+            >
+              <option value="">Choose…</option>
+              {choices.map((reason) => (
+                <option key={reason.id} value={reason.id}>
+                  {reason.label}
+                </option>
+              ))}
+            </Select>
+          )}
+        </FormField>
+        <FormField label="Note" error={shown.note} hint="Optional. Purchase does not see it.">
+          {(field) => (
+            <Input
+              {...field}
+              autoComplete="off"
+              value={values.note}
+              onChange={(event) => set('note', event.target.value)}
+            />
+          )}
+        </FormField>
+      </div>
+    </ActionFormShell>
+  );
+}
+
+/** b5 → Leakage: the buyer says no. The seller's hold ends. */
+export function BuyerNoForm({ trade, onDone, onChangedByOthers }: ActionFormProps) {
+  const action = useTradeAction(trade, 'buyerNo', onChangedByOthers);
+  const [serverErrors, setServerErrors] = useState<FormErrors>({});
+  return (
+    <ReasonForm
+      context="BUYER_NO"
+      title="Buyer says no"
+      description="The trade is lost (Leakage) and the seller may sell the stock to someone else. You can reopen it later."
+      submitLabel="Save"
+      pending={action.isPending}
+      error={action.error?.message}
+      serverErrors={serverErrors}
+      onSave={(input) =>
+        action.mutate(input, {
+          onSuccess: onDone,
+          onError: (e) => setServerErrors(serverFieldErrors(e)),
+        })
+      }
+      onCancel={onDone}
+    />
+  );
+}
+
+/** b6 → Leakage: the buyer drops the order before paying. His sales order is cancelled. */
+export function LeakAfterOrderForm({ trade, onDone, onChangedByOthers }: ActionFormProps) {
+  const action = useTradeAction(trade, 'leakAfterOrder', onChangedByOthers);
+  const [serverErrors, setServerErrors] = useState<FormErrors>({});
+  return (
+    <ReasonForm
+      context="B6_LEAK"
+      title="Buyer drops the order"
+      description={`Cancels ${trade.salesOrder?.number ?? 'the sales order'} and ends the seller's hold. The trade is lost (Leakage); you can reopen it later.`}
+      submitLabel="Cancel the order"
+      pending={action.isPending}
+      error={action.error?.message}
+      serverErrors={serverErrors}
+      onSave={(input) =>
+        action.mutate(input, {
+          onSuccess: onDone,
+          onError: (e) => setServerErrors(serverFieldErrors(e)),
+        })
+      }
+      onCancel={onDone}
+    />
+  );
+}
+
+/** Leakage → b2: the buyer is interested again. */
+export function ReopenForm({ trade, onDone, onChangedByOthers }: ActionFormProps) {
+  const action = useTradeAction(trade, 'reopen', onChangedByOthers);
+  return (
+    <ActionFormShell
+      title="Reopen"
+      description={`Brings the trade back to b2 for ${trade.boxesWanted ?? 0} boxes. Send it to the seller again when the buyer is ready; a cancelled order stays on record.`}
+      submitLabel="Reopen"
+      pending={action.isPending}
+      error={action.error?.message}
+      onSubmit={() => action.mutate({}, { onSuccess: onDone })}
+      onCancel={onDone}
+    />
   );
 }

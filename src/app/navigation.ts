@@ -27,6 +27,13 @@ export const NAV_ITEMS: readonly MenuItem[] = [
     icon: 'funnel',
     roles: ['SALES', 'CONTROLLER', 'FOUNDER', 'ADMIN'],
   },
+  // Orders raised when a buyer says yes. Accounts reads them too (payments come next).
+  {
+    label: 'Sales orders',
+    path: '/sales-orders',
+    icon: 'receipt',
+    roles: ['SALES', 'ACCOUNTS', 'CONTROLLER', 'FOUNDER', 'ADMIN'],
+  },
   {
     label: 'Sellers',
     path: '/sellers',

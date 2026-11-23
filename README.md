@@ -206,12 +206,32 @@ One trade engine on the server (Q-WF-01, Option 3); these screens only show a tr
   first, so your change was not saved" (`TradeActions.tsx`, `isChangedByOthers()` in `hooks.ts`).
 - What a person sees comes from the API: Sales gets the buyer side (buyer, board rate or the offer), Purchase the seller
   side (seller, landed rate, his answer), Controller/Founder/Admin both. `TradeFacts.tsx` shows the parts that came back.
+- After the seller answers, Sales presses **Send to buyer** (the form says what to tell him: boxes, rate, box value,
+  expiry), then **Buyer says yes** (raises his sales order; the card links it) or **Buyer says no** (a reason from the
+  reason codes, context "Buyer said no"). At b6 **Buyer drops the order** cancels the order (context "Lost at stage
+  B6"); a lost trade shows why, and **Reopen** takes it back to b2. Reasons come from `useReasonCodes()`, filtered to the
+  form's context and turned-on codes. The "no" buttons are the quieter (white) ones.
 - **Buyer funnels** (Sales, Controller, Founder, Admin) and **Seller funnels** (Purchase's queue; Purchase, Controller,
   Founder, Admin): `FunnelView.tsx`, one list with a tab per stage (with counts), search and paging. Whoever must act
   soonest is first. A seller decline sends Purchase back to the Seller funnels.
 - Data: `features/trades/api.ts` (Zod schemas, one `runAction(trade, action, input)` for every button) and `hooks.ts`
   (`useTrade`, `useFunnel`, `useTradeAction`; a change refreshes the card and both lists). Nothing is cached: another
   desk may have acted.
+
+## Sales orders (features/salesOrders)
+
+Menu: **Sales orders** (Sales, Accounts, Controller, Founder, Admin; the API gives anyone else a 403). Read only: an
+order is raised by **Buyer says yes** and cancelled by **Buyer drops the order** on the deal card (one trade engine).
+
+- `/sales-orders` (`pages/salesOrders/SalesOrdersPage.tsx`): newest first, search by order number or buyer, filter by
+  status, paged. Shows when payment is due (red once overdue).
+- `/sales-orders/:id` (`SalesOrderPage.tsx`): the buyer as on the order, the frozen line (rate per unit, box value,
+  boxes, line total, HSN, GST rate, expiry and batch), and the total with the GST worked back out of it (CGST + SGST in
+  Madhya Pradesh, IGST for another state). The server sends the seller and his rate only to Controller, Founder and
+  Admin, so the page shows the "Seller rate" column only when it came back. "Open the deal card" is shown to the roles
+  that can open trades (not Accounts).
+- Data: `features/salesOrders/api.ts` (Zod schemas) and `hooks.ts`. The query keys sit under `['trades']`, so a deal
+  card button also refreshes the order list and page. `SalesOrderStatusBadge` shows the status everywhere.
 
 ## Recipes
 
@@ -233,5 +253,5 @@ and parses the result with a Zod schema.
 
 ## Not built yet (on purpose)
 
-MFA, the SKU ₹/unit matrix (P2), the trade after b4 (buyer confirms, orders, payment, dock, dispatch, delivery), and the
-Accounts and Logistics desk queues.
+MFA, the SKU ₹/unit matrix (P2), the trade after b6 (payment, PO, dock, Marg bill, dispatch, delivery), insurance on an
+order (Q-SAL-04), and the Accounts and Logistics desk queues.

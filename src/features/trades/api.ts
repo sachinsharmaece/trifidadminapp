@@ -10,6 +10,7 @@ import {
   type AskReason,
   type DeclineReason,
 } from '@/types/trade';
+import { SALES_ORDER_STATUSES } from '@/types/salesOrder';
 
 /**
  * Trades (deal cards). The server builds each answer for the signed-in person's side of the wall: Sales gets the
@@ -77,6 +78,27 @@ const tradeSchema = z.object({
       boxValuePaise: z.number().nullable(),
       tier,
       indicative: z.boolean(),
+    })
+    .nullable()
+    .optional(),
+
+  // The buyer's sales order (b6 onward) and why a trade was lost (Leakage): buyer side too.
+  salesOrder: z
+    .object({
+      id: z.string(),
+      number: z.string(),
+      status: z.enum(SALES_ORDER_STATUSES),
+      totalPaise: z.number(),
+      paymentDueAt: z.string(),
+    })
+    .nullable()
+    .optional(),
+  leakage: z
+    .object({
+      context: z.string(),
+      reasonLabel: z.string(),
+      note: z.string().nullable(),
+      at: z.string(),
     })
     .nullable()
     .optional(),
@@ -197,6 +219,11 @@ export interface ActionInputs {
     boxesAvailable: number;
     batchNumber?: string | undefined;
   };
+  sendToBuyer: Record<string, never>;
+  buyerYes: Record<string, never>;
+  buyerNo: { reasonCodeId: string; note?: string | undefined };
+  leakAfterOrder: { reasonCodeId: string; note?: string | undefined };
+  reopen: Record<string, never>;
 }
 
 /** Presses an engine button. `version` is the one on screen: if someone acted since, the server says 409. */

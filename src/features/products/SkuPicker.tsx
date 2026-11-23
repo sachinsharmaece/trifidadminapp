@@ -8,6 +8,7 @@ import { useProducts } from './hooks';
 /** The few things about a pack that a form needs to show the choice. */
 export interface SkuChoice {
   id: string;
+  productId: string;
   productName: string;
   packLabel: string;
   unitsPerBox: number;
@@ -44,6 +45,7 @@ export function SkuPicker({ value, onChange, field }: SkuPickerProps) {
             .filter((sku) => sku.active)
             .map((sku) => ({
               id: sku.id,
+              productId: product.id,
               productName: product.name,
               packLabel: sku.packLabel,
               unitsPerBox: sku.unitsPerBox,

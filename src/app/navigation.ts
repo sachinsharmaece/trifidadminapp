@@ -20,6 +20,13 @@ export const NAV_ITEMS: readonly MenuItem[] = [
     icon: 'rupee',
     roles: ['SALES', 'CONTROLLER', 'FOUNDER', 'ADMIN'],
   },
+  // Trades (deal cards), buyer side. Opened from the Rate board.
+  {
+    label: 'Buyer funnels',
+    path: '/buyer-funnels',
+    icon: 'funnel',
+    roles: ['SALES', 'CONTROLLER', 'FOUNDER', 'ADMIN'],
+  },
   {
     label: 'Sellers',
     path: '/sellers',
@@ -31,6 +38,13 @@ export const NAV_ITEMS: readonly MenuItem[] = [
     label: 'Listings',
     path: '/listings',
     icon: 'trending-up',
+    roles: ['PURCHASE', 'CONTROLLER', 'FOUNDER', 'ADMIN'],
+  },
+  // Trades on the seller side: Purchase's queue (find a seller, get his confirmation).
+  {
+    label: 'Seller funnels',
+    path: '/seller-funnels',
+    icon: 'funnel',
     roles: ['PURCHASE', 'CONTROLLER', 'FOUNDER', 'ADMIN'],
   },
   // The masters: everyone can look, only Founder and Admin see the add / edit buttons.

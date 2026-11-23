@@ -1,15 +1,20 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router';
 import { Badge } from '@/components/atoms/Badge';
 import { Button } from '@/components/atoms/Button';
 import { Spinner } from '@/components/atoms/Spinner';
+import { ErrorAlert } from '@/components/molecules/ErrorAlert';
 import { ErrorState } from '@/components/molecules/ErrorState';
 import { FormField } from '@/components/molecules/FormField';
 import { Pagination } from '@/components/molecules/Pagination';
 import { DataTableToolbar } from '@/components/organisms/DataTableToolbar';
 import { PageLayout } from '@/components/templates/PageLayout';
+import { useCurrentUser } from '@/features/auth/hooks';
 import { BoardTable } from '@/features/board/BoardTable';
 import { useBoard } from '@/features/board/hooks';
 import { BuyerPicker, type BuyerChoice } from '@/features/buyers/BuyerPicker';
+import { AskForm } from '@/features/trades/AskForm';
+import { useOpenViewing } from '@/features/trades/hooks';
 import { useDebouncedValue } from '@/hooks/useDebouncedValue';
 import { RATE_TIER_LABELS } from '@/types/party';
 
@@ -23,9 +28,24 @@ export function RateBoardPage() {
   // Wait until typing pauses before asking the server.
   const q = useDebouncedValue(search.trim());
   const board = useBoard(buyer?.id ?? null, { q, page, pageSize: PAGE_SIZE });
+  const { data: me } = useCurrentUser();
+  // Sales starts trades, and so may Founder and Admin (they have every right). Controller only looks.
+  const canStartTrades = me?.role === 'SALES' || me?.role === 'FOUNDER' || me?.role === 'ADMIN';
+  const navigate = useNavigate();
+  const open = useOpenViewing();
+  const [asking, setAsking] = useState(false);
+
+  function openRow(listingId: string) {
+    if (!buyer) return;
+    open.mutate(
+      { buyerId: buyer.id, listingId },
+      { onSuccess: (trade) => void navigate(`/trades/${trade.id}`) },
+    );
+  }
 
   function chooseBuyer(chosen: BuyerChoice) {
     setBuyer(chosen);
+    setAsking(false);
     setSearch('');
     setPage(1);
   }
@@ -36,10 +56,32 @@ export function RateBoardPage() {
   }
 
   return (
-    <PageLayout title="Rate board" description="What we can offer a buyer today, and at what rate.">
+    <PageLayout
+      title="Rate board"
+      description="What we can offer a buyer today, and at what rate."
+      actions={
+        canStartTrades &&
+        buyer &&
+        !asking && (
+          <Button variant="secondary" onClick={() => setAsking(true)}>
+            Ask for an item not listed
+          </Button>
+        )
+      }
+    >
       <FormField label="Buyer" className="max-w-md">
         {(field) => <BuyerPicker field={field} value={buyer} onChange={chooseBuyer} />}
       </FormField>
+
+      {buyer && asking && (
+        <AskForm
+          key={buyer.id}
+          buyer={buyer}
+          onCancel={() => setAsking(false)}
+          onCreated={(trade) => void navigate(`/trades/${trade.id}`)}
+        />
+      )}
+      <ErrorAlert message={open.error?.message} />
 
       {buyer && board.isPending && (
         <Spinner label="Loading the rate board" className="h-6 w-6 text-brand-600" />
@@ -69,7 +111,12 @@ export function RateBoardPage() {
             searchPlaceholder="Search by product"
             searchLabel="Search the rate board"
           />
-          <BoardTable rows={board.data.rows} indicative={board.data.buyer.indicative} />
+          <BoardTable
+            rows={board.data.rows}
+            indicative={board.data.buyer.indicative}
+            onOpen={canStartTrades ? (row) => openRow(row.id) : undefined}
+            openingId={open.isPending ? (open.variables?.listingId ?? null) : null}
+          />
           <Pagination
             page={page}
             pageSize={PAGE_SIZE}

@@ -48,6 +48,9 @@ Full commands, layout and recipes: `README.md`.
 - The Sales rate board lives in `features/board` with the page in `pages/board/RateBoardPage.tsx`; the buyer is chosen with
   `BuyerPicker` (`features/buyers`). Rates arrive finished from the API (`buyerRatePaisePerUnit`); the admin app never works
   out a margin and the API never sends a seller, landed rate or margin to this screen. A `null` rate shows "Rate unavailable".
-- Not yet built: MFA, the SKU ₹/unit matrix, the buyer funnel on the board and other role-specific screens.
+- Trades live in `features/trades` with pages in `pages/trades/` (deal card `/trades/:id`, Buyer funnels, Seller funnels).
+  Buttons come from `trade.actions` (the server); a new button is one form in `actionForms.tsx` and one line in
+  `FORMS` (`TradeActions.tsx`), pressed through `useTradeAction()`. Never write a trade any other way (one engine).
+- Not yet built: MFA, the SKU ₹/unit matrix, the trade after b4, and the Accounts and Logistics desk queues.
 - Do not add: Redux, Zustand, React Hook Form, TanStack Table, analytics, auth/PDF libraries, paid UI kits
   (unless the task says so).

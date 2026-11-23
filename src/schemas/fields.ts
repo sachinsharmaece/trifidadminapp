@@ -78,3 +78,23 @@ export const wholeNumber = (message: string, min: number, max: number) =>
       (value) => value >= min && value <= max,
       `Use a number from ${min.toLocaleString('en-IN')} to ${max.toLocaleString('en-IN')}`,
     );
+
+/**
+ * The field messages the server sent with a 422 answer (`details: [{ path, message }]`), so a form can show them
+ * under the right field. Anything else gives no field messages (the form shows the error message at the top).
+ */
+export function serverFieldErrors(error: unknown): FormErrors {
+  const details = (error as { details?: unknown } | null)?.details;
+  if (!Array.isArray(details)) return {};
+  const errors: FormErrors = {};
+  for (const item of details as { path?: unknown; message?: unknown }[]) {
+    if (typeof item.path === 'string' && typeof item.message === 'string')
+      errors[item.path] ??= item.message;
+  }
+  return errors;
+}
+
+/** An expiry month typed as YYYY-MM (the value of `<input type="month">`). */
+export const expiryMonthText = z
+  .string()
+  .regex(/^\d{4}-(0[1-9]|1[0-2])$/, 'Choose the expiry month');

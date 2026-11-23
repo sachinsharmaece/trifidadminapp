@@ -20,6 +20,9 @@ import { ProductsPage } from '@/pages/products/ProductsPage';
 import { StaffPage } from '@/pages/staff/StaffPage';
 import { NotFoundPage } from '@/pages/NotFoundPage';
 import { RouteErrorPage } from '@/pages/RouteErrorPage';
+import { BuyerFunnelsPage } from '@/pages/trades/BuyerFunnelsPage';
+import { SellerFunnelsPage } from '@/pages/trades/SellerFunnelsPage';
+import { TradePage } from '@/pages/trades/TradePage';
 import { AppShell } from './AppShell';
 
 /** Every route of the app. Menu entries are configured separately in app/navigation.ts. */
@@ -47,6 +50,9 @@ export const router = createBrowserRouter([
                   { path: '/sellers', element: <SellersPage /> },
                   { path: '/listings', element: <ListingsPage /> },
                   { path: '/rate-board', element: <RateBoardPage /> },
+                  { path: '/buyer-funnels', element: <BuyerFunnelsPage /> },
+                  { path: '/seller-funnels', element: <SellerFunnelsPage /> },
+                  { path: '/trades/:id', element: <TradePage /> },
                   { path: '/products', element: <ProductsPage /> },
                   { path: '/products/new', element: <NewProductPage /> },
                   { path: '/products/:id', element: <ProductPage /> },

@@ -186,7 +186,32 @@ him today with **our rate per unit** and the value of a box.
   class and the buyer's tier. Fill the box on the Margin matrix screen.
 - A buyer who is not classified yet is priced as a Retailer: the page shows an **Indicative** badge, a note, and "indicative"
   under each rate. **Classify now** on the Buyers page confirms his tier and the board then uses it.
-- Not built: opening a row to start a trade, "He wants it", asks and call outcomes (the funnel; waits on Q-WF-01).
+- Sales, Founder and Admin (the Controller only looks): **Open** on a row starts a trade for this buyer and goes to its deal card (opening the same row again goes
+  back to the same open trade). **Ask for an item not listed** (top right, once a buyer is chosen) records what the buyer
+  wants that is not on the board, and also goes to the deal card.
+
+## Deal cards and funnels (features/trades)
+
+One trade engine on the server (Q-WF-01, Option 3); these screens only show a trade and press its buttons.
+
+- **Deal card** (`pages/trades/TradePage.tsx`, `/trades/:id`): the trade number, its stages (`b1 Viewing` … on the buyer
+  side, `s0`/`s1` on the seller side), what is due by when, the buttons, what this person may see, and the history.
+- The buttons come from the server (`trade.actions`): the page never decides who may press what. A button of another desk
+  is greyed with who does it ("Purchase does this"); Founder and Admin may press every button (they have every right,
+  Q-ROL-01). Pressing one opens its small form (`actionForms.tsx`, one per
+  action) under the buttons. The server checks every rule again, and its field messages show under the fields
+  (`serverFieldErrors()` in `schemas/fields.ts`).
+- Every press sends the trade's `version`. If someone else moved the trade first, the server says 409 and saves nothing:
+  the card reloads, the open form closes, the new stage shows, and a red note says "Someone else acted on this trade
+  first, so your change was not saved" (`TradeActions.tsx`, `isChangedByOthers()` in `hooks.ts`).
+- What a person sees comes from the API: Sales gets the buyer side (buyer, board rate or the offer), Purchase the seller
+  side (seller, landed rate, his answer), Controller/Founder/Admin both. `TradeFacts.tsx` shows the parts that came back.
+- **Buyer funnels** (Sales, Controller, Founder, Admin) and **Seller funnels** (Purchase's queue; Purchase, Controller,
+  Founder, Admin): `FunnelView.tsx`, one list with a tab per stage (with counts), search and paging. Whoever must act
+  soonest is first. A seller decline sends Purchase back to the Seller funnels.
+- Data: `features/trades/api.ts` (Zod schemas, one `runAction(trade, action, input)` for every button) and `hooks.ts`
+  (`useTrade`, `useFunnel`, `useTradeAction`; a change refreshes the card and both lists). Nothing is cached: another
+  desk may have acted.
 
 ## Recipes
 
@@ -208,4 +233,5 @@ and parses the result with a Zod schema.
 
 ## Not built yet (on purpose)
 
-MFA, the SKU ₹/unit matrix (P2), the buyer funnel on the rate board (Q-WF-01), and the business modules after listings (orders, trades, …).
+MFA, the SKU ₹/unit matrix (P2), the trade after b4 (buyer confirms, orders, payment, dock, dispatch, delivery), and the
+Accounts and Logistics desk queues.

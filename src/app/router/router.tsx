@@ -2,6 +2,7 @@ import { createBrowserRouter } from 'react-router';
 import { RequireAuth } from '@/features/auth/RequireAuth';
 import { ChangePasswordPage } from '@/pages/auth/ChangePasswordPage';
 import { LoginPage } from '@/pages/auth/LoginPage';
+import { RateBoardPage } from '@/pages/board/RateBoardPage';
 import { DashboardPage } from '@/pages/dashboard/DashboardPage';
 import { ListingsPage } from '@/pages/listings/ListingsPage';
 import { CompanyPage } from '@/pages/masters/CompanyPage';
@@ -45,6 +46,7 @@ export const router = createBrowserRouter([
                   { path: '/buyers', element: <BuyersPage /> },
                   { path: '/sellers', element: <SellersPage /> },
                   { path: '/listings', element: <ListingsPage /> },
+                  { path: '/rate-board', element: <RateBoardPage /> },
                   { path: '/products', element: <ProductsPage /> },
                   { path: '/products/new', element: <NewProductPage /> },
                   { path: '/products/:id', element: <ProductPage /> },

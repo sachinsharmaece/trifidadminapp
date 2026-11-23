@@ -13,6 +13,13 @@ export const NAV_ITEMS: readonly MenuItem[] = [
     icon: 'cart',
     roles: ['SALES', 'CONTROLLER', 'FOUNDER', 'ADMIN'],
   },
+  // The rate board is the Sales desk's price list for one buyer. The API enforces the same wall as the buyers.
+  {
+    label: 'Rate board',
+    path: '/rate-board',
+    icon: 'rupee',
+    roles: ['SALES', 'CONTROLLER', 'FOUNDER', 'ADMIN'],
+  },
   {
     label: 'Sellers',
     path: '/sellers',

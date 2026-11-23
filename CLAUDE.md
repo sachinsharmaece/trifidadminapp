@@ -45,6 +45,9 @@ Full commands, layout and recipes: `README.md`.
 - The margin matrix lives in `features/margins` with the page in `pages/masters/MarginMatrixPage.tsx` (Controller, Founder,
   Admin see it; only Founder/Admin get the change button). Saving asks for the password first (`useCreateMarginCell`
   calls `confirmPassword()` then saves): copy that pattern for any other step-up action.
-- Not yet built: MFA, the SKU ₹/unit matrix, the Sales-side rate board and other role-specific screens.
+- The Sales rate board lives in `features/board` with the page in `pages/board/RateBoardPage.tsx`; the buyer is chosen with
+  `BuyerPicker` (`features/buyers`). Rates arrive finished from the API (`buyerRatePaisePerUnit`); the admin app never works
+  out a margin and the API never sends a seller, landed rate or margin to this screen. A `null` rate shows "Rate unavailable".
+- Not yet built: MFA, the SKU ₹/unit matrix, the buyer funnel on the board and other role-specific screens.
 - Do not add: Redux, Zustand, React Hook Form, TanStack Table, analytics, auth/PDF libraries, paid UI kits
   (unless the task says so).

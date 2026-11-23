@@ -155,20 +155,38 @@ Menu: **Margin matrix** (Controller, Founder, Admin; any other role would get th
 them). The page (`pages/masters/MarginMatrixPage.tsx`) has a 3 × 4 grid (class A/B/C down, buyer tier across) showing
 the margin in use now ("since 12 Nov 2026"), and under it a table of every change ever made, newest first, each marked
 **In use**, **Scheduled** or **Replaced**. A box nobody has set shows "Not set": real margins are not entered yet
-(Q-PRC-07; in development, `npm run db:seed-demo` in the server fills them with made-up values), and pricing will say "Rate unavailable: margin cell missing" for a pair with no cell.
+(Q-PRC-07; in development, `npm run db:seed-demo` in the server fills them with made-up values), and the Rate board says "Rate unavailable: margin cell missing" for a pair with no cell.
 
 - Only Founder and Admin (`useCanEditMasters()`) see **Change a margin** and the small button inside each box. The form
   (`MarginForm`) takes the class, the tier, the margin as a percent ("12.5", sent as basis points), the date it starts
   (today or later, in Indian time) and **Your password**.
 - The password is asked every time, even though the server accepts a check made in the last 5 minutes: it is the step-up
-  from SRS-AUTH-05. `useCreateMarginCell()` first calls `confirmPassword()` (`features/auth/api.ts`, `POST
-/auth/step-up`) and then saves the cell. A wrong password stays on the form with "The password is not correct." and
+  from SRS-AUTH-05. `useCreateMarginCell()` first calls `confirmPassword()` (`features/auth/api.ts`, `POST /auth/step-up`) and then saves the cell. A wrong password stays on the form with "The password is not correct." and
   does not sign the person out.
 - A margin is never edited: **Change** adds a new cell. If the date is today the new margin is in use at once; a later
   date shows as "Then 14% from 1 Dec 2026" in the grid. Starting on or before the pair's latest cell is refused by the
   server (409) and shown above the form.
 - Form checks are in `schemas/marginForm.ts` (`validateMarginForm`); the class and tier lists are in `types/margin.ts`.
 - `formatDate()` (`utils/format.ts`) always shows Indian time, whatever the computer's own time zone is.
+
+## Rate board (features/board)
+
+Menu: **Rate board**, next to Buyers (Sales, Controller, Founder, Admin; the API gives anyone else a 403). The page
+(`pages/board/RateBoardPage.tsx`) is the Sales price list for one buyer: pick the buyer, then see every offer we can quote
+him today with **our rate per unit** and the value of a box.
+
+- The buyer is chosen with `BuyerPicker` (`features/buyers/`, like `SellerPicker`): type 2 or more characters; only buyers
+  that are turned on are offered. Nothing is shown until a buyer is chosen. Changing the buyer clears the search.
+- `useBoard()` (`features/board/hooks.ts`) asks `GET /buyers/:id/board`. It never uses a cached copy (`staleTime: 0`): a
+  quoted rate must match what is saved now. The search box filters by product name on the server; the table is paged.
+- A row shows product, pack, units per box and maker, the buyer rate, the box value, minimum / available boxes and shelf life.
+  The rate comes finished from the server (landed rate plus margin). The page never sees the seller, the seller's rate or the
+  margin, because the API does not send them.
+- **Rate unavailable: margin cell missing** takes the place of the rate when the margin matrix has no cell for that pack's
+  class and the buyer's tier. Fill the box on the Margin matrix screen.
+- A buyer who is not classified yet is priced as a Retailer: the page shows an **Indicative** badge, a note, and "indicative"
+  under each rate. **Classify now** on the Buyers page confirms his tier and the board then uses it.
+- Not built: opening a row to start a trade, "He wants it", asks and call outcomes (the funnel; waits on Q-WF-01).
 
 ## Recipes
 
@@ -190,4 +208,4 @@ and parses the result with a Zod schema.
 
 ## Not built yet (on purpose)
 
-MFA, the SKU ₹/unit matrix (P2), the Sales-side rate board, and the business modules after listings (orders, trades, …).
+MFA, the SKU ₹/unit matrix (P2), the buyer funnel on the rate board (Q-WF-01), and the business modules after listings (orders, trades, …).

@@ -46,6 +46,24 @@ taken, Vite silently moves to 5174 and every API call is then blocked by CORS (t
   Vite 8 option), breaks ESLint, and swaps this finding for real Vite dev-server vulnerabilities. The check that
   matters for production is `npm audit --omit=dev` (it reports 0).
 
+## Deploy to Vercel
+
+The app is a static build (`dist/`). In production there is no Vite dev server, so `vercel.json` does its two jobs:
+
+- **`/api/v1/*` is forwarded to the API** (`https://api-trifid.servehttp.com`, the `trifidserverapp` on AWS EC2). The
+  browser only ever talks to the Vercel address, so there is no CORS, and the sign-in cookie (`SameSite=Strict`) works.
+  Do **not** set `VITE_API_BASE_URL` to the API's own address: the cookie would then not be sent and every request
+  would be signed out. If the API moves to another address, change it in `vercel.json` (it cannot read env variables).
+- **Every other path serves `index.html`**, so refreshing `/products` or opening a saved link works.
+
+Vercel project settings: Framework Preset **Vite**, Build Command `npm run build`, Output Directory `dist`,
+Node.js Version **22.x**. Environment variables (Production and Preview): only `VITE_API_BASE_URL=/api/v1`, and even
+that is optional because it is the default. `VITE_DEV_PROXY_TARGET` is for the dev server only, so leave it out.
+Every `VITE_*` value is visible in the browser: never put a secret in one.
+
+The API's own `.env` on the server needs `NODE_ENV=production` (HTTPS-only cookie) and `DATA_ENCRYPTION_KEY`
+(required in production); its MongoDB Atlas network access must allow the server's public IP.
+
 ## Where things go
 
 ```

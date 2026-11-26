@@ -6,6 +6,7 @@ import { ErrorState } from '@/components/molecules/ErrorState';
 import { Pagination } from '@/components/molecules/Pagination';
 import { DataTableToolbar } from '@/components/organisms/DataTableToolbar';
 import { PageLayout } from '@/components/templates/PageLayout';
+import { PurchaseOrderStatusBadge } from '@/features/purchaseOrders/PurchaseOrderProgress';
 import { usePurchaseOrders } from '@/features/purchaseOrders/hooks';
 import { useDebouncedValue } from '@/hooks/useDebouncedValue';
 import { dueText, formatDateTime, formatRupees } from '@/utils/format';
@@ -52,7 +53,7 @@ export function PurchaseOrdersPage() {
                   <th className="px-4 py-3 font-medium">Seller</th>
                   <th className="px-4 py-3 font-medium">Item</th>
                   <th className="px-4 py-3 text-right font-medium">Total</th>
-                  <th className="px-4 py-3 font-medium">Dispatch</th>
+                  <th className="px-4 py-3 font-medium">Status</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
@@ -82,7 +83,10 @@ export function PurchaseOrdersPage() {
                       {formatRupees(po.totalPaise)}
                     </td>
                     <td className="px-4 py-3 text-xs text-slate-600">
-                      {dueText(po.dispatchDueAt)}
+                      <PurchaseOrderStatusBadge status={po.status} />
+                      {po.status === 'RAISED' && (
+                        <div className="mt-1">Dispatch {dueText(po.dispatchDueAt)}</div>
+                      )}
                     </td>
                   </tr>
                 ))}

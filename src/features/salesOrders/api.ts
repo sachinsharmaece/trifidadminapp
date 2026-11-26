@@ -85,6 +85,18 @@ const salesOrderSchema = z.object({
       rejectNote: z.string().nullable(),
     }),
   ),
+  // Money owed back to the buyer after the dock check (paid later, with payouts).
+  refunds: z.array(
+    z.object({
+      id: z.string(),
+      number: z.string(),
+      reason: z.string(),
+      boxes: z.number(),
+      amountPaise: z.number(),
+      status: z.enum(['DUE']),
+      createdAt: z.string(),
+    }),
+  ),
   cancel: z
     .object({ at: z.string(), reasonLabel: z.string(), note: z.string().nullable() })
     .nullable(),

@@ -56,8 +56,8 @@ src/
     molecules/    FormField, SearchInput, PasswordField, Pagination, ErrorState, ErrorAlert, PageSpinner
     organisms/    Header, Sidebar, NavigationMenu, DataTableToolbar
     templates/    AuthLayout, DashboardLayout, PageLayout
-  pages/        Thin screens: login, staff, masters/ (company, manufacturers, technicals, HSN codes, tehsils, reason codes), parties/ (sellers, buyers), listings/, products/, board/, trades/, salesOrders/, purchaseOrders/, books/ (payments, ledgers, bank accounts), dashboard
-  features/     Business modules, one folder each (auth, staff, company, manufacturers, technicals, hsnCodes, products, tehsils, reasonCodes, sellers, buyers, listings, margins, board, trades, salesOrders, payments, purchaseOrders, ledgers, bankAccounts)
+  pages/        Thin screens: login, staff, masters/ (company, manufacturers, technicals, HSN codes, tehsils, reason codes), parties/ (sellers, buyers), listings/, products/, board/, trades/, salesOrders/, purchaseOrders/, books/ (payments, ledgers, bank accounts), dock/ (dock, return notes), dashboard
+  features/     Business modules, one folder each (auth, staff, company, manufacturers, technicals, hsnCodes, products, tehsils, reasonCodes, sellers, buyers, listings, margins, board, trades, salesOrders, payments, purchaseOrders, ledgers, bankAccounts, dock)
   services/     api/ (Axios client, ApiError, error envelope, system status)  query/ (QueryClient)
   schemas/      UI-only form validation (Zod)
   hooks/ lib/ utils/ types/ assets/ styles/
@@ -238,6 +238,29 @@ order is raised by **Buyer says yes** and cancelled by **Buyer drops the order**
 - Data: `features/salesOrders/api.ts` (Zod schemas) and `hooks.ts`. The query keys sit under `['trades']`, so a deal
   card button also refreshes the order list and page. `SalesOrderStatusBadge` shows the status everywhere.
 
+## Dispatch and the dock (features/dock, trades/dockActionForms.tsx)
+
+After the PO (Build 3, LOCK-40). Every button presses an engine action; the server checks everything again.
+
+- **Record dispatch** and **Seller bill** (Purchase, on the deal card at s3–s6): how the seller sent the goods to
+  Indore (transport + LR, bus + driver's mobile, or a depot note), the freight (paid by the seller, or to pay at Indore
+  with the amount), the dispatch date, and per PO line the batch and expiry he packed (and "short expiry agreed"). The
+  seller's bill: number, amount, date (a different amount than the PO is saved with a warning; entering it again
+  replaces it).
+- **Dock** (`/dock`, `pages/dock/DockPage.tsx`; Logistics, Controller, Founder, Admin): three lanes. **Coming**:
+  dispatched, not here yet (red after 4 days on the road) → **Goods arrived** (when, boxes counted, bill with the
+  goods). **Arrived: to check** (check within a day) → **Check the goods** (`features/dock/InspectionForm.tsx`): per
+  line the batch and expiry found and the damaged, leaking and extra boxes; short boxes are worked out (ordered −
+  counted) and the form previews short and accepted as you type. **Checked**: the result and any return notes. The
+  dock never shows firm names or money. The Controller only looks. Founder and Admin also get both forms on the deal
+  card (the same components).
+- **Return notes** (`/return-notes`; Purchase, Logistics, Controller, Founder, Admin): open notes, due soonest first,
+  closed as picked up, shipped back or disposed (with the return freight, if any). Purchase gets a link to the PO.
+- After the check the deal card shows the PO's progress (dispatched, bill, arrived, checked, owed to the seller) on the
+  seller side and **Refund due to the buyer** on the buyer side (also on the order page).
+- Data: `features/dock/api.ts` and `hooks.ts` (query keys under `['trades']`); form rules in `schemas/dockForms.ts`;
+  labels in `types/dock.ts`.
+
 ## Payments, the PO and the books (features/payments, purchaseOrders, ledgers, bankAccounts)
 
 The rule (Q-ACC-01): the PO goes to the seller only when the order is **paid in full**; a smaller payment is kept as
@@ -279,5 +302,5 @@ and parses the result with a Zod schema.
 
 ## Not built yet (on purpose)
 
-MFA, the SKU ₹/unit matrix (P2), the trade after b7 (dispatch, dock, Marg bill, delivery), seller payouts, journals,
-insurance on an order (Q-SAL-04), and the Logistics desk queue.
+MFA, the SKU ₹/unit matrix (P2), the trade after b8 (Marg bill, trips, delivery), seller payouts and paying refunds,
+photos at dispatch and the dock (Q-ARC-02), journals, and insurance on an order (Q-SAL-04).

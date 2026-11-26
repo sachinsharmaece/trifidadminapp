@@ -11,6 +11,8 @@ import {
   type DeclineReason,
 } from '@/types/trade';
 import { RECEIPT_STATUSES } from '@/types/books';
+import { PURCHASE_ORDER_STATUSES, type FreightTerms, type Leg1Mode } from '@/types/dock';
+import { dockFactsShape } from '@/features/purchaseOrders/api';
 import { SALES_ORDER_STATUSES } from '@/types/salesOrder';
 
 /**
@@ -112,6 +114,20 @@ const tradeSchema = z.object({
     .optional(),
   balanceDuePaise: z.number().nullable().optional(),
   openPaise: z.number().nullable().optional(),
+  // Money owed back to the buyer after the dock check (buyer side; paid later, with payouts).
+  refunds: z
+    .array(
+      z.object({
+        id: z.string(),
+        number: z.string(),
+        reason: z.string(),
+        boxes: z.number(),
+        amountPaise: z.number(),
+        status: z.enum(['DUE']),
+        createdAt: z.string(),
+      }),
+    )
+    .optional(),
   leakage: z
     .object({
       context: z.string(),
@@ -124,13 +140,26 @@ const tradeSchema = z.object({
 
   // Seller side (Purchase and supervisors)
   seller: party.nullable().optional(),
+  // The PO (seller side): its lines, for the dispatch and dock forms, and what happened to it so far.
   purchaseOrder: z
     .object({
       id: z.string(),
       number: z.string(),
-      status: z.string(),
+      status: z.enum(PURCHASE_ORDER_STATUSES),
       totalPaise: z.number(),
       dispatchDueAt: z.string(),
+      lines: z.array(
+        z.object({
+          lineNo: z.number(),
+          productName: z.string(),
+          packLabel: z.string(),
+          unitsPerBox: z.number(),
+          boxes: z.number(),
+          expiryMonth: z.string(),
+          batchNumber: z.string().nullable(),
+        }),
+      ),
+      ...dockFactsShape,
     })
     .nullable()
     .optional(),
@@ -261,6 +290,51 @@ export interface ActionInputs {
   };
   confirmPayment: { receiptId: string };
   rejectPayment: { receiptId: string; note: string };
+  recordDispatch: DispatchInput;
+  recordSellerBill: { number: string; amountPaise: number; billDate: string };
+  recordArrival: ArrivalInput;
+  inspectLot: InspectionInput;
+}
+
+/** Leg 1 (Purchase). Fields that do not apply to the mode are left out. */
+export interface DispatchInput {
+  mode: Leg1Mode;
+  transporter?: string | undefined;
+  lrNumber?: string | undefined;
+  lrDate?: string | undefined;
+  busDetails?: string | undefined;
+  driverName?: string | undefined;
+  driverMobile?: string | undefined;
+  note?: string | undefined;
+  freightTerms: FreightTerms;
+  freightPaise?: number | undefined;
+  dispatchedOn: string;
+  lines: {
+    lineNo: number;
+    batchDeclared?: string | undefined;
+    expiryDeclared?: string | undefined;
+    shortExpiryAgreed: boolean;
+  }[];
+}
+
+/** The goods reached the dock (Logistics). `arrivedAt` is an ISO time. */
+export interface ArrivalInput {
+  arrivedAt: string;
+  boxesCounted: number;
+  billWithGoods: boolean;
+}
+
+/** The dock's check, per PO line. Short boxes are worked out by the server from the arrival count. */
+export interface InspectionInput {
+  lines: {
+    lineNo: number;
+    batchFound?: string | undefined;
+    expiryFound?: string | undefined;
+    damagedBoxes: number;
+    leakingBoxes: number;
+    excessBoxes: number;
+  }[];
+  note?: string | undefined;
 }
 
 /** Presses an engine button. `version` is the one on screen: if someone acted since, the server says 409. */

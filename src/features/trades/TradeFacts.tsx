@@ -1,5 +1,9 @@
 import type { ReactNode } from 'react';
 import { Link } from 'react-router';
+import {
+  PurchaseOrderStatusBadge,
+  purchaseOrderProgressRows,
+} from '@/features/purchaseOrders/PurchaseOrderProgress';
 import { SalesOrderStatusBadge } from '@/features/salesOrders/SalesOrderStatusBadge';
 import { Badge } from '@/components/atoms/Badge';
 import { EXPIRY_BAND_LABELS, PROVENANCE_LABELS } from '@/types/listing';
@@ -147,6 +151,27 @@ export function TradeFacts({ trade }: { trade: Trade }) {
               )}
             </div>
           )}
+          {trade.refunds && trade.refunds.length > 0 && (
+            <div className="mt-4 border-t border-slate-100 pt-3">
+              <h3 className="text-xs font-semibold uppercase text-slate-500">
+                Refund due to the buyer ·{' '}
+                {formatRupees(trade.refunds.reduce((sum, refund) => sum + refund.amountPaise, 0))}
+              </h3>
+              <ul className="mt-2 space-y-1 text-sm">
+                {trade.refunds.map((refund) => (
+                  <li key={refund.id}>
+                    <span className="font-medium">{formatRupees(refund.amountPaise)}</span>{' '}
+                    <span className="text-xs text-slate-500">
+                      {refund.number} · {refund.reason}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+              <p className="mt-1 text-xs text-slate-500">
+                Paying refunds comes with seller payouts (a later build).
+              </p>
+            </div>
+          )}
           {trade.leakage && (
             <p className="mt-3 rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700">
               Lost {formatDateTime(trade.leakage.at)}: {trade.leakage.reasonLabel}
@@ -187,9 +212,11 @@ export function TradeFacts({ trade }: { trade: Trade }) {
                       >
                         {trade.purchaseOrder.number}
                       </Link>
+                      <PurchaseOrderStatusBadge status={trade.purchaseOrder.status} />
                       {formatRupees(trade.purchaseOrder.totalPaise)}
                     </span>,
                   ],
+                  ...purchaseOrderProgressRows(trade.purchaseOrder),
                 ] as [string, ReactNode][])
               : []),
             ...(trade.listing

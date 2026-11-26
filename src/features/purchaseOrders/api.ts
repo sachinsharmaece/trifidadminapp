@@ -1,14 +1,62 @@
 import { z } from 'zod';
 import { apiClient } from '@/services/api/client';
+import {
+  FREIGHT_TERMS,
+  INSPECTION_OUTCOMES,
+  LEG1_MODES,
+  PURCHASE_ORDER_STATUSES,
+  RETURN_NOTE_TYPES,
+} from '@/types/dock';
 
 /**
- * Purchase orders: read only. Raised by the trade engine when Accounts confirms the buyer has paid in full.
- * A PO names the seller and his rate, never the buyer (Purchase reads it).
+ * Purchase orders: read only here. Raised by the trade engine when Accounts confirms the buyer has paid in full;
+ * dispatch (Purchase) and the dock (Logistics) are engine buttons too. A PO names the seller and his rate, never
+ * the buyer (Purchase reads it).
  */
+
+/** Leg 1, the seller's bill, the arrival and the dock's result. Also on the deal card's seller side. */
+export const dockFactsShape = {
+  leg1: z
+    .object({
+      mode: z.enum(LEG1_MODES),
+      transporter: z.string().nullable(),
+      lrNumber: z.string().nullable(),
+      lrDate: z.string().nullable(),
+      busDetails: z.string().nullable(),
+      driverName: z.string().nullable(),
+      driverMobile: z.string().nullable(),
+      note: z.string().nullable(),
+      freightTerms: z.enum(FREIGHT_TERMS),
+      freightPaise: z.number().nullable(),
+      dispatchedOn: z.string(),
+      lines: z.array(
+        z.object({
+          lineNo: z.number(),
+          batchDeclared: z.string().nullable(),
+          expiryDeclared: z.string().nullable(),
+          shortExpiryAgreed: z.boolean(),
+        }),
+      ),
+      at: z.string(),
+    })
+    .nullable(),
+  sellerBill: z
+    .object({ number: z.string(), amountPaise: z.number(), billDate: z.string(), at: z.string() })
+    .nullable(),
+  arrival: z
+    .object({ arrivedAt: z.string(), boxesCounted: z.number(), billWithGoods: z.boolean() })
+    .nullable(),
+  inspectBy: z.string().nullable(),
+  outcome: z.enum(INSPECTION_OUTCOMES).nullable(),
+  acceptedBoxes: z.number().nullable(),
+  acceptedValuePaise: z.number().nullable(),
+  inspectedAt: z.string().nullable(),
+};
+
 const rowSchema = z.object({
   id: z.string(),
   number: z.string(),
-  status: z.enum(['RAISED']),
+  status: z.enum(PURCHASE_ORDER_STATUSES),
   seller: z.object({ number: z.string(), firmName: z.string() }),
   item: z.string(),
   totalPaise: z.number(),
@@ -39,6 +87,43 @@ const purchaseOrderSchema = rowSchema.extend({
       exRatePaisePerUnit: z.number().nullable(),
       colPaisePerBox: z.number().nullable(),
       lineTotalPaise: z.number(),
+    }),
+  ),
+  ...dockFactsShape,
+  inspection: z
+    .object({
+      outcome: z.enum(INSPECTION_OUTCOMES),
+      boxesCounted: z.number(),
+      note: z.string().nullable(),
+      savedAt: z.string(),
+      lines: z.array(
+        z.object({
+          lineNo: z.number(),
+          boxesOnPo: z.number(),
+          boxesShort: z.number(),
+          boxesDamaged: z.number(),
+          boxesLeaking: z.number(),
+          boxesAccepted: z.number(),
+          boxesExcess: z.number(),
+          batchFound: z.string().nullable(),
+          expiryFound: z.string().nullable(),
+          batchDiffers: z.boolean(),
+          expiryDiffers: z.boolean(),
+          belowShelfLife: z.boolean(),
+          shortExpiryAgreed: z.boolean(),
+        }),
+      ),
+    })
+    .nullable(),
+  returnNotes: z.array(
+    z.object({
+      id: z.string(),
+      number: z.string(),
+      type: z.enum(RETURN_NOTE_TYPES),
+      boxes: z.number(),
+      reason: z.string(),
+      state: z.enum(['OPEN', 'CLOSED']),
+      dueAt: z.string(),
     }),
   ),
 });

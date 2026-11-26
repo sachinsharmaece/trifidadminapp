@@ -57,7 +57,11 @@ Full commands, layout and recipes: `README.md`.
   `features/bankAccounts`, with pages in `pages/books/` and `pages/purchaseOrders/`. A payment is entered on the deal
   card and confirmed from the Payments to confirm queue: both press engine actions (`runTradeAction` on the server).
   POs and ledgers are read only; the admin app never works out a balance or a GST split itself.
-- Not yet built: MFA, the SKU ₹/unit matrix, the trade after b7 (dispatch onward), seller payouts, and the Logistics
-  desk queue.
+- Dispatch and the dock live in `features/dock` (Dock and Return notes pages in `pages/dock/`) and
+  `features/trades/dockActionForms.tsx`. The arrival and check forms are shared by the Dock screen and the deal card.
+  Dock screens never show firm names or money (the API leaves them out). Short and accepted boxes in the check form
+  are only a preview: the server works them out.
+- Not yet built: MFA, the SKU ₹/unit matrix, the trade after b8 (Marg bill onward), seller payouts and paying refunds,
+  and photos.
 - Do not add: Redux, Zustand, React Hook Form, TanStack Table, analytics, auth/PDF libraries, paid UI kits
   (unless the task says so).

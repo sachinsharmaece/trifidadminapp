@@ -48,6 +48,20 @@ export const NAV_ITEMS: readonly MenuItem[] = [
     icon: 'clipboard',
     roles: ['PURCHASE', 'ACCOUNTS', 'CONTROLLER', 'FOUNDER', 'ADMIN'],
   },
+  // The Indore dock: arrival and the check. No firm names or money.
+  {
+    label: 'Dock',
+    path: '/dock',
+    icon: 'truck',
+    roles: ['LOGISTICS', 'CONTROLLER', 'FOUNDER', 'ADMIN'],
+  },
+  // Boxes going back to sellers after the dock check.
+  {
+    label: 'Return notes',
+    path: '/return-notes',
+    icon: 'return',
+    roles: ['PURCHASE', 'LOGISTICS', 'CONTROLLER', 'FOUNDER', 'ADMIN'],
+  },
   // The books.
   {
     label: 'Ledgers',

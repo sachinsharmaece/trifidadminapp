@@ -71,3 +71,8 @@ export function todayInIndia(): string {
 export function paiseToRupeesText(paise: number): string {
   return paise % 100 === 0 ? String(paise / 100) : (paise / 100).toFixed(2);
 }
+
+/** "1 box", "12 boxes". */
+export function boxesText(count: number): string {
+  return `${count} box${count === 1 ? '' : 'es'}`;
+}

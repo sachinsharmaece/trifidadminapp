@@ -1,17 +1,24 @@
 import { Link, useParams } from 'react-router';
-import { Badge } from '@/components/atoms/Badge';
 import { Button } from '@/components/atoms/Button';
 import { Spinner } from '@/components/atoms/Spinner';
 import { ErrorState } from '@/components/molecules/ErrorState';
 import { PageLayout } from '@/components/templates/PageLayout';
 import { useCurrentUser } from '@/features/auth/hooks';
 import { usePurchaseOrder } from '@/features/purchaseOrders/hooks';
-import { dueText, formatDateTime, formatRupees } from '@/utils/format';
+import {
+  PurchaseOrderStatusBadge,
+  purchaseOrderProgressRows,
+} from '@/features/purchaseOrders/PurchaseOrderProgress';
+import { OUTCOME_LABELS, RETURN_NOTE_TYPE_LABELS } from '@/types/dock';
+import { boxesText, dueText, formatDate, formatDateTime, formatRupees } from '@/utils/format';
 
 /** Who may open the deal card behind a PO (Accounts reads POs but not trades). */
 const SEES_TRADES = ['PURCHASE', 'CONTROLLER', 'FOUNDER', 'ADMIN'];
 
-/** One purchase order, read only: the seller, the line at his rate, and when he should dispatch. */
+/**
+ * One purchase order, read only: the seller, the line at his rate, then what happened to it: dispatch, the
+ * seller's bill, arrival, the dock check (per line) and any return notes. The buttons are on the deal card.
+ */
 export function PurchaseOrderPage() {
   const { id = '' } = useParams();
   const po = usePurchaseOrder(id);
@@ -35,8 +42,10 @@ export function PurchaseOrderPage() {
       description={`${data.seller.number} · ${data.seller.firmName} · raised ${formatDateTime(data.createdAt)}`}
     >
       <div className="flex flex-wrap items-center gap-3 text-sm">
-        <Badge tone="info">Raised</Badge>
-        <span className="text-slate-600">Seller to dispatch {dueText(data.dispatchDueAt)}</span>
+        <PurchaseOrderStatusBadge status={data.status} />
+        {data.status === 'RAISED' && (
+          <span className="text-slate-600">Seller to dispatch {dueText(data.dispatchDueAt)}</span>
+        )}
         {me && SEES_TRADES.includes(me.role) && (
           <Link
             to={`/trades/${data.tradeId}`}
@@ -104,6 +113,63 @@ export function PurchaseOrderPage() {
           </tfoot>
         </table>
       </div>
+      <section className="rounded-lg border border-slate-200 bg-white p-5 text-sm">
+        <h2 className="font-semibold text-slate-900">Dispatch and dock</h2>
+        <dl className="mt-3 grid gap-x-6 gap-y-2 sm:grid-cols-2">
+          {purchaseOrderProgressRows(data).map(([label, value]) => (
+            <div key={label}>
+              <dt className="text-xs text-slate-500">{label}</dt>
+              <dd className="text-slate-900">{value}</dd>
+            </div>
+          ))}
+        </dl>
+      </section>
+      {data.inspection && (
+        <section className="rounded-lg border border-slate-200 bg-white p-5 text-sm">
+          <h2 className="font-semibold text-slate-900">
+            Dock check · {OUTCOME_LABELS[data.inspection.outcome]}
+          </h2>
+          <p className="mt-1 text-xs text-slate-500">
+            {formatDateTime(data.inspection.savedAt)} · {data.inspection.boxesCounted} boxes counted
+            {data.inspection.note ? ` · ${data.inspection.note}` : ''}
+          </p>
+          <ul className="mt-3 space-y-2">
+            {data.inspection.lines.map((line) => {
+              const notes = [
+                line.batchDiffers ? `batch found ${line.batchFound ?? '—'} (differs)` : '',
+                line.expiryDiffers ? `expiry found ${line.expiryFound ?? '—'} (differs)` : '',
+                line.belowShelfLife ? 'short shelf life' : '',
+              ].filter(Boolean);
+              return (
+                <li key={line.lineNo}>
+                  Line {line.lineNo}: {line.boxesAccepted} of {line.boxesOnPo} accepted
+                  {line.boxesShort ? ` · ${line.boxesShort} short` : ''}
+                  {line.boxesDamaged ? ` · ${line.boxesDamaged} damaged` : ''}
+                  {line.boxesLeaking ? ` · ${line.boxesLeaking} leaking` : ''}
+                  {line.boxesExcess ? ` · ${line.boxesExcess} extra` : ''}
+                  {notes.length > 0 && (
+                    <div className="text-xs text-amber-700">Note: {notes.join(', ')}</div>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+        </section>
+      )}
+      {data.returnNotes.length > 0 && (
+        <section className="rounded-lg border border-slate-200 bg-white p-5 text-sm">
+          <h2 className="font-semibold text-slate-900">Return notes</h2>
+          <ul className="mt-2 space-y-1">
+            {data.returnNotes.map((note) => (
+              <li key={note.id}>
+                {note.number} · {RETURN_NOTE_TYPE_LABELS[note.type]} · {boxesText(note.boxes)} (
+                {note.reason}) ·{' '}
+                {note.state === 'OPEN' ? `due ${formatDate(note.dueAt)}` : 'closed'}
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
     </PageLayout>
   );
 }

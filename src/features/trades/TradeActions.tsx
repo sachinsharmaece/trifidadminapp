@@ -19,6 +19,12 @@ import {
   type ActionFormProps,
 } from './actionForms';
 import type { Trade } from './api';
+import {
+  InspectLotForm,
+  RecordArrivalForm,
+  RecordDispatchForm,
+  SellerBillForm,
+} from './dockActionForms';
 
 const FORMS: Record<TradeActionName, (props: ActionFormProps) => React.JSX.Element> = {
   wantIt: WantItForm,
@@ -34,6 +40,10 @@ const FORMS: Record<TradeActionName, (props: ActionFormProps) => React.JSX.Eleme
   enterPayment: EnterPaymentForm,
   confirmPayment: ConfirmPaymentForm,
   rejectPayment: RejectPaymentForm,
+  recordDispatch: RecordDispatchForm,
+  recordSellerBill: SellerBillForm,
+  recordArrival: RecordArrivalForm,
+  inspectLot: InspectLotForm,
 };
 
 /** The "no" buttons look quieter than the ones that move the trade forward. */
@@ -42,6 +52,7 @@ const QUIET_BUTTONS: TradeActionName[] = [
   'buyerNo',
   'leakAfterOrder',
   'rejectPayment',
+  'recordSellerBill',
 ];
 
 /**

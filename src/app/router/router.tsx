@@ -26,6 +26,8 @@ import { BankAccountsPage } from '@/pages/books/BankAccountsPage';
 import { LedgerPage } from '@/pages/books/LedgerPage';
 import { LedgersPage } from '@/pages/books/LedgersPage';
 import { PaymentsPage } from '@/pages/books/PaymentsPage';
+import { DockPage } from '@/pages/dock/DockPage';
+import { ReturnNotesPage } from '@/pages/dock/ReturnNotesPage';
 import { PurchaseOrderPage } from '@/pages/purchaseOrders/PurchaseOrderPage';
 import { PurchaseOrdersPage } from '@/pages/purchaseOrders/PurchaseOrdersPage';
 import { SalesOrderPage } from '@/pages/salesOrders/SalesOrderPage';
@@ -66,6 +68,8 @@ export const router = createBrowserRouter([
                   { path: '/payments', element: <PaymentsPage /> },
                   { path: '/purchase-orders', element: <PurchaseOrdersPage /> },
                   { path: '/purchase-orders/:id', element: <PurchaseOrderPage /> },
+                  { path: '/dock', element: <DockPage /> },
+                  { path: '/return-notes', element: <ReturnNotesPage /> },
                   { path: '/ledgers', element: <LedgersPage /> },
                   { path: '/ledgers/:id', element: <LedgerPage /> },
                   { path: '/bank-accounts', element: <BankAccountsPage /> },

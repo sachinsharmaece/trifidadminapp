@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import { Link } from 'react-router';
+import { billingRows } from '@/features/billing/billingRows';
 import {
   PurchaseOrderStatusBadge,
   purchaseOrderProgressRows,
@@ -149,6 +150,21 @@ export function TradeFacts({ trade }: { trade: Trade }) {
                   ))}
                 </ul>
               )}
+            </div>
+          )}
+          {trade.billing && (
+            <div className="mt-4 border-t border-slate-100 pt-3">
+              <h3 className="text-xs font-semibold uppercase text-slate-500">
+                Billing and delivery
+              </h3>
+              <dl className="mt-2 grid gap-x-6 gap-y-2 text-sm sm:grid-cols-2">
+                {billingRows(trade.billing).map(([label, value]) => (
+                  <div key={label}>
+                    <dt className="text-xs text-slate-500">{label}</dt>
+                    <dd className="text-slate-900">{value}</dd>
+                  </div>
+                ))}
+              </dl>
             </div>
           )}
           {trade.refunds && trade.refunds.length > 0 && (

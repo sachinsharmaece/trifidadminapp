@@ -1,4 +1,4 @@
-/** Trade stages and reasons, as the API uses them (server: shared/enums.ts). Built so far: b1–b8, s0–s6. */
+/** Trade stages and reasons, as the API uses them (server: shared/enums.ts). Built so far: b1–b10, s0–s6. */
 export const BUYER_STAGES = [
   'B1_VIEWING',
   'B2_INQUIRY',
@@ -8,6 +8,8 @@ export const BUYER_STAGES = [
   'B6_ORDER_CONFIRMED',
   'B7_PAID',
   'B8_BILLED',
+  'B9_DISPATCH',
+  'B10_DELIVERED',
   'X_LEAKAGE',
   'X_DOCK_REJECTED',
 ] as const;
@@ -21,7 +23,9 @@ export const BUYER_STAGE_LABELS: Record<BuyerStage, string> = {
   B5_BUYERS_CALL: "b5 Buyer's call",
   B6_ORDER_CONFIRMED: 'b6 Order confirmed',
   B7_PAID: 'b7 Paid',
-  B8_BILLED: 'b8 To be billed',
+  B8_BILLED: 'b8 Billing',
+  B9_DISPATCH: 'b9 Dispatched',
+  B10_DELIVERED: 'b10 Delivered',
   X_LEAKAGE: 'Leakage',
   X_DOCK_REJECTED: 'Dock rejected',
 };
@@ -95,5 +99,8 @@ export const TRADE_ACTION_NAMES = [
   'recordSellerBill',
   'recordArrival',
   'inspectLot',
+  'recordMargBill',
+  'recordPod',
+  'confirmDelivery',
 ] as const;
 export type TradeActionName = (typeof TRADE_ACTION_NAMES)[number];

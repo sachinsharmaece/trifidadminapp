@@ -19,6 +19,7 @@ import {
   type ActionFormProps,
 } from './actionForms';
 import type { Trade } from './api';
+import { ConfirmDeliveryForm, MargBillActionForm, PodForm } from './billingActionForms';
 import {
   InspectLotForm,
   RecordArrivalForm,
@@ -44,6 +45,9 @@ const FORMS: Record<TradeActionName, (props: ActionFormProps) => React.JSX.Eleme
   recordSellerBill: SellerBillForm,
   recordArrival: RecordArrivalForm,
   inspectLot: InspectLotForm,
+  recordMargBill: MargBillActionForm,
+  recordPod: PodForm,
+  confirmDelivery: ConfirmDeliveryForm,
 };
 
 /** The "no" buttons look quieter than the ones that move the trade forward. */

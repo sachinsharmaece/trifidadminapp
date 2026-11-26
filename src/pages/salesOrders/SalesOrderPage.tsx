@@ -7,6 +7,7 @@ import { ErrorState } from '@/components/molecules/ErrorState';
 import { PageLayout } from '@/components/templates/PageLayout';
 import { useCurrentUser } from '@/features/auth/hooks';
 import { useSalesOrder } from '@/features/salesOrders/hooks';
+import { billingRows } from '@/features/billing/billingRows';
 import { SalesOrderStatusBadge } from '@/features/salesOrders/SalesOrderStatusBadge';
 import { RECEIPT_STATUS_LABELS, RECEIPT_STATUS_TONES } from '@/types/books';
 import { RATE_TIER_LABELS } from '@/types/party';
@@ -212,6 +213,20 @@ export function SalesOrderPage() {
           </ul>
         )}
       </section>
+
+      {(data.margBill ?? data.status === 'PAID') && (
+        <section className="rounded-lg border border-slate-200 bg-white p-5">
+          <h2 className="text-sm font-semibold text-slate-900">Billing and delivery</h2>
+          <dl className="mt-3 grid gap-x-6 gap-y-2 text-sm sm:grid-cols-2">
+            {billingRows({ margBill: data.margBill, ...data.delivery }).map(([label, value]) => (
+              <div key={label}>
+                <dt className="text-xs text-slate-500">{label}</dt>
+                <dd className="text-slate-900">{value}</dd>
+              </div>
+            ))}
+          </dl>
+        </section>
+      )}
 
       {data.refunds.length > 0 && (
         <section className="rounded-lg border border-slate-200 bg-white p-5">

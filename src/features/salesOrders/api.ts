@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { deliveryShape, margBillSchema } from '@/features/billing/api';
 import { apiClient } from '@/services/api/client';
 import { RECEIPT_STATUSES } from '@/types/books';
 import { RATE_TIER_LABELS } from '@/types/party';
@@ -85,6 +86,9 @@ const salesOrderSchema = z.object({
       rejectNote: z.string().nullable(),
     }),
   ),
+  // Build 4: the Marg bill, the trip and delivery.
+  margBill: margBillSchema.nullable(),
+  delivery: z.object(deliveryShape),
   // Money owed back to the buyer after the dock check (paid later, with payouts).
   refunds: z.array(
     z.object({

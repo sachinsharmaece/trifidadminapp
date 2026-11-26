@@ -65,3 +65,23 @@ export const RETURN_CLOSURE_LABELS: Record<ReturnClosure, string> = {
   SHIPPED_BACK: 'We shipped it back',
   DISPOSED: 'Disposed of',
 };
+
+/** Trips (leg 2): PLANNED → OUT → CLOSED (when every bill has a POD). */
+export const TRIP_STATUSES = ['PLANNED', 'OUT', 'CLOSED'] as const;
+export type TripStatus = (typeof TRIP_STATUSES)[number];
+
+export const TRIP_STATUS_LABELS: Record<TripStatus, string> = {
+  PLANNED: 'Planned',
+  OUT: 'Out',
+  CLOSED: 'Closed',
+};
+
+/** How a bill goes on from our vehicle. */
+export const BOOK_WITH_MODES = ['TRANSPORT', 'BUS', 'DIRECT'] as const;
+export type BookWithMode = (typeof BOOK_WITH_MODES)[number];
+
+export const BOOK_WITH_LABELS: Record<BookWithMode, string> = {
+  TRANSPORT: 'Transport company',
+  BUS: 'Bus parcel',
+  DIRECT: 'Our vehicle delivers it',
+};

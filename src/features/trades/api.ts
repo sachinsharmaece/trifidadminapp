@@ -13,6 +13,7 @@ import {
 import { RECEIPT_STATUSES } from '@/types/books';
 import { PURCHASE_ORDER_STATUSES, type FreightTerms, type Leg1Mode } from '@/types/dock';
 import { dockFactsShape } from '@/features/purchaseOrders/api';
+import { acceptedSchema, deliveryShape, margBillSchema } from '@/features/billing/api';
 import { SALES_ORDER_STATUSES } from '@/types/salesOrder';
 
 /**
@@ -114,6 +115,15 @@ const tradeSchema = z.object({
     .optional(),
   balanceDuePaise: z.number().nullable().optional(),
   openPaise: z.number().nullable().optional(),
+  // From b8: what the dock accepted at the buyer's rate, the Marg bill, the trip and delivery (buyer side).
+  billing: z
+    .object({
+      accepted: acceptedSchema.nullable(),
+      margBill: margBillSchema.nullable(),
+      ...deliveryShape,
+    })
+    .nullable()
+    .optional(),
   // Money owed back to the buyer after the dock check (buyer side; paid later, with payouts).
   refunds: z
     .array(
@@ -294,6 +304,18 @@ export interface ActionInputs {
   recordSellerBill: { number: string; amountPaise: number; billDate: string };
   recordArrival: ArrivalInput;
   inspectLot: InspectionInput;
+  recordMargBill: MargBillInput;
+  recordPod: { ref: string; date: string };
+  confirmDelivery: Record<string, never>;
+}
+
+/** The Marg invoice as keyed by Accounts. */
+export interface MargBillInput {
+  invoiceNumber: string;
+  ewayBillNumber?: string | undefined;
+  billDate: string;
+  totalPaise: number;
+  lines: { lineNo: number; boxes: number }[];
 }
 
 /** Leg 1 (Purchase). Fields that do not apply to the mode are left out. */

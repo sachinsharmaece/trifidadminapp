@@ -56,8 +56,8 @@ src/
     molecules/    FormField, SearchInput, PasswordField, Pagination, ErrorState, ErrorAlert, PageSpinner
     organisms/    Header, Sidebar, NavigationMenu, DataTableToolbar
     templates/    AuthLayout, DashboardLayout, PageLayout
-  pages/        Thin screens: login, staff, masters/ (company, manufacturers, technicals, HSN codes, tehsils, reason codes), parties/ (sellers, buyers), listings/, products/, board/, trades/, salesOrders/, purchaseOrders/, books/ (payments, ledgers, bank accounts), dock/ (dock, return notes), dashboard
-  features/     Business modules, one folder each (auth, staff, company, manufacturers, technicals, hsnCodes, products, tehsils, reasonCodes, sellers, buyers, listings, margins, board, trades, salesOrders, payments, purchaseOrders, ledgers, bankAccounts, dock)
+  pages/        Thin screens: login, staff, masters/ (company, manufacturers, technicals, HSN codes, tehsils, reason codes), parties/ (sellers, buyers), listings/, products/, board/, trades/, salesOrders/, purchaseOrders/, books/ (payments, to be billed, ledgers, bank accounts), dock/ (dock, return notes), trips/, dashboard
+  features/     Business modules, one folder each (auth, staff, company, manufacturers, technicals, hsnCodes, products, tehsils, reasonCodes, sellers, buyers, listings, margins, board, trades, salesOrders, payments, purchaseOrders, ledgers, bankAccounts, dock, billing, trips)
   services/     api/ (Axios client, ApiError, error envelope, system status)  query/ (QueryClient)
   schemas/      UI-only form validation (Zod)
   hooks/ lib/ utils/ types/ assets/ styles/
@@ -261,6 +261,27 @@ After the PO (Build 3, LOCK-40). Every button presses an engine action; the serv
 - Data: `features/dock/api.ts` and `hooks.ts` (query keys under `['trades']`); form rules in `schemas/dockForms.ts`;
   labels in `types/dock.ts`.
 
+## Billing, trips and delivery (features/billing, features/trips, trades/billingActionForms.tsx)
+
+To the buyer (Build 4). Every button presses an engine action; the server checks everything again.
+
+- **To be billed** (`/to-be-billed`, `pages/books/ToBeBilledPage.tsx`; Accounts, Controller, Founder, Admin): orders
+  the dock has checked, oldest first, each with what was accepted at the buyer's rate ("At most ₹X to bill") and any
+  refund due. **Enter Marg bill** (`features/billing/MargBillForm.tsx`, also on the deal card for Founder and Admin):
+  the Marg invoice number, e-way bill, date, boxes billed per line and the total. Q-ACC-02: the bill may be lower than
+  the accepted value (the form shows by how much) but never higher (the form warns; the server refuses with "Check 3").
+  The **Billed** filter lists the ones done. The Controller only looks.
+- **Trips** (`/trips`, `pages/trips/TripsPage.tsx`; Logistics, Controller, Founder, Admin): **Billed: to load** (Marg
+  bills on no trip, with boxes, destination, batch and expiry) → **Add to trip** (a planned trip and how it goes on:
+  transport company, bus parcel or deliver direct). **New trip**: date, vehicle, driver and mobile. **Planned**: remove
+  a bill, **Check out**. **Out**: the WhatsApp text for the driver (with "Open in WhatsApp") and **Proof of dispatch**
+  per bill (LR or receipt number and date): the buyer moves to b9 Dispatched. The last POD closes the trip
+  (**Closed**). Trips never show firm names or money. The Controller only looks.
+- **Delivered** (Sales, on the deal card at b9): b9 → b10, the order is Delivered. The card and the order page show a
+  "Billing and delivery" block (accepted, Marg bill, trip, POD, delivered) via `features/billing/billingRows.ts`.
+- Data: `features/billing/api.ts` + `hooks.ts`, `features/trips/api.ts` + `hooks.ts` (query keys under `['trades']`);
+  form rules in `schemas/billingForms.ts`; trip and "book with" labels in `types/dock.ts`.
+
 ## Payments, the PO and the books (features/payments, purchaseOrders, ledgers, bankAccounts)
 
 The rule (Q-ACC-01): the PO goes to the seller only when the order is **paid in full**; a smaller payment is kept as
@@ -302,5 +323,5 @@ and parses the result with a Zod schema.
 
 ## Not built yet (on purpose)
 
-MFA, the SKU ₹/unit matrix (P2), the trade after b8 (Marg bill, trips, delivery), seller payouts and paying refunds,
-photos at dispatch and the dock (Q-ARC-02), journals, and insurance on an order (Q-SAL-04).
+MFA, the SKU ₹/unit matrix (P2), complaints after delivery (Q-SAL-05/08), seller payouts and paying refunds, photos
+at dispatch, the dock and the POD (Q-ARC-02), a vehicle register, journals, and insurance on an order (Q-SAL-04).

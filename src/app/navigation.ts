@@ -55,12 +55,26 @@ export const NAV_ITEMS: readonly MenuItem[] = [
     icon: 'truck',
     roles: ['LOGISTICS', 'CONTROLLER', 'FOUNDER', 'ADMIN'],
   },
+  // Billed orders loaded onto trips, checked out, and the proof of dispatch. No firm names or money.
+  {
+    label: 'Trips',
+    path: '/trips',
+    icon: 'truck',
+    roles: ['LOGISTICS', 'CONTROLLER', 'FOUNDER', 'ADMIN'],
+  },
   // Boxes going back to sellers after the dock check.
   {
     label: 'Return notes',
     path: '/return-notes',
     icon: 'return',
     roles: ['PURCHASE', 'LOGISTICS', 'CONTROLLER', 'FOUNDER', 'ADMIN'],
+  },
+  // The Accounts desk queue: checked lots waiting for their Marg bill (the same engine button as the deal card).
+  {
+    label: 'To be billed',
+    path: '/to-be-billed',
+    icon: 'receipt',
+    roles: ['ACCOUNTS', 'CONTROLLER', 'FOUNDER', 'ADMIN'],
   },
   // The books.
   {

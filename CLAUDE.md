@@ -61,7 +61,10 @@ Full commands, layout and recipes: `README.md`.
   `features/trades/dockActionForms.tsx`. The arrival and check forms are shared by the Dock screen and the deal card.
   Dock screens never show firm names or money (the API leaves them out). Short and accepted boxes in the check form
   are only a preview: the server works them out.
-- Not yet built: MFA, the SKU ₹/unit matrix, the trade after b8 (Marg bill onward), seller payouts and paying refunds,
-  and photos.
+- Billing and trips live in `features/billing` (To be billed page in `pages/books/`, `MargBillForm` shared with the
+  deal card) and `features/trips` (Trips page in `pages/trips/`; the POD fields are shared with the deal card via
+  `PodFields` in `features/trades/billingActionForms.tsx`). The Marg form's "lower" / "higher" notes are only a
+  preview: the server does the checks. Trips never show firm names or money.
+- Not yet built: MFA, the SKU ₹/unit matrix, complaints after delivery, seller payouts and paying refunds, and photos.
 - Do not add: Redux, Zustand, React Hook Form, TanStack Table, analytics, auth/PDF libraries, paid UI kits
   (unless the task says so).

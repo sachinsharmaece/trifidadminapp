@@ -1,0 +1,109 @@
+import { Link, useParams } from 'react-router';
+import { Badge } from '@/components/atoms/Badge';
+import { Button } from '@/components/atoms/Button';
+import { Spinner } from '@/components/atoms/Spinner';
+import { ErrorState } from '@/components/molecules/ErrorState';
+import { PageLayout } from '@/components/templates/PageLayout';
+import { useCurrentUser } from '@/features/auth/hooks';
+import { usePurchaseOrder } from '@/features/purchaseOrders/hooks';
+import { dueText, formatDateTime, formatRupees } from '@/utils/format';
+
+/** Who may open the deal card behind a PO (Accounts reads POs but not trades). */
+const SEES_TRADES = ['PURCHASE', 'CONTROLLER', 'FOUNDER', 'ADMIN'];
+
+/** One purchase order, read only: the seller, the line at his rate, and when he should dispatch. */
+export function PurchaseOrderPage() {
+  const { id = '' } = useParams();
+  const po = usePurchaseOrder(id);
+  const { data: me } = useCurrentUser();
+
+  if (po.isPending) return <Spinner label="Loading PO" className="h-6 w-6 text-brand-600" />;
+  if (po.isError) {
+    return (
+      <ErrorState title="Could not load this purchase order" message={po.error.message}>
+        <Button onClick={() => void po.refetch()}>Try again</Button>
+        <Link to="/purchase-orders" className="text-sm font-medium text-brand-700 hover:underline">
+          Back to purchase orders
+        </Link>
+      </ErrorState>
+    );
+  }
+  const data = po.data;
+  return (
+    <PageLayout
+      title={data.number}
+      description={`${data.seller.number} · ${data.seller.firmName} · raised ${formatDateTime(data.createdAt)}`}
+    >
+      <div className="flex flex-wrap items-center gap-3 text-sm">
+        <Badge tone="info">Raised</Badge>
+        <span className="text-slate-600">Seller to dispatch {dueText(data.dispatchDueAt)}</span>
+        {me && SEES_TRADES.includes(me.role) && (
+          <Link
+            to={`/trades/${data.tradeId}`}
+            className="font-medium text-brand-700 hover:underline"
+          >
+            Open the deal card
+          </Link>
+        )}
+      </div>
+      <section className="rounded-lg border border-slate-200 bg-white p-5 text-sm">
+        <h2 className="font-semibold text-slate-900">Seller</h2>
+        <p className="mt-2">
+          {data.seller.number} · {data.seller.firmName}
+        </p>
+        <p className="text-xs text-slate-500">GSTIN {data.seller.gstin ?? 'none'}</p>
+      </section>
+      <div className="overflow-x-auto rounded-lg border border-slate-200 bg-white">
+        <table className="w-full min-w-[44rem] text-left text-sm">
+          <thead className="border-b border-slate-200 bg-slate-50 text-xs uppercase text-slate-500">
+            <tr>
+              <th className="px-4 py-3 font-medium">Item</th>
+              <th className="px-4 py-3 font-medium">Expiry · batch</th>
+              <th className="px-4 py-3 text-right font-medium">Rate per unit (landed)</th>
+              <th className="px-4 py-3 text-right font-medium">Boxes</th>
+              <th className="px-4 py-3 text-right font-medium">Line total</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-slate-100">
+            {data.lines.map((line) => (
+              <tr key={line.lineNo}>
+                <td className="px-4 py-3">
+                  {line.productName} · {line.packLabel}
+                  <div className="text-xs text-slate-500">{line.unitsPerBox} per box</div>
+                </td>
+                <td className="px-4 py-3">
+                  {line.expiryMonth}
+                  {line.batchNumber ? ` · ${line.batchNumber}` : ''}
+                </td>
+                <td className="whitespace-nowrap px-4 py-3 text-right">
+                  {formatRupees(line.landedPaisePerUnit)}
+                  {line.rateType === 'EX' && line.exRatePaisePerUnit !== null && (
+                    <div className="text-xs text-slate-500">
+                      Ex {formatRupees(line.exRatePaisePerUnit)} + carriage{' '}
+                      {formatRupees(line.colPaisePerBox ?? 0)}/box
+                    </div>
+                  )}
+                  {line.rateType === 'FOR' && <div className="text-xs text-slate-500">FOR</div>}
+                </td>
+                <td className="px-4 py-3 text-right">{line.boxes}</td>
+                <td className="whitespace-nowrap px-4 py-3 text-right font-medium">
+                  {formatRupees(line.lineTotalPaise)}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+          <tfoot className="border-t border-slate-200">
+            <tr>
+              <td colSpan={4} className="px-4 py-3 text-right font-semibold">
+                Total
+              </td>
+              <td className="whitespace-nowrap px-4 py-3 text-right font-semibold">
+                {formatRupees(data.totalPaise)}
+              </td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+    </PageLayout>
+  );
+}

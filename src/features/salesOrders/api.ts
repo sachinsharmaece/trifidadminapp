@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { apiClient } from '@/services/api/client';
+import { RECEIPT_STATUSES } from '@/types/books';
 import { RATE_TIER_LABELS } from '@/types/party';
 import { SALES_ORDER_STATUSES, type SalesOrderStatus } from '@/types/salesOrder';
 
@@ -71,6 +72,19 @@ const salesOrderSchema = z.object({
   }),
   paymentDueAt: z.string(),
   paidPaise: z.number(),
+  paidAt: z.string().nullable(),
+  payments: z.array(
+    z.object({
+      id: z.string(),
+      number: z.string(),
+      status: z.enum(RECEIPT_STATUSES),
+      amountPaise: z.number(),
+      utr: z.string(),
+      bankName: z.string(),
+      receivedOn: z.string(),
+      rejectNote: z.string().nullable(),
+    }),
+  ),
   cancel: z
     .object({ at: z.string(), reasonLabel: z.string(), note: z.string().nullable() })
     .nullable(),

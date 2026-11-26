@@ -78,6 +78,45 @@ export const validateReason = (values: ReasonValues) =>
     values,
   );
 
+export interface PaymentValues {
+  bankLedgerId: string;
+  utr: string;
+  amount: string;
+  receivedOn: string;
+}
+/** "Enter payment": our bank account, the UTR, the amount in rupees (sent as paise) and the day it came in. */
+export const validatePayment = (values: PaymentValues) =>
+  checkForm(
+    z
+      .object({
+        bankLedgerId: z.string().min(1, 'Choose the bank account'),
+        utr: z
+          .string()
+          .transform((text) => text.replace(/[\s-]/g, '').toUpperCase())
+          .pipe(z.string().regex(/^[0-9A-Z]{6,30}$/, 'A UTR has 6 to 30 letters or digits')),
+        amount: rupeesToPaise('Enter the amount', 100_000_000),
+        receivedOn: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Choose the date the money came in'),
+      })
+      .transform(({ amount, ...rest }) => ({ ...rest, amountPaise: amount })),
+    values,
+  );
+
+export interface PaymentChoiceValues {
+  receiptId: string;
+  note: string;
+}
+/** "Confirm payment" / "Payment not received" on the deal card: which entry, and (for not received) why. */
+export const validatePaymentChoice = (values: PaymentChoiceValues, needsNote: boolean) =>
+  checkForm(
+    z.object({
+      receiptId: z.string().min(1, 'Choose the payment'),
+      note: needsNote
+        ? z.string().trim().min(1, 'Say what was wrong').max(300)
+        : z.string().trim().max(300),
+    }),
+    values,
+  );
+
 export interface AskValues {
   boxes: string;
   reason: string;

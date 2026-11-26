@@ -61,3 +61,13 @@ export function dueText(isoDate: string, now: Date = new Date()): string {
   const minutes = Math.floor(late / 60_000);
   return `overdue by ${Math.floor(minutes / 60)}h ${minutes % 60}m`;
 }
+
+/** Today's date in India as YYYY-MM-DD (the value of `<input type="date">`). */
+export function todayInIndia(): string {
+  return new Date(Date.now() + 5.5 * 60 * 60 * 1000).toISOString().slice(0, 10);
+}
+
+/** Paise as the text a person types into a rupee field: 5000000 -> "50000", 59950 -> "599.50". */
+export function paiseToRupeesText(paise: number): string {
+  return paise % 100 === 0 ? String(paise / 100) : (paise / 100).toFixed(2);
+}

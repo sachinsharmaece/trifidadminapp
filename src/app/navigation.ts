@@ -27,12 +27,39 @@ export const NAV_ITEMS: readonly MenuItem[] = [
     icon: 'funnel',
     roles: ['SALES', 'CONTROLLER', 'FOUNDER', 'ADMIN'],
   },
-  // Orders raised when a buyer says yes. Accounts reads them too (payments come next).
+  // Orders raised when a buyer says yes. Accounts reads them too.
   {
     label: 'Sales orders',
     path: '/sales-orders',
     icon: 'receipt',
     roles: ['SALES', 'ACCOUNTS', 'CONTROLLER', 'FOUNDER', 'ADMIN'],
+  },
+  // The Accounts desk queue: confirm payments Sales entered (the same engine buttons as the deal card).
+  {
+    label: 'Payments to confirm',
+    path: '/payments',
+    icon: 'check',
+    roles: ['ACCOUNTS', 'CONTROLLER', 'FOUNDER', 'ADMIN'],
+  },
+  // Raised when a buyer has paid in full. Seller side: never Sales.
+  {
+    label: 'Purchase orders',
+    path: '/purchase-orders',
+    icon: 'clipboard',
+    roles: ['PURCHASE', 'ACCOUNTS', 'CONTROLLER', 'FOUNDER', 'ADMIN'],
+  },
+  // The books.
+  {
+    label: 'Ledgers',
+    path: '/ledgers',
+    icon: 'book',
+    roles: ['ACCOUNTS', 'CONTROLLER', 'FOUNDER', 'ADMIN'],
+  },
+  {
+    label: 'Bank accounts',
+    path: '/bank-accounts',
+    icon: 'bank',
+    roles: ['ACCOUNTS', 'CONTROLLER', 'FOUNDER', 'ADMIN'],
   },
   {
     label: 'Sellers',

@@ -53,7 +53,11 @@ Full commands, layout and recipes: `README.md`.
   `FORMS` (`TradeActions.tsx`), pressed through `useTradeAction()`. Never write a trade any other way (one engine).
 - Sales orders live in `features/salesOrders` with pages in `pages/salesOrders/`: read only (the deal card's buttons
   raise and cancel them). Show only what the API sent: the seller and his rate come back for supervisors only.
-- Not yet built: MFA, the SKU ₹/unit matrix, the trade after b6 (payments first), and the Accounts and Logistics desk
-  queues.
+- Payments, POs and the books live in `features/payments`, `features/purchaseOrders`, `features/ledgers` and
+  `features/bankAccounts`, with pages in `pages/books/` and `pages/purchaseOrders/`. A payment is entered on the deal
+  card and confirmed from the Payments to confirm queue: both press engine actions (`runTradeAction` on the server).
+  POs and ledgers are read only; the admin app never works out a balance or a GST split itself.
+- Not yet built: MFA, the SKU ₹/unit matrix, the trade after b7 (dispatch onward), seller payouts, and the Logistics
+  desk queue.
 - Do not add: Redux, Zustand, React Hook Form, TanStack Table, analytics, auth/PDF libraries, paid UI kits
   (unless the task says so).

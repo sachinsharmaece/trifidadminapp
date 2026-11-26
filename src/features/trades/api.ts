@@ -10,6 +10,7 @@ import {
   type AskReason,
   type DeclineReason,
 } from '@/types/trade';
+import { RECEIPT_STATUSES } from '@/types/books';
 import { SALES_ORDER_STATUSES } from '@/types/salesOrder';
 
 /**
@@ -93,6 +94,24 @@ const tradeSchema = z.object({
     })
     .nullable()
     .optional(),
+  // Payments entered for the order (buyer side): what is still due, and what may still be entered.
+  payments: z
+    .array(
+      z.object({
+        id: z.string(),
+        number: z.string(),
+        status: z.enum(RECEIPT_STATUSES),
+        amountPaise: z.number(),
+        utr: z.string(),
+        bankName: z.string(),
+        receivedOn: z.string(),
+        enteredById: z.string(),
+        rejectNote: z.string().nullable(),
+      }),
+    )
+    .optional(),
+  balanceDuePaise: z.number().nullable().optional(),
+  openPaise: z.number().nullable().optional(),
   leakage: z
     .object({
       context: z.string(),
@@ -105,6 +124,16 @@ const tradeSchema = z.object({
 
   // Seller side (Purchase and supervisors)
   seller: party.nullable().optional(),
+  purchaseOrder: z
+    .object({
+      id: z.string(),
+      number: z.string(),
+      status: z.string(),
+      totalPaise: z.number(),
+      dispatchDueAt: z.string(),
+    })
+    .nullable()
+    .optional(),
   listing: z
     .object({
       id: z.string(),
@@ -224,6 +253,14 @@ export interface ActionInputs {
   buyerNo: { reasonCodeId: string; note?: string | undefined };
   leakAfterOrder: { reasonCodeId: string; note?: string | undefined };
   reopen: Record<string, never>;
+  enterPayment: {
+    bankLedgerId: string;
+    utr: string;
+    amountPaise: number;
+    receivedOn: string;
+  };
+  confirmPayment: { receiptId: string };
+  rejectPayment: { receiptId: string; note: string };
 }
 
 /** Presses an engine button. `version` is the one on screen: if someone acted since, the server says 409. */

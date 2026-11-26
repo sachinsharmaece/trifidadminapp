@@ -5,7 +5,10 @@ import type { TradeActionName } from '@/types/trade';
 import {
   BuyerNoForm,
   BuyerYesForm,
+  ConfirmPaymentForm,
   ConfirmStockForm,
+  EnterPaymentForm,
+  RejectPaymentForm,
   DeclineStockForm,
   LeakAfterOrderForm,
   QuoteForm,
@@ -28,10 +31,18 @@ const FORMS: Record<TradeActionName, (props: ActionFormProps) => React.JSX.Eleme
   buyerNo: BuyerNoForm,
   leakAfterOrder: LeakAfterOrderForm,
   reopen: ReopenForm,
+  enterPayment: EnterPaymentForm,
+  confirmPayment: ConfirmPaymentForm,
+  rejectPayment: RejectPaymentForm,
 };
 
 /** The "no" buttons look quieter than the ones that move the trade forward. */
-const QUIET_BUTTONS: TradeActionName[] = ['declineStock', 'buyerNo', 'leakAfterOrder'];
+const QUIET_BUTTONS: TradeActionName[] = [
+  'declineStock',
+  'buyerNo',
+  'leakAfterOrder',
+  'rejectPayment',
+];
 
 /**
  * The trade's buttons, exactly as the server listed them: a button another desk presses is shown greyed with

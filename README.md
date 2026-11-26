@@ -46,24 +46,6 @@ taken, Vite silently moves to 5174 and every API call is then blocked by CORS (t
   Vite 8 option), breaks ESLint, and swaps this finding for real Vite dev-server vulnerabilities. The check that
   matters for production is `npm audit --omit=dev` (it reports 0).
 
-## Deploy to Vercel
-
-The app is a static build (`dist/`). In production there is no Vite dev server, so `vercel.json` does its two jobs:
-
-- **`/api/v1/*` is forwarded to the API** (`https://api-trifid.servehttp.com`, the `trifidserverapp` on AWS EC2). The
-  browser only ever talks to the Vercel address, so there is no CORS, and the sign-in cookie (`SameSite=Strict`) works.
-  Do **not** set `VITE_API_BASE_URL` to the API's own address: the cookie would then not be sent and every request
-  would be signed out. If the API moves to another address, change it in `vercel.json` (it cannot read env variables).
-- **Every other path serves `index.html`**, so refreshing `/products` or opening a saved link works.
-
-Vercel project settings: Framework Preset **Vite**, Build Command `npm run build`, Output Directory `dist`,
-Node.js Version **22.x**. Environment variables (Production and Preview): only `VITE_API_BASE_URL=/api/v1`, and even
-that is optional because it is the default. `VITE_DEV_PROXY_TARGET` is for the dev server only, so leave it out.
-Every `VITE_*` value is visible in the browser: never put a secret in one.
-
-The API's own `.env` on the server needs `NODE_ENV=production` (HTTPS-only cookie) and `DATA_ENCRYPTION_KEY`
-(required in production); its MongoDB Atlas network access must allow the server's public IP.
-
 ## Where things go
 
 ```
@@ -74,8 +56,8 @@ src/
     molecules/    FormField, SearchInput, PasswordField, Pagination, ErrorState, ErrorAlert, PageSpinner
     organisms/    Header, Sidebar, NavigationMenu, DataTableToolbar
     templates/    AuthLayout, DashboardLayout, PageLayout
-  pages/        Thin screens: login, staff, masters/ (company, manufacturers, technicals, HSN codes, tehsils, reason codes), parties/ (sellers, buyers), listings/, products/, dashboard
-  features/     Business modules, one folder each (auth, staff, company, manufacturers, technicals, hsnCodes, products, tehsils, reasonCodes, sellers, buyers, listings)
+  pages/        Thin screens: login, staff, masters/ (company, manufacturers, technicals, HSN codes, tehsils, reason codes), parties/ (sellers, buyers), listings/, products/, board/, trades/, salesOrders/, purchaseOrders/, books/ (payments, ledgers, bank accounts), dashboard
+  features/     Business modules, one folder each (auth, staff, company, manufacturers, technicals, hsnCodes, products, tehsils, reasonCodes, sellers, buyers, listings, margins, board, trades, salesOrders, payments, purchaseOrders, ledgers, bankAccounts)
   services/     api/ (Axios client, ApiError, error envelope, system status)  query/ (QueryClient)
   schemas/      UI-only form validation (Zod)
   hooks/ lib/ utils/ types/ assets/ styles/
@@ -227,7 +209,10 @@ One trade engine on the server (Q-WF-01, Option 3); these screens only show a tr
 - After the seller answers, Sales presses **Send to buyer** (the form says what to tell him: boxes, rate, box value,
   expiry), then **Buyer says yes** (raises his sales order; the card links it) or **Buyer says no** (a reason from the
   reason codes, context "Buyer said no"). At b6 **Buyer drops the order** cancels the order (context "Lost at stage
-  B6"); a lost trade shows why, and **Reopen** takes it back to b2. Reasons come from `useReasonCodes()`, filtered to the
+  B6"); a lost trade shows why, and **Reopen** takes it back to b2. At b6 Sales also presses **Enter payment** (our
+  bank account, UTR, amount, the day it came in; the form shows what is still open), and Accounts **Confirm payment** /
+  **Payment not received** (pick the waiting payment). The card lists the payments and what is still due; once paid
+  in full it moves to b7 and links the PO. Reasons come from `useReasonCodes()`, filtered to the
   form's context and turned-on codes. The "no" buttons are the quieter (white) ones.
 - **Buyer funnels** (Sales, Controller, Founder, Admin) and **Seller funnels** (Purchase's queue; Purchase, Controller,
   Founder, Admin): `FunnelView.tsx`, one list with a tab per stage (with counts), search and paging. Whoever must act
@@ -248,8 +233,31 @@ order is raised by **Buyer says yes** and cancelled by **Buyer drops the order**
   Madhya Pradesh, IGST for another state). The server sends the seller and his rate only to Controller, Founder and
   Admin, so the page shows the "Seller rate" column only when it came back. "Open the deal card" is shown to the roles
   that can open trades (not Accounts).
+- The order page also shows "Still due" and its payments (waiting, confirmed with the voucher number, or not received
+  with the note).
 - Data: `features/salesOrders/api.ts` (Zod schemas) and `hooks.ts`. The query keys sit under `['trades']`, so a deal
   card button also refreshes the order list and page. `SalesOrderStatusBadge` shows the status everywhere.
+
+## Payments, the PO and the books (features/payments, purchaseOrders, ledgers, bankAccounts)
+
+The rule (Q-ACC-01): the PO goes to the seller only when the order is **paid in full**; a smaller payment is kept as
+an advance. Sales enters a payment on the deal card; Accounts confirms it. Nobody confirms a payment they entered
+(maker ≠ checker, Founder and Admin included).
+
+- **Payments to confirm** (`/payments`, `pages/books/PaymentsPage.tsx`; Accounts, Controller, Founder, Admin): the
+  Accounts desk queue, oldest first, with a status filter and search. **Confirm** and **Not received** (with a note)
+  press the same engine actions as the deal card (`POST /payments/:id/confirm|reject`, with the trade's `version`). A
+  row you entered says "You entered it: someone else confirms" instead of buttons. The Controller only looks.
+- **Purchase orders** (`/purchase-orders`, `/purchase-orders/:id`; Purchase, Accounts, Controller, Founder, Admin):
+  read only. A PO is raised by the server when a payment makes the order paid in full; it shows the seller, the line at
+  the seller's rate and "Dispatch by". It never shows the buyer or our selling rate.
+- **Ledgers** (`/ledgers`, `/ledgers/:id`; Accounts, Controller, Founder, Admin): every ledger with its Dr, Cr and
+  balance, and one ledger's statement (its voucher lines with the running balance). A bank account's statement is the
+  bank book (Q-ACC-09: the vouchers are the only books). `BalanceText` shows "₹X Dr" / "₹X Cr".
+- **Bank accounts** (`/bank-accounts`; Accounts, Controller, Founder, Admin see; Founder and Admin add or change): our
+  bank and cash accounts. Only the last 4 digits of the number ever come back. Turn one off instead of deleting it.
+- Data: `api.ts` (Zod schemas) and `hooks.ts` in each folder; the payment and PO query keys sit under `['trades']`, so a
+  confirm also refreshes the deal card, the order and the lists. Money is typed in rupees and sent as paise.
 
 ## Recipes
 
@@ -271,5 +279,5 @@ and parses the result with a Zod schema.
 
 ## Not built yet (on purpose)
 
-MFA, the SKU ₹/unit matrix (P2), the trade after b6 (payment, PO, dock, Marg bill, dispatch, delivery), insurance on an
-order (Q-SAL-04), and the Accounts and Logistics desk queues.
+MFA, the SKU ₹/unit matrix (P2), the trade after b7 (dispatch, dock, Marg bill, delivery), seller payouts, journals,
+insurance on an order (Q-SAL-04), and the Logistics desk queue.

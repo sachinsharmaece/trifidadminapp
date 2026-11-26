@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import { Link, useParams } from 'react-router';
+import { Badge } from '@/components/atoms/Badge';
 import { Button } from '@/components/atoms/Button';
 import { Spinner } from '@/components/atoms/Spinner';
 import { ErrorState } from '@/components/molecules/ErrorState';
@@ -7,6 +8,7 @@ import { PageLayout } from '@/components/templates/PageLayout';
 import { useCurrentUser } from '@/features/auth/hooks';
 import { useSalesOrder } from '@/features/salesOrders/hooks';
 import { SalesOrderStatusBadge } from '@/features/salesOrders/SalesOrderStatusBadge';
+import { RECEIPT_STATUS_LABELS, RECEIPT_STATUS_TONES } from '@/types/books';
 import { RATE_TIER_LABELS } from '@/types/party';
 import { dueText, formatDateTime, formatPercent, formatRupees } from '@/utils/format';
 
@@ -174,9 +176,41 @@ export function SalesOrderPage() {
           <dd className="border-t border-slate-200 pt-1 text-right font-semibold">
             {formatRupees(data.totalPaise)}
           </dd>
-          <dt className="text-slate-600">Received</dt>
+          <dt className="text-slate-600">Received (confirmed)</dt>
           <dd className="text-right">{formatRupees(data.paidPaise)}</dd>
+          <dt className="font-semibold">Still due</dt>
+          <dd className="text-right font-semibold">
+            {formatRupees(data.status === 'CANCELLED' ? 0 : data.totalPaise - data.paidPaise)}
+          </dd>
         </dl>
+      </section>
+
+      <section className="rounded-lg border border-slate-200 bg-white p-5">
+        <h2 className="text-sm font-semibold text-slate-900">Payments</h2>
+        <p className="mt-1 text-xs text-slate-500">
+          Sales enters what the buyer paid; it counts once Accounts confirms it. The PO goes to the
+          seller when the order is paid in full.
+        </p>
+        {data.payments.length === 0 ? (
+          <p className="mt-3 text-sm text-slate-500">None entered yet.</p>
+        ) : (
+          <ul className="mt-3 divide-y divide-slate-100 text-sm">
+            {data.payments.map((payment) => (
+              <li key={payment.id} className="flex flex-wrap items-center gap-2 py-2">
+                <span className="font-medium">{formatRupees(payment.amountPaise)}</span>
+                <span className="text-slate-600">
+                  {payment.number} · UTR {payment.utr} · {payment.bankName} · {payment.receivedOn}
+                </span>
+                <Badge tone={RECEIPT_STATUS_TONES[payment.status]}>
+                  {RECEIPT_STATUS_LABELS[payment.status]}
+                </Badge>
+                {payment.rejectNote && (
+                  <span className="text-xs text-red-700">{payment.rejectNote}</span>
+                )}
+              </li>
+            ))}
+          </ul>
+        )}
       </section>
     </PageLayout>
   );

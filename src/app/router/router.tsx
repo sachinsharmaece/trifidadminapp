@@ -22,6 +22,12 @@ import { NotFoundPage } from '@/pages/NotFoundPage';
 import { RouteErrorPage } from '@/pages/RouteErrorPage';
 import { BuyerFunnelsPage } from '@/pages/trades/BuyerFunnelsPage';
 import { SellerFunnelsPage } from '@/pages/trades/SellerFunnelsPage';
+import { BankAccountsPage } from '@/pages/books/BankAccountsPage';
+import { LedgerPage } from '@/pages/books/LedgerPage';
+import { LedgersPage } from '@/pages/books/LedgersPage';
+import { PaymentsPage } from '@/pages/books/PaymentsPage';
+import { PurchaseOrderPage } from '@/pages/purchaseOrders/PurchaseOrderPage';
+import { PurchaseOrdersPage } from '@/pages/purchaseOrders/PurchaseOrdersPage';
 import { SalesOrderPage } from '@/pages/salesOrders/SalesOrderPage';
 import { SalesOrdersPage } from '@/pages/salesOrders/SalesOrdersPage';
 import { TradePage } from '@/pages/trades/TradePage';
@@ -57,6 +63,12 @@ export const router = createBrowserRouter([
                   { path: '/trades/:id', element: <TradePage /> },
                   { path: '/sales-orders', element: <SalesOrdersPage /> },
                   { path: '/sales-orders/:id', element: <SalesOrderPage /> },
+                  { path: '/payments', element: <PaymentsPage /> },
+                  { path: '/purchase-orders', element: <PurchaseOrdersPage /> },
+                  { path: '/purchase-orders/:id', element: <PurchaseOrderPage /> },
+                  { path: '/ledgers', element: <LedgersPage /> },
+                  { path: '/ledgers/:id', element: <LedgerPage /> },
+                  { path: '/bank-accounts', element: <BankAccountsPage /> },
                   { path: '/products', element: <ProductsPage /> },
                   { path: '/products/new', element: <NewProductPage /> },
                   { path: '/products/:id', element: <ProductPage /> },

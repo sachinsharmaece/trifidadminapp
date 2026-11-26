@@ -4,6 +4,7 @@ import { SalesOrderStatusBadge } from '@/features/salesOrders/SalesOrderStatusBa
 import { Badge } from '@/components/atoms/Badge';
 import { EXPIRY_BAND_LABELS, PROVENANCE_LABELS } from '@/types/listing';
 import { RATE_TIER_LABELS } from '@/types/party';
+import { RECEIPT_STATUS_LABELS, RECEIPT_STATUS_TONES } from '@/types/books';
 import { ASK_REASON_LABELS } from '@/types/trade';
 import { formatDateTime, formatRupees } from '@/utils/format';
 import type { Trade } from './api';
@@ -116,6 +117,36 @@ export function TradeFacts({ trade }: { trade: Trade }) {
                 : []),
           ]}
         >
+          {trade.payments !== undefined && trade.salesOrder && (
+            <div className="mt-4 border-t border-slate-100 pt-3">
+              <h3 className="text-xs font-semibold uppercase text-slate-500">
+                Payments · due {formatRupees(trade.balanceDuePaise ?? 0)}
+              </h3>
+              {trade.payments.length === 0 ? (
+                <p className="mt-1 text-sm text-slate-500">None entered yet.</p>
+              ) : (
+                <ul className="mt-2 space-y-2 text-sm">
+                  {trade.payments.map((payment) => (
+                    <li key={payment.id}>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="font-medium">{formatRupees(payment.amountPaise)}</span>
+                        <Badge tone={RECEIPT_STATUS_TONES[payment.status]}>
+                          {RECEIPT_STATUS_LABELS[payment.status]}
+                        </Badge>
+                      </div>
+                      <div className="text-xs text-slate-500">
+                        {payment.number} · UTR {payment.utr} · {payment.bankName} ·{' '}
+                        {payment.receivedOn}
+                      </div>
+                      {payment.rejectNote && (
+                        <div className="text-xs text-red-700">{payment.rejectNote}</div>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          )}
           {trade.leakage && (
             <p className="mt-3 rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700">
               Lost {formatDateTime(trade.leakage.at)}: {trade.leakage.reasonLabel}
@@ -145,6 +176,22 @@ export function TradeFacts({ trade }: { trade: Trade }) {
               'Seller',
               trade.seller ? `${trade.seller.number} · ${trade.seller.firmName}` : 'Not chosen yet',
             ],
+            ...(trade.purchaseOrder
+              ? ([
+                  [
+                    'Purchase order',
+                    <span key="po" className="inline-flex flex-wrap items-center gap-2">
+                      <Link
+                        to={`/purchase-orders/${trade.purchaseOrder.id}`}
+                        className="font-medium text-brand-700 hover:underline"
+                      >
+                        {trade.purchaseOrder.number}
+                      </Link>
+                      {formatRupees(trade.purchaseOrder.totalPaise)}
+                    </span>,
+                  ],
+                ] as [string, ReactNode][])
+              : []),
             ...(trade.listing
               ? ([
                   [

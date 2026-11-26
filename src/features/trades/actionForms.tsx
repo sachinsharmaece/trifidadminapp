@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router';
 import { Input } from '@/components/atoms/Input';
 import { Select } from '@/components/atoms/Select';
 import { FormField, type FieldControlProps } from '@/components/molecules/FormField';
+import { useCurrentUser } from '@/features/auth/hooks';
+import { useBankAccounts } from '@/features/bankAccounts/hooks';
 import { useProduct } from '@/features/products/hooks';
 import { useReasonCodes } from '@/features/reasonCodes/hooks';
 import { SellerPicker, type SellerChoice } from '@/features/sellers/SellerPicker';
@@ -10,16 +12,20 @@ import { serverFieldErrors, type FormErrors } from '@/schemas/fields';
 import {
   validateConfirmStock,
   validateDecline,
+  validatePayment,
+  validatePaymentChoice,
   validateQuote,
   validateReason,
   validateWantIt,
   type ConfirmStockValues,
   type DeclineValues,
+  type PaymentChoiceValues,
+  type PaymentValues,
   type QuoteValues,
   type ReasonValues,
 } from '@/schemas/tradeForms';
 import { CONTEXT_LABELS } from '@/types/reasonCode';
-import { formatRupees } from '@/utils/format';
+import { formatRupees, paiseToRupeesText, todayInIndia } from '@/utils/format';
 import { DECLINE_REASONS, DECLINE_REASON_LABELS } from '@/types/trade';
 import { ActionFormShell } from './ActionFormShell';
 import type { Trade } from './api';
@@ -581,4 +587,195 @@ export function ReopenForm({ trade, onDone, onChangedByOthers }: ActionFormProps
       onCancel={onDone}
     />
   );
+}
+
+/**
+ * b6: Sales enters what the buyer says he paid. It is not money until Accounts finds it in the bank, so the
+ * trade stays at b6. The amount starts at what is still open (due − payments already entered).
+ */
+export function EnterPaymentForm({ trade, onDone, onChangedByOthers }: ActionFormProps) {
+  const action = useTradeAction(trade, 'enterPayment', onChangedByOthers);
+  const banks = useBankAccounts(true);
+  const open = trade.openPaise ?? 0;
+  const [values, setValues] = useState<PaymentValues>({
+    bankLedgerId: '',
+    utr: '',
+    amount: open > 0 ? paiseToRupeesText(open) : '',
+    receivedOn: todayInIndia(),
+  });
+  const [errors, setErrors] = useState<FormErrors>({});
+  const set = (field: keyof PaymentValues, value: string) =>
+    setValues((current) => ({ ...current, [field]: value }));
+
+  function submit() {
+    const result = validatePayment(values);
+    if (!result.ok) return setErrors(result.errors);
+    setErrors({});
+    action.mutate(result.data, {
+      onSuccess: onDone,
+      onError: (e) => setErrors(serverFieldErrors(e)),
+    });
+  }
+
+  return (
+    <ActionFormShell
+      title="Enter payment"
+      description={`What the buyer says he paid. It counts only when Accounts finds it in the bank. Due: ${formatRupees(trade.balanceDuePaise ?? 0)}; still to enter: ${formatRupees(open)}.`}
+      submitLabel="Save payment"
+      pending={action.isPending}
+      error={action.error?.message}
+      onSubmit={submit}
+      onCancel={onDone}
+    >
+      <div className="grid gap-4 sm:grid-cols-2">
+        <FormField
+          label="Our bank account"
+          required
+          error={errors.bankLedgerId}
+          hint={
+            banks.isSuccess && banks.data.length === 0
+              ? 'No bank accounts yet: Founder or Admin adds them under Bank accounts.'
+              : undefined
+          }
+        >
+          {(field) => (
+            <Select
+              {...field}
+              value={values.bankLedgerId}
+              onChange={(event) => set('bankLedgerId', event.target.value)}
+            >
+              <option value="">Choose…</option>
+              {(banks.data ?? []).map((bank) => (
+                <option key={bank.id} value={bank.id}>
+                  {bank.name}
+                </option>
+              ))}
+            </Select>
+          )}
+        </FormField>
+        <FormField
+          label="UTR"
+          required
+          error={errors.utr}
+          hint="The bank reference the buyer gave."
+        >
+          {(field) => (
+            <Input
+              {...field}
+              autoComplete="off"
+              value={values.utr}
+              onChange={(event) => set('utr', event.target.value)}
+            />
+          )}
+        </FormField>
+        <FormField label="Amount (₹)" required error={errors.amountPaise ?? errors.amount}>
+          {(field) => (
+            <Input
+              {...field}
+              inputMode="decimal"
+              value={values.amount}
+              onChange={(event) => set('amount', event.target.value)}
+            />
+          )}
+        </FormField>
+        <FormField label="Received on" required error={errors.receivedOn}>
+          {(field) => (
+            <Input
+              {...field}
+              type="date"
+              max={todayInIndia()}
+              value={values.receivedOn}
+              onChange={(event) => set('receivedOn', event.target.value)}
+            />
+          )}
+        </FormField>
+      </div>
+    </ActionFormShell>
+  );
+}
+
+/**
+ * Accounts' two buttons, on the deal card (for Founder and Admin, who may press them too; Accounts uses its
+ * "Payments to confirm" queue). Only payments waiting for Accounts and NOT entered by this person are offered.
+ */
+function PaymentChoiceForm(props: ActionFormProps & { reject: boolean }) {
+  const { trade, onDone, onChangedByOthers, reject } = props;
+  const confirm = useTradeAction(trade, 'confirmPayment', onChangedByOthers);
+  const markNotReceived = useTradeAction(trade, 'rejectPayment', onChangedByOthers);
+  const action = reject ? markNotReceived : confirm;
+  const { data: me } = useCurrentUser();
+  const waiting = (trade.payments ?? []).filter(
+    (payment) => payment.status === 'LOGGED' && payment.enteredById !== me?.id,
+  );
+  const [values, setValues] = useState<PaymentChoiceValues>({
+    receiptId: waiting.length === 1 ? (waiting[0]?.id ?? '') : '',
+    note: '',
+  });
+  const [errors, setErrors] = useState<FormErrors>({});
+
+  function submit() {
+    const result = validatePaymentChoice(values, reject);
+    if (!result.ok) return setErrors(result.errors);
+    setErrors({});
+    const done = { onSuccess: onDone, onError: (e: unknown) => setErrors(serverFieldErrors(e)) };
+    if (reject) markNotReceived.mutate(result.data, done);
+    else confirm.mutate({ receiptId: result.data.receiptId }, done);
+  }
+
+  return (
+    <ActionFormShell
+      title={reject ? 'Payment not received' : 'Confirm payment'}
+      description={
+        waiting.length === 0
+          ? 'No payment is waiting for you: you cannot confirm or reject one you entered yourself.'
+          : reject
+            ? 'The money is not in the bank. Sales sees your note and can enter it again.'
+            : 'Posts it to the books (Dr our bank · Cr the buyer). Once the order is paid in full, the PO goes to the seller.'
+      }
+      submitLabel={reject ? 'Mark not received' : 'Confirm payment'}
+      pending={action.isPending}
+      error={action.error?.message}
+      onSubmit={submit}
+      onCancel={onDone}
+    >
+      <div className="grid gap-4 sm:grid-cols-2">
+        <FormField label="Payment" required error={errors.receiptId}>
+          {(field) => (
+            <Select
+              {...field}
+              value={values.receiptId}
+              onChange={(event) => setValues((v) => ({ ...v, receiptId: event.target.value }))}
+            >
+              <option value="">Choose…</option>
+              {waiting.map((payment) => (
+                <option key={payment.id} value={payment.id}>
+                  {payment.number} · {formatRupees(payment.amountPaise)} · UTR {payment.utr}
+                </option>
+              ))}
+            </Select>
+          )}
+        </FormField>
+        {reject && (
+          <FormField label="What was wrong" required error={errors.note}>
+            {(field) => (
+              <Input
+                {...field}
+                autoComplete="off"
+                value={values.note}
+                onChange={(event) => setValues((v) => ({ ...v, note: event.target.value }))}
+              />
+            )}
+          </FormField>
+        )}
+      </div>
+    </ActionFormShell>
+  );
+}
+
+export function ConfirmPaymentForm(props: ActionFormProps) {
+  return <PaymentChoiceForm {...props} reject={false} />;
+}
+
+export function RejectPaymentForm(props: ActionFormProps) {
+  return <PaymentChoiceForm {...props} reject />;
 }

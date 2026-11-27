@@ -1,3 +1,4 @@
+import { useSearchParams } from 'react-router';
 import { useState } from 'react';
 import { Link } from 'react-router';
 import { Button } from '@/components/atoms/Button';
@@ -38,7 +39,9 @@ function stageOf(side: FunnelSide, row: TradeRow): string {
 export function FunnelView({ side }: { side: FunnelSide }) {
   const config = SIDES[side];
   const [stage, setStage] = useState('');
-  const [search, setSearch] = useState('');
+  // Reference-copy branch: "Open funnel" links pass the party's number as ?q=.
+  const [searchParams] = useSearchParams();
+  const [search, setSearch] = useState(() => searchParams.get('q') ?? '');
   const [page, setPage] = useState(1);
   const q = useDebouncedValue(search.trim());
   const funnel = useFunnel(side, { stage, q, page, pageSize: PAGE_SIZE });

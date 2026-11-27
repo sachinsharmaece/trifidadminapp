@@ -66,6 +66,16 @@ import { PurchaseOrdersPage as RefPurchaseOrdersPage } from '@/pages/ref/purchas
 import { PurchaseTodayPage as RefPurchaseTodayPage } from '@/pages/ref/purchase/PurchaseTodayPage';
 import { SellerDetailPage as RefSellerDetailPage } from '@/pages/ref/purchase/SellerDetailPage';
 import { SellersPage as RefSellersPage } from '@/pages/ref/purchase/SellersPage';
+import { AsksPage as RefAsksPage } from '@/pages/ref/sales/AsksPage';
+import { SalesDeskLayout } from '@/pages/ref/sales/BuyerQuickSearch';
+import { BuyerDetailPage as RefBuyerDetailPage } from '@/pages/ref/sales/BuyerDetailPage';
+import { BuyersPage as RefBuyersPage } from '@/pages/ref/sales/BuyersPage';
+import { CallScreenPage as RefCallScreenPage } from '@/pages/ref/sales/CallScreenPage';
+import { NewBuyerPage as RefNewBuyerPage } from '@/pages/ref/sales/NewBuyerPage';
+import { NewSalesOrderPage as RefNewSalesOrderPage } from '@/pages/ref/sales/NewSalesOrderPage';
+import { SalesOrderDetailPage as RefSalesOrderDetailPage } from '@/pages/ref/sales/SalesOrderDetailPage';
+import { SalesOrdersPage as RefSalesOrdersPage } from '@/pages/ref/sales/SalesOrdersPage';
+import { SalesTodayPage as RefSalesTodayPage } from '@/pages/ref/sales/SalesTodayPage';
 import { AppShell } from './AppShell';
 
 /** A page from the reference that a later build (R2–R10) copies; until then it says so. */
@@ -108,6 +118,22 @@ export const router = createBrowserRouter([
                   { path: '/masters/staff', element: <RefStaffPage /> },
                   // Desk pages: our existing screen where one already does the job; the rest come in later builds.
                   { path: '/controller-today', element: <TodayPage /> },
+                  // Sales desk (R3): every screen sits under the buyer quick search, as the reference.
+                  {
+                    element: <SalesDeskLayout />,
+                    children: [
+                      { path: '/today', element: <RefSalesTodayPage /> },
+                      { path: '/buyers', element: <RefBuyersPage /> },
+                      { path: '/buyers/new', element: <RefNewBuyerPage /> },
+                      { path: '/buyers/:id', element: <RefBuyerDetailPage /> },
+                      { path: '/call-screen', element: <RefCallScreenPage /> },
+                      { path: '/asks', element: <RefAsksPage /> },
+                      { path: '/sales-orders', element: <RefSalesOrdersPage /> },
+                      { path: '/sales-orders/new', element: <RefNewSalesOrderPage /> },
+                      { path: '/sales-orders/:id', element: <RefSalesOrderDetailPage /> },
+                      { path: '/buyer-funnels', element: <BuyerFunnelsPage /> },
+                    ],
+                  },
                   // Purchase desk (R2)
                   { path: '/purchase-today', element: <RefPurchaseTodayPage /> },
                   { path: '/sellers', element: <RefSellersPage /> },
@@ -118,7 +144,6 @@ export const router = createBrowserRouter([
                   { path: '/purchase-orders', element: <RefPurchaseOrdersPage /> },
                   { path: '/purchase-orders/new', element: <RefNewPurchaseOrderPage /> },
                   { path: '/purchase-orders/:id', element: <RefPurchaseOrderDetailPage /> },
-                  { path: '/call-screen', element: <RateBoardPage /> },
                   { path: '/dispatch-leg2', element: <TripsPage /> },
                   { path: '/upcoming-payments', element: <PaymentsPage /> },
                   { path: '/ledger', element: <LedgersPage /> },
@@ -126,7 +151,6 @@ export const router = createBrowserRouter([
                   { path: '/journal', element: <JournalsPage /> },
                   { path: '/ledger-master', element: <LedgersPage /> },
                   { path: '/seller-leads', element: soon('Seller leads', 'R8') },
-                  { path: '/asks', element: soon('Asks', 'R3') },
                   { path: '/goods-in', element: soon('Goods-in', 'R5') },
                   { path: '/inspection', element: soon('Inspection', 'R5') },
                   { path: '/logistics-trade-queue', element: soon('Trade queue', 'R5') },
@@ -134,19 +158,18 @@ export const router = createBrowserRouter([
                   { path: '/accounts-today', element: soon('Accounts — Today', 'R6') },
                   { path: '/credit-log', element: soon('Credit log', 'R7') },
                   // ---- Older paths, still reachable ----
+                  { path: '/old/today', element: <TodayPage /> },
+                  { path: '/old/buyers', element: <BuyersPage /> },
+                  { path: '/old/sales-orders', element: <SalesOrdersPage /> },
+                  { path: '/old/sales-orders/:id', element: <SalesOrderPage /> },
                   { path: '/old/sellers', element: <SellersPage /> },
                   { path: '/old/purchase-orders', element: <PurchaseOrdersPage /> },
                   { path: '/old/purchase-orders/:id', element: <PurchaseOrderPage /> },
-                  { path: '/buyers', element: <BuyersPage /> },
                   { path: '/listings', element: <ListingsPage /> },
                   { path: '/rate-board', element: <RateBoardPage /> },
-                  { path: '/buyer-funnels', element: <BuyerFunnelsPage /> },
                   { path: '/seller-funnels', element: <SellerFunnelsPage /> },
                   { path: '/trades/:id', element: <TradePage /> },
-                  { path: '/sales-orders', element: <SalesOrdersPage /> },
-                  { path: '/sales-orders/:id', element: <SalesOrderPage /> },
                   { path: '/complaints', element: <ComplaintsPage /> },
-                  { path: '/today', element: <TodayPage /> },
                   { path: '/payments', element: <PaymentsPage /> },
                   { path: '/dock', element: <DockPage /> },
                   { path: '/return-notes', element: <ReturnNotesPage /> },

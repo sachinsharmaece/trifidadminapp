@@ -73,6 +73,8 @@ const tradeSchema = z.object({
       tier,
       indicative: z.boolean(),
       live: z.boolean(),
+      /** Reference FAST-ORDER: boxes the listing confirms by itself (0 when auto-confirm is off). */
+      autoBoxesLeft: z.number().optional(),
     })
     .nullable()
     .optional(),
@@ -295,6 +297,7 @@ export async function createAsk(input: AskInput): Promise<Trade> {
 /** The input each engine action takes (the server checks it again). */
 export interface ActionInputs {
   wantIt: { boxes: number };
+  orderOnCall: { boxes: number };
   sendToSeller: Record<string, never>;
   confirmStock: { boxes: number; expiryMonth: string; batchNumber?: string | undefined };
   declineStock: { reason: DeclineReason; note?: string | undefined };

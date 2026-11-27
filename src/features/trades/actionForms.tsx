@@ -107,6 +107,62 @@ export function WantItForm({ trade, onDone, onChangedByOthers }: ActionFormProps
   );
 }
 
+/**
+ * Reference FAST-ORDER "Order on call" (b1 or b2): the listing's auto-confirm covers the boxes, so one press
+ * confirms them, sends the offer and raises the buyer's order while he is on the phone (b6, pay first).
+ */
+export function OrderOnCallForm({ trade, onDone, onChangedByOthers }: ActionFormProps) {
+  const action = useTradeAction(trade, 'orderOnCall', onChangedByOthers);
+  const moq = trade.boardOffer?.moqBoxes;
+  const left = trade.boardOffer?.autoBoxesLeft ?? 0;
+  const [boxes, setBoxes] = useState(String(trade.boxesWanted ?? moq ?? ''));
+  const [errors, setErrors] = useState<FormErrors>({});
+  const rate = trade.boardOffer?.buyerRatePaisePerUnit ?? null;
+  const unitsPerBox = trade.boardOffer?.unitsPerBox ?? 0;
+  const count = Number(boxes);
+  const total = rate !== null && count > 0 ? formatRupees(rate * unitsPerBox * count) : '';
+
+  function submit() {
+    const result = validateWantIt({ boxes });
+    if (!result.ok) return setErrors(result.errors);
+    setErrors({});
+    action.mutate(result.data, {
+      onSuccess: onDone,
+      onError: (e) => setErrors(serverFieldErrors(e)),
+    });
+  }
+
+  return (
+    <ActionFormShell
+      title="Order on call"
+      description={`Confirmed at once from the listing (auto-confirm), offered and ordered in one step. Raises the buyer's sales order${total ? ` for ${total} including GST` : ''}; he pays first.`}
+      submitLabel="Raise the order"
+      pending={action.isPending}
+      error={action.error?.message}
+      onSubmit={submit}
+      onCancel={onDone}
+    >
+      <FormField
+        label="Boxes"
+        required
+        error={errors.boxes}
+        hint={`Auto-confirm covers up to ${left} boxes${moq ? `; minimum order ${moq}` : ''}.`}
+        className="max-w-xs"
+      >
+        {(field) => (
+          <Input
+            {...field}
+            inputMode="numeric"
+            autoComplete="off"
+            value={boxes}
+            onChange={(event) => setBoxes(event.target.value)}
+          />
+        )}
+      </FormField>
+    </ActionFormShell>
+  );
+}
+
 /** b2 → b3: no fields, just confirm where it goes. */
 export function SendToSellerForm({ trade, onDone, onChangedByOthers }: ActionFormProps) {
   const action = useTradeAction(trade, 'sendToSeller', onChangedByOthers);

@@ -5,6 +5,7 @@ import { refGet } from '@/lib/refApi';
 import { ArrivedTab, ComingTab, InspectTab } from './DockLotTabs';
 import { BilledTab, TripsTab, VehiclesTab } from './DockTripTabs';
 import type { BilledBill, DockLot, Trip, Vehicle } from './dockTypes';
+import { StockComingLots, StockInspectLots, type StockLot } from './DockStockLots';
 
 type Tab = 'coming' | 'arrived' | 'inspect' | 'billed' | 'trips' | 'vehicles';
 
@@ -28,6 +29,9 @@ export function DockPage() {
   const [coming, setComing] = useState<DockLot[]>([]);
   const [arrived, setArrived] = useState<DockLot[]>([]);
   const [inspected, setInspected] = useState<DockLot[]>([]);
+  // Stock POs (Fast order): TriFid buying into its own stock goes through the same dock.
+  const [stockComing, setStockComing] = useState<StockLot[]>([]);
+  const [stockArrived, setStockArrived] = useState<StockLot[]>([]);
   const [bills, setBills] = useState<BilledBill[]>([]);
   const [trips, setTrips] = useState<Trip[]>([]);
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
@@ -45,6 +49,13 @@ export function DockPage() {
     setComing(c?.rows ?? []);
     setArrived(a?.rows ?? []);
     setInspected(k?.rows ?? []);
+    const [sc, sa] = await Promise.all(
+      (['COMING', 'ARRIVED'] as const).map((lane) =>
+        refGet<{ rows: StockLot[] }>('/stock-dock', { lane }),
+      ),
+    );
+    setStockComing(sc?.rows ?? []);
+    setStockArrived(sa?.rows ?? []);
   }, []);
   const loadTrips = useCallback(async () => {
     const [billed, ...lists] = await Promise.all([
@@ -97,7 +108,10 @@ export function DockPage() {
           </p>
         )}
         {tab === 'coming' && (
-          <ComingTab lots={coming} busy={busy} withBusy={withBusy} reload={loadDock} />
+          <>
+            <ComingTab lots={coming} busy={busy} withBusy={withBusy} reload={loadDock} />
+            <StockComingLots lots={stockComing} busy={busy} withBusy={withBusy} reload={loadDock} />
+          </>
         )}
         {tab === 'arrived' && (
           <ArrivedTab
@@ -118,6 +132,9 @@ export function DockPage() {
             withBusy={withBusy}
             reload={loadDock}
           />
+        )}
+        {tab === 'inspect' && (
+          <StockInspectLots lots={stockArrived} busy={busy} withBusy={withBusy} reload={loadDock} />
         )}
         {tab === 'billed' && (
           <BilledTab
@@ -147,9 +164,9 @@ export function DockPage() {
           {TABS.map((t) => {
             const count =
               t.id === 'coming'
-                ? coming.length
+                ? coming.length + stockComing.length
                 : t.id === 'arrived'
-                  ? arrived.length
+                  ? arrived.length + stockArrived.length
                   : t.id === 'billed'
                     ? bills.length
                     : 0;

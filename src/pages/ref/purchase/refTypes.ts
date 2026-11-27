@@ -10,6 +10,8 @@ export interface RefSeller {
   bank: { accountLast4: string; ifsc: string };
   manufacturerIds: string[];
   tier: 'NEW' | 'VERIFIED' | 'TRUSTED';
+  /** TriFid Stock, the house seller (Fast order). */
+  isHouse?: boolean;
   active: boolean;
   createdAt: string;
 }

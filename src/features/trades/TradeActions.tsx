@@ -15,6 +15,7 @@ import {
   ReopenForm,
   SendToBuyerForm,
   SendToSellerForm,
+  OrderOnCallForm,
   WantItForm,
   type ActionFormProps,
 } from './actionForms';
@@ -36,6 +37,7 @@ import {
 
 const FORMS: Record<TradeActionName, (props: ActionFormProps) => React.JSX.Element> = {
   wantIt: WantItForm,
+  orderOnCall: OrderOnCallForm,
   sendToSeller: SendToSellerForm,
   confirmStock: ConfirmStockForm,
   declineStock: DeclineStockForm,

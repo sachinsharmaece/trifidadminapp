@@ -92,6 +92,7 @@ export const DECLINE_REASON_LABELS: Record<DeclineReason, string> = {
  */
 export const TRADE_ACTION_NAMES = [
   'wantIt',
+  'orderOnCall',
   'sendToSeller',
   'giveQuote',
   'confirmStock',

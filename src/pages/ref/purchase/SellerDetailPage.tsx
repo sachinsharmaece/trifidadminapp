@@ -18,7 +18,19 @@ interface Listing {
   ratePaisePerUnit: number;
   quantityBoxes: number;
   status: string;
+  autoConfirm: boolean;
+  autoBoxesLeft: number;
+  sellerIsHouse: boolean;
+  autoConfirmToggleLocked: boolean;
 }
+
+/** Why auto-confirm is turned off by hand (reference AUTO_OFF_REASONS). */
+const AUTO_OFF_REASONS = [
+  { value: 'SOLD_ELSEWHERE', label: 'Sold elsewhere' },
+  { value: 'STOCK_SHORT', label: 'Stock short' },
+  { value: 'RATE_CHANGING', label: 'Rate changing' },
+  { value: 'OTHER', label: 'Other' },
+];
 
 /** Quick-add defaults, as the reference; the full New listing form still has every field. */
 const QUICK_ADD_DEFAULTS = {
@@ -29,8 +41,9 @@ const QUICK_ADD_DEFAULTS = {
 
 /**
  * Purchase → a seller, as the reference (app/(purchase)/sellers/[id]): his details and tier, his companies
- * (dealerships), "His products" to list a pack in one line, and his listings. The reference's auto-confirm switch
- * comes with Fast order (build R7) and the portal login panel with the portals (build R9).
+ * (dealerships), "His products" to list a pack in one line, and his listings with their auto-confirm switch
+ * (Fast order: ON asks the boxes, OFF asks a reason; not for New sellers; TriFid Stock is always on). The portal
+ * login panel comes with the portals (build R9).
  */
 export function SellerDetailPage() {
   const { id = '' } = useParams();
@@ -49,6 +62,12 @@ export function SellerDetailPage() {
   const [skuConfirming, setSkuConfirming] = useState<Record<string, boolean>>({});
   const [tierSaving, setTierSaving] = useState(false);
   const [tierError, setTierError] = useState<string | null>(null);
+  // Fast order — the auto-confirm switch's inline edit, per listing.
+  const [autoEdit, setAutoEdit] = useState<{ listingId: string; mode: 'on' | 'off' } | null>(null);
+  const [autoBoxes, setAutoBoxes] = useState<string>('');
+  const [autoOffReason, setAutoOffReason] = useState('SOLD_ELSEWHERE');
+  const [autoOffNote, setAutoOffNote] = useState('');
+  const [autoError, setAutoError] = useState<string | null>(null);
   useDocumentTitle(seller?.firmName ?? 'Seller');
 
   async function loadListings() {
@@ -57,6 +76,55 @@ export function SellerDetailPage() {
       pageSize: 100,
     });
     setListings(data.listings ?? []);
+  }
+
+  function openAutoEdit(listing: Listing) {
+    setAutoError(null);
+    if (listing.autoConfirm) {
+      setAutoEdit({ listingId: listing.id, mode: 'off' });
+    } else {
+      setAutoBoxes(String(listing.quantityBoxes));
+      setAutoEdit({ listingId: listing.id, mode: 'on' });
+    }
+  }
+
+  async function submitAutoOn(listing: Listing) {
+    setAutoError(null);
+    const boxes = Number(autoBoxes);
+    if (!Number.isInteger(boxes) || boxes < 1) {
+      setAutoError('Enter boxes to accept automatically (at least 1).');
+      return;
+    }
+    const res = await refSend('POST', `/listings/${listing.id}/auto-confirm`, {
+      action: 'on',
+      boxes,
+    });
+    if (!res.ok) {
+      setAutoError(res.message);
+      return;
+    }
+    setAutoEdit(null);
+    await loadListings();
+  }
+
+  async function submitAutoOff(listing: Listing) {
+    setAutoError(null);
+    if (autoOffReason === 'OTHER' && !autoOffNote.trim()) {
+      setAutoError('A note is required when the reason is Other.');
+      return;
+    }
+    const res = await refSend('POST', `/listings/${listing.id}/auto-confirm`, {
+      action: 'off',
+      reason: autoOffReason,
+      ...(autoOffReason === 'OTHER' ? { note: autoOffNote.trim() } : {}),
+    });
+    if (!res.ok) {
+      setAutoError(res.message);
+      return;
+    }
+    setAutoEdit(null);
+    setAutoOffNote('');
+    await loadListings();
   }
 
   useOnMount(async () => {
@@ -108,6 +176,8 @@ export function SellerDetailPage() {
       return;
     }
     setSeller(res.data.seller);
+    // The tier decides whether the auto-confirm switch is allowed on his listings.
+    await loadListings();
   }
 
   const draftFor = (skuId: string) => drafts[skuId] ?? { rate: undefined, qty: undefined };
@@ -178,17 +248,23 @@ export function SellerDetailPage() {
         <dd>{formatDateIST(seller.createdAt)}</dd>
         <dt className="text-zinc-500">Tier</dt>
         <dd>
-          <select
-            aria-label="Tier"
-            value={seller.tier}
-            disabled={tierSaving}
-            onChange={(e) => void changeTier(e.target.value as RefSeller['tier'])}
-            className="min-h-11 rounded border border-zinc-300 px-2 py-1 text-sm"
-          >
-            <option value="NEW">New</option>
-            <option value="VERIFIED">Verified</option>
-            <option value="TRUSTED">Trusted</option>
-          </select>
+          {seller.isHouse ? (
+            <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-semibold text-emerald-700">
+              TriFid Stock — our own stock
+            </span>
+          ) : (
+            <select
+              aria-label="Tier"
+              value={seller.tier}
+              disabled={tierSaving}
+              onChange={(e) => void changeTier(e.target.value as RefSeller['tier'])}
+              className="min-h-11 rounded border border-zinc-300 px-2 py-1 text-sm"
+            >
+              <option value="NEW">New</option>
+              <option value="VERIFIED">Verified</option>
+              <option value="TRUSTED">Trusted</option>
+            </select>
+          )}
           {tierError && <span className="ml-2 text-xs text-red-600">{tierError}</span>}
         </dd>
       </dl>
@@ -322,17 +398,115 @@ export function SellerDetailPage() {
         <h2 className="mb-2 text-sm font-semibold text-zinc-900">Listings</h2>
         <div className="flex flex-col divide-y divide-zinc-100">
           {listings.map((l) => (
-            <div
-              key={l.id}
-              className="flex items-center justify-between gap-2 py-2 text-sm"
-              data-testid="listing-row"
-            >
-              <span>
-                {l.sku?.productName} — {l.sku?.packLabel}
-              </span>
-              <span className="text-zinc-500">{l.quantityBoxes} boxes</span>
-              <strong>{formatPaiseAsINR(l.ratePaisePerUnit)} per unit</strong>
-              <span className="text-xs text-zinc-400">{l.status}</span>
+            <div key={l.id} className="flex flex-col gap-2 py-2 text-sm" data-testid="listing-row">
+              <div className="flex items-center justify-between gap-2">
+                <span>
+                  {l.sku?.productName} — {l.sku?.packLabel}
+                </span>
+                <span className="text-zinc-500">{l.quantityBoxes} boxes</span>
+                <strong>{formatPaiseAsINR(l.ratePaisePerUnit)} per unit</strong>
+                <span className="text-xs text-zinc-400">{l.status}</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-zinc-500">Auto-confirm:</span>
+                {l.sellerIsHouse ? (
+                  <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-semibold text-emerald-700">
+                    Always on · own stock
+                  </span>
+                ) : l.autoConfirmToggleLocked ? (
+                  <span className="text-xs text-zinc-400">New seller — not allowed</span>
+                ) : (
+                  <>
+                    <button
+                      type="button"
+                      role="switch"
+                      aria-checked={l.autoConfirm}
+                      aria-label={`Auto-confirm ${l.sku?.productName ?? ''} ${l.sku?.packLabel ?? ''}`}
+                      onClick={() => openAutoEdit(l)}
+                      className={`relative h-6 w-11 flex-none rounded-full transition-colors ${l.autoConfirm ? 'bg-emerald-600' : 'bg-zinc-300'}`}
+                    >
+                      <span
+                        className={`absolute left-0 top-0.5 h-5 w-5 rounded-full bg-white transition-transform ${l.autoConfirm ? 'translate-x-5' : 'translate-x-0.5'}`}
+                      />
+                    </button>
+                    <span className="text-xs text-zinc-600">
+                      {l.autoConfirm
+                        ? `${l.autoBoxesLeft} of ${l.quantityBoxes} boxes left`
+                        : 'Off'}
+                    </span>
+                  </>
+                )}
+              </div>
+
+              {autoEdit?.listingId === l.id && autoEdit.mode === 'on' && (
+                <div className="flex flex-wrap items-center gap-2 rounded bg-zinc-50 p-2">
+                  <label className="text-xs text-zinc-600">
+                    Boxes to accept automatically (1–{l.quantityBoxes})
+                    <input
+                      type="number"
+                      min={1}
+                      max={l.quantityBoxes}
+                      value={autoBoxes}
+                      onChange={(e) => setAutoBoxes(e.target.value)}
+                      className="ml-2 w-20 rounded border border-zinc-300 px-2 py-1 text-sm"
+                    />
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => void submitAutoOn(l)}
+                    className="min-h-11 rounded bg-zinc-900 px-3 py-1.5 text-xs font-medium text-white"
+                  >
+                    Turn on
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setAutoEdit(null)}
+                    className="min-h-11 rounded border border-zinc-300 px-3 py-1.5 text-xs"
+                  >
+                    Cancel
+                  </button>
+                  {autoError && <p className="w-full text-xs text-red-600">{autoError}</p>}
+                </div>
+              )}
+              {autoEdit?.listingId === l.id && autoEdit.mode === 'off' && (
+                <div className="flex flex-wrap items-center gap-2 rounded bg-zinc-50 p-2">
+                  <select
+                    aria-label="Reason"
+                    value={autoOffReason}
+                    onChange={(e) => setAutoOffReason(e.target.value)}
+                    className="min-h-11 rounded border border-zinc-300 px-2 py-1 text-sm"
+                  >
+                    {AUTO_OFF_REASONS.map((r) => (
+                      <option key={r.value} value={r.value}>
+                        {r.label}
+                      </option>
+                    ))}
+                  </select>
+                  {autoOffReason === 'OTHER' && (
+                    <input
+                      value={autoOffNote}
+                      onChange={(e) => setAutoOffNote(e.target.value)}
+                      placeholder="Note (required)"
+                      className="min-h-11 rounded border border-zinc-300 px-2 py-1 text-sm"
+                    />
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => void submitAutoOff(l)}
+                    className="min-h-11 rounded bg-zinc-900 px-3 py-1.5 text-xs font-medium text-white"
+                  >
+                    Turn off
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setAutoEdit(null)}
+                    className="min-h-11 rounded border border-zinc-300 px-3 py-1.5 text-xs"
+                  >
+                    Cancel
+                  </button>
+                  {autoError && <p className="w-full text-xs text-red-600">{autoError}</p>}
+                </div>
+              )}
             </div>
           ))}
           {listings.length === 0 && <p className="py-2 text-sm text-zinc-400">No listings yet.</p>}

@@ -76,6 +76,10 @@ import { NewSalesOrderPage as RefNewSalesOrderPage } from '@/pages/ref/sales/New
 import { SalesOrderDetailPage as RefSalesOrderDetailPage } from '@/pages/ref/sales/SalesOrderDetailPage';
 import { SalesOrdersPage as RefSalesOrdersPage } from '@/pages/ref/sales/SalesOrdersPage';
 import { SalesTodayPage as RefSalesTodayPage } from '@/pages/ref/sales/SalesTodayPage';
+import {
+  BuyerFunnelsPage as RefBuyerFunnelsPage,
+  SellerFunnelsPage as RefSellerFunnelsPage,
+} from '@/pages/ref/orders/FunnelPages';
 import { AppShell } from './AppShell';
 
 /** A page from the reference that a later build (R2–R10) copies; until then it says so. */
@@ -131,7 +135,8 @@ export const router = createBrowserRouter([
                       { path: '/sales-orders', element: <RefSalesOrdersPage /> },
                       { path: '/sales-orders/new', element: <RefNewSalesOrderPage /> },
                       { path: '/sales-orders/:id', element: <RefSalesOrderDetailPage /> },
-                      { path: '/buyer-funnels', element: <BuyerFunnelsPage /> },
+                      { path: '/buyer-funnels', element: <RefBuyerFunnelsPage /> },
+                      { path: '/buyer-funnels/:partyId', element: <RefBuyerFunnelsPage /> },
                     ],
                   },
                   // Purchase desk (R2)
@@ -167,7 +172,10 @@ export const router = createBrowserRouter([
                   { path: '/old/purchase-orders/:id', element: <PurchaseOrderPage /> },
                   { path: '/listings', element: <ListingsPage /> },
                   { path: '/rate-board', element: <RateBoardPage /> },
-                  { path: '/seller-funnels', element: <SellerFunnelsPage /> },
+                  { path: '/seller-funnels', element: <RefSellerFunnelsPage /> },
+                  { path: '/seller-funnels/:partyId', element: <RefSellerFunnelsPage /> },
+                  { path: '/old/buyer-funnels', element: <BuyerFunnelsPage /> },
+                  { path: '/old/seller-funnels', element: <SellerFunnelsPage /> },
                   { path: '/trades/:id', element: <TradePage /> },
                   { path: '/complaints', element: <ComplaintsPage /> },
                   { path: '/payments', element: <PaymentsPage /> },

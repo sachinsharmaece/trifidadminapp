@@ -63,7 +63,7 @@ export function BuyerDetailPage() {
       <div className="mb-4 flex items-center justify-between">
         <h1 className="text-lg font-semibold text-zinc-900">{buyer.firmName}</h1>
         <Link
-          to={`/buyer-funnels?q=${encodeURIComponent(buyer.number)}`}
+          to={`/buyer-funnels/${buyer.id}`}
           className="rounded border border-zinc-300 px-3 py-2 text-sm text-zinc-700"
         >
           Open funnel

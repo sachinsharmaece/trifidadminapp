@@ -154,7 +154,7 @@ export function SellerDetailPage() {
           {seller.firmName}
         </h1>
         <Link
-          to={`/seller-funnels?q=${encodeURIComponent(seller.number)}`}
+          to={`/seller-funnels/${seller.id}`}
           className="rounded border border-zinc-300 px-3 py-2 text-sm text-zinc-700"
         >
           Open funnel

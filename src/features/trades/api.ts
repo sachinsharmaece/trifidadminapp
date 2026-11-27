@@ -233,6 +233,9 @@ const tradeRowSchema = z.object({
   boxesWanted: z.number().nullable(),
   due,
   lastActionAt: z.string(),
+  // Reference-copy branch (the funnel board).
+  expiryMonth: z.string().nullable().optional(),
+  listingId: z.string().nullable().optional(),
 });
 export type TradeRow = z.infer<typeof tradeRowSchema>;
 

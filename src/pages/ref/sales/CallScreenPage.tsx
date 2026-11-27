@@ -187,7 +187,7 @@ export function CallScreenPage() {
       setTakeMessage(res.message);
       return;
     }
-    void navigate(`/buyer-funnels?q=${encodeURIComponent(selectedBuyer.number)}`);
+    void navigate(`/buyer-funnels/${selectedBuyer.id}`);
   }
 
   async function takeListing(listingId: string) {

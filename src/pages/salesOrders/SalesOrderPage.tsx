@@ -6,6 +6,7 @@ import { Spinner } from '@/components/atoms/Spinner';
 import { ErrorState } from '@/components/molecules/ErrorState';
 import { PageLayout } from '@/components/templates/PageLayout';
 import { useCurrentUser } from '@/features/auth/hooks';
+import { RefundLine } from '@/features/payouts/RefundLine';
 import { useSalesOrder } from '@/features/salesOrders/hooks';
 import { billingRows } from '@/features/billing/billingRows';
 import { SalesOrderStatusBadge } from '@/features/salesOrders/SalesOrderStatusBadge';
@@ -230,20 +231,14 @@ export function SalesOrderPage() {
 
       {data.refunds.length > 0 && (
         <section className="rounded-lg border border-slate-200 bg-white p-5">
-          <h2 className="text-sm font-semibold text-slate-900">Refund due to the buyer</h2>
+          <h2 className="text-sm font-semibold text-slate-900">Refund to the buyer</h2>
           <p className="mt-1 text-xs text-slate-500">
-            Boxes the dock found short, damaged or leaking, at this order&apos;s rate. Paying
-            refunds comes with seller payouts (a later build).
+            Boxes the dock found short, damaged or leaking, at this order&apos;s rate. Accounts pays
+            it from the Payouts screen; it is paid when the bank proof is typed.
           </p>
           <ul className="mt-3 divide-y divide-slate-100 text-sm">
             {data.refunds.map((refund) => (
-              <li key={refund.id} className="flex flex-wrap items-center gap-2 py-2">
-                <span className="font-medium">{formatRupees(refund.amountPaise)}</span>
-                <span className="text-slate-600">
-                  {refund.number} · {refund.reason}
-                </span>
-                <Badge tone="warning">Due</Badge>
-              </li>
+              <RefundLine key={refund.id} refund={refund} />
             ))}
           </ul>
         </section>

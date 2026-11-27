@@ -257,7 +257,7 @@ After the PO (Build 3, LOCK-40). Every button presses an engine action; the serv
 - **Return notes** (`/return-notes`; Purchase, Logistics, Controller, Founder, Admin): open notes, due soonest first,
   closed as picked up, shipped back or disposed (with the return freight, if any). Purchase gets a link to the PO.
 - After the check the deal card shows the PO's progress (dispatched, bill, arrived, checked, owed to the seller) on the
-  seller side and **Refund due to the buyer** on the buyer side (also on the order page).
+  seller side and **Refund to the buyer** on the buyer side (also on the order page; Due until a payout pays it, then Paid with its UTR).
 - Data: `features/dock/api.ts` and `hooks.ts` (query keys under `['trades']`); form rules in `schemas/dockForms.ts`;
   labels in `types/dock.ts`.
 
@@ -281,6 +281,29 @@ To the buyer (Build 4). Every button presses an engine action; the server checks
   "Billing and delivery" block (accepted, Marg bill, trip, POD, delivered) via `features/billing/billingRows.ts`.
 - Data: `features/billing/api.ts` + `hooks.ts`, `features/trips/api.ts` + `hooks.ts` (query keys under `['trades']`);
   form rules in `schemas/billingForms.ts`; trip and "book with" labels in `types/dock.ts`.
+
+## Payouts (features/payouts)
+
+Seller payments and buyer refunds (Build 5). Menu: **Payouts** (`/payouts`, `pages/books/PayoutsPage.tsx`; Accounts,
+Controller, Founder, Admin). Two views, **To pay** and **Batches**. Nothing counts as paid until the bank's UTR is typed.
+
+- **To pay** (`ToPayTab.tsx`): checked purchase orders (the seller's bill on file; "Waiting for the seller's bill" and a
+  disabled tick until then) with the accepted value, any freight paid at Indore taken off, and the net amount; and refunds
+  due to buyers. Tick what to pay, choose the bank account ("Pay from") and **Build batch**: a draft. The Controller only
+  looks (no ticks, no button).
+- **Batches** (`BatchesTab.tsx`, `BatchCard.tsx`): filter Draft / Released / Cancelled, search by batch number or payee.
+  A **Draft** has **Release** (Founder and Admin only, never a batch you built: the card says "someone else releases it";
+  `ReleaseForm.tsx` asks for the password, `useReleaseBatch` calls `confirmPassword` first like the margin form) and
+  **Cancel batch** (Accounts, Founder, Admin; asks "Yes, cancel it"). A **Released** batch has **Add bank proof** on each
+  line (`ProofForm.tsx`: the UTR and the date paid). A seller's proof closes the deal on the seller side; a refund's proof
+  marks the refund Paid. A line shows its UTR, date and voucher number once paid.
+- On the **PO page** and the **seller side of the deal card**: "Payment to the seller" (not in a batch yet, waiting for
+  release, waiting for the bank proof, or Paid with the UTR), a **Seller paid** badge, and the same badge on the PO list
+  (`features/payouts/payoutText.ts`). **Refunds** on the deal card and the order page show Due or Paid with the UTR
+  (`RefundLine.tsx`). Sales never sees the seller's payment.
+- Data: `features/payouts/api.ts` + `hooks.ts` (query keys under `['trades', 'payouts']`, so every payout also refreshes
+  cards, orders and ledgers); form rules in `schemas/payoutForms.ts`; labels in `types/payouts.ts`. The server's
+  `recordSellerPayment` action has no card button (the Payouts screen presses it).
 
 ## Payments, the PO and the books (features/payments, purchaseOrders, ledgers, bankAccounts)
 
@@ -323,5 +346,5 @@ and parses the result with a Zod schema.
 
 ## Not built yet (on purpose)
 
-MFA, the SKU ₹/unit matrix (P2), complaints after delivery (Q-SAL-05/08), seller payouts and paying refunds, photos
+MFA, the SKU ₹/unit matrix (P2), complaints after delivery (Q-SAL-05/08), payout run times, a seller hold and the return-freight debit, photos
 at dispatch, the dock and the POD (Q-ARC-02), a vehicle register, journals, and insurance on an order (Q-SAL-04).

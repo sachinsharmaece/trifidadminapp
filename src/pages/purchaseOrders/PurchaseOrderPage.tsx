@@ -1,9 +1,11 @@
 import { Link, useParams } from 'react-router';
+import { Badge } from '@/components/atoms/Badge';
 import { Button } from '@/components/atoms/Button';
 import { Spinner } from '@/components/atoms/Spinner';
 import { ErrorState } from '@/components/molecules/ErrorState';
 import { PageLayout } from '@/components/templates/PageLayout';
 import { useCurrentUser } from '@/features/auth/hooks';
+import { sellerPayoutRows } from '@/features/payouts/payoutText';
 import { usePurchaseOrder } from '@/features/purchaseOrders/hooks';
 import {
   PurchaseOrderStatusBadge,
@@ -43,6 +45,7 @@ export function PurchaseOrderPage() {
     >
       <div className="flex flex-wrap items-center gap-3 text-sm">
         <PurchaseOrderStatusBadge status={data.status} />
+        {data.paidAt && <Badge tone="success">Seller paid</Badge>}
         {data.status === 'RAISED' && (
           <span className="text-slate-600">Seller to dispatch {dueText(data.dispatchDueAt)}</span>
         )}
@@ -116,7 +119,10 @@ export function PurchaseOrderPage() {
       <section className="rounded-lg border border-slate-200 bg-white p-5 text-sm">
         <h2 className="font-semibold text-slate-900">Dispatch and dock</h2>
         <dl className="mt-3 grid gap-x-6 gap-y-2 sm:grid-cols-2">
-          {purchaseOrderProgressRows(data).map(([label, value]) => (
+          {[
+            ...purchaseOrderProgressRows(data),
+            ...sellerPayoutRows(data.payout, data.status === 'CHECKED'),
+          ].map(([label, value]) => (
             <div key={label}>
               <dt className="text-xs text-slate-500">{label}</dt>
               <dd className="text-slate-900">{value}</dd>

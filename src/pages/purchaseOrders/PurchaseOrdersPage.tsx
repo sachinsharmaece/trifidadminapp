@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'react-router';
+import { Badge } from '@/components/atoms/Badge';
 import { Button } from '@/components/atoms/Button';
 import { Spinner } from '@/components/atoms/Spinner';
 import { ErrorState } from '@/components/molecules/ErrorState';
@@ -84,6 +85,7 @@ export function PurchaseOrdersPage() {
                     </td>
                     <td className="px-4 py-3 text-xs text-slate-600">
                       <PurchaseOrderStatusBadge status={po.status} />
+                      {po.paidAt && <Badge tone="success">Seller paid</Badge>}
                       {po.status === 'RAISED' && (
                         <div className="mt-1">Dispatch {dueText(po.dispatchDueAt)}</div>
                       )}

@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { deliveryShape, margBillSchema } from '@/features/billing/api';
+import { refundSchema } from '@/features/payouts/api';
 import { apiClient } from '@/services/api/client';
 import { RECEIPT_STATUSES } from '@/types/books';
 import { RATE_TIER_LABELS } from '@/types/party';
@@ -89,18 +90,8 @@ const salesOrderSchema = z.object({
   // Build 4: the Marg bill, the trip and delivery.
   margBill: margBillSchema.nullable(),
   delivery: z.object(deliveryShape),
-  // Money owed back to the buyer after the dock check (paid later, with payouts).
-  refunds: z.array(
-    z.object({
-      id: z.string(),
-      number: z.string(),
-      reason: z.string(),
-      boxes: z.number(),
-      amountPaise: z.number(),
-      status: z.enum(['DUE']),
-      createdAt: z.string(),
-    }),
-  ),
+  // Money owed back to the buyer after the dock check, and whether a payout batch has paid it.
+  refunds: z.array(refundSchema),
   cancel: z
     .object({ at: z.string(), reasonLabel: z.string(), note: z.string().nullable() })
     .nullable(),

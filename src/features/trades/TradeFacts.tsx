@@ -1,6 +1,8 @@
 import type { ReactNode } from 'react';
 import { Link } from 'react-router';
 import { billingRows } from '@/features/billing/billingRows';
+import { RefundLine } from '@/features/payouts/RefundLine';
+import { sellerPayoutRows } from '@/features/payouts/payoutText';
 import {
   PurchaseOrderStatusBadge,
   purchaseOrderProgressRows,
@@ -170,22 +172,14 @@ export function TradeFacts({ trade }: { trade: Trade }) {
           {trade.refunds && trade.refunds.length > 0 && (
             <div className="mt-4 border-t border-slate-100 pt-3">
               <h3 className="text-xs font-semibold uppercase text-slate-500">
-                Refund due to the buyer ·{' '}
+                Refund to the buyer ·{' '}
                 {formatRupees(trade.refunds.reduce((sum, refund) => sum + refund.amountPaise, 0))}
               </h3>
-              <ul className="mt-2 space-y-1 text-sm">
+              <ul className="mt-2 text-sm">
                 {trade.refunds.map((refund) => (
-                  <li key={refund.id}>
-                    <span className="font-medium">{formatRupees(refund.amountPaise)}</span>{' '}
-                    <span className="text-xs text-slate-500">
-                      {refund.number} · {refund.reason}
-                    </span>
-                  </li>
+                  <RefundLine key={refund.id} refund={refund} />
                 ))}
               </ul>
-              <p className="mt-1 text-xs text-slate-500">
-                Paying refunds comes with seller payouts (a later build).
-              </p>
             </div>
           )}
           {trade.leakage && (
@@ -233,6 +227,7 @@ export function TradeFacts({ trade }: { trade: Trade }) {
                     </span>,
                   ],
                   ...purchaseOrderProgressRows(trade.purchaseOrder),
+                  ...sellerPayoutRows(trade.payout, trade.purchaseOrder.status === 'CHECKED'),
                 ] as [string, ReactNode][])
               : []),
             ...(trade.listing

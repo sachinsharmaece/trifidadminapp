@@ -12,6 +12,7 @@ import {
 } from '@/types/trade';
 import { RECEIPT_STATUSES } from '@/types/books';
 import { PURCHASE_ORDER_STATUSES, type FreightTerms, type Leg1Mode } from '@/types/dock';
+import { payoutFactsSchema, refundSchema } from '@/features/payouts/api';
 import { dockFactsShape } from '@/features/purchaseOrders/api';
 import { acceptedSchema, deliveryShape, margBillSchema } from '@/features/billing/api';
 import { SALES_ORDER_STATUSES } from '@/types/salesOrder';
@@ -124,20 +125,8 @@ const tradeSchema = z.object({
     })
     .nullable()
     .optional(),
-  // Money owed back to the buyer after the dock check (buyer side; paid later, with payouts).
-  refunds: z
-    .array(
-      z.object({
-        id: z.string(),
-        number: z.string(),
-        reason: z.string(),
-        boxes: z.number(),
-        amountPaise: z.number(),
-        status: z.enum(['DUE']),
-        createdAt: z.string(),
-      }),
-    )
-    .optional(),
+  // Money owed back to the buyer after the dock check, and whether a payout batch has paid it (buyer side).
+  refunds: z.array(refundSchema).optional(),
   leakage: z
     .object({
       context: z.string(),
@@ -158,6 +147,7 @@ const tradeSchema = z.object({
       status: z.enum(PURCHASE_ORDER_STATUSES),
       totalPaise: z.number(),
       dispatchDueAt: z.string(),
+      paidAt: z.string().nullable(),
       lines: z.array(
         z.object({
           lineNo: z.number(),
@@ -173,6 +163,8 @@ const tradeSchema = z.object({
     })
     .nullable()
     .optional(),
+  // Where the seller's payment is (seller side only): in a batch, released, or paid with its UTR.
+  payout: payoutFactsSchema.nullable().optional(),
   listing: z
     .object({
       id: z.string(),

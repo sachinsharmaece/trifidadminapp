@@ -28,6 +28,7 @@ import { LedgersPage } from '@/pages/books/LedgersPage';
 import { PaymentsPage } from '@/pages/books/PaymentsPage';
 import { DockPage } from '@/pages/dock/DockPage';
 import { ReturnNotesPage } from '@/pages/dock/ReturnNotesPage';
+import { PayoutsPage } from '@/pages/books/PayoutsPage';
 import { ToBeBilledPage } from '@/pages/books/ToBeBilledPage';
 import { TripsPage } from '@/pages/trips/TripsPage';
 import { PurchaseOrderPage } from '@/pages/purchaseOrders/PurchaseOrderPage';
@@ -73,6 +74,7 @@ export const router = createBrowserRouter([
                   { path: '/dock', element: <DockPage /> },
                   { path: '/return-notes', element: <ReturnNotesPage /> },
                   { path: '/to-be-billed', element: <ToBeBilledPage /> },
+                  { path: '/payouts', element: <PayoutsPage /> },
                   { path: '/trips', element: <TripsPage /> },
                   { path: '/ledgers', element: <LedgersPage /> },
                   { path: '/ledgers/:id', element: <LedgerPage /> },

@@ -65,6 +65,10 @@ Full commands, layout and recipes: `README.md`.
   deal card) and `features/trips` (Trips page in `pages/trips/`; the POD fields are shared with the deal card via
   `PodFields` in `features/trades/billingActionForms.tsx`). The Marg form's "lower" / "higher" notes are only a
   preview: the server does the checks. Trips never show firm names or money.
-- Not yet built: MFA, the SKU ₹/unit matrix, complaints after delivery, seller payouts and paying refunds, and photos.
+- Payouts live in `features/payouts` (page in `pages/books/PayoutsPage.tsx`). The release form asks for the password
+  through `useReleaseBatch` (`confirmPassword` first, like the margin form); the server also refuses the person who built
+  the batch, and `builtByMe` only hides the button. Refunds and seller payment facts come from the shared
+  `refundSchema` and `payoutFactsSchema` in `features/payouts/api.ts`. Sales never sees seller payout facts.
+- Not yet built: MFA, the SKU ₹/unit matrix, complaints after delivery, payout run times, a seller hold, and photos.
 - Do not add: Redux, Zustand, React Hook Form, TanStack Table, analytics, auth/PDF libraries, paid UI kits
   (unless the task says so).

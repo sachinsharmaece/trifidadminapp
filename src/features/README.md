@@ -8,4 +8,4 @@ Today: `auth/` (sign-in, route guard, user menu, change password), `staff/` (sta
 the parties: `sellers/` (Purchase side) and `buyers/` (Sales side); `listings/` (Purchase side); `margins/` (the margin matrix: Controller, Founder, Admin); `board/` (the Sales rate board); `trades/` (the deal card and the buyer and seller funnels); `salesOrders/`
 (orders raised when a buyer says yes; read only); `payments/` (the Accounts queue); `purchaseOrders/` (read only);
 `ledgers/` and `bankAccounts/` (the books); `dock/` (the Logistics dock and return notes); `billing/` (To be billed:
-the Marg bill, Accounts); `trips/` (trips and the proof of dispatch, Logistics).
+the Marg bill, Accounts); `trips/` (trips and the proof of dispatch, Logistics); `payouts/` (seller payments and refunds: build, release, bank proof).

@@ -76,6 +76,13 @@ export const NAV_ITEMS: readonly MenuItem[] = [
     icon: 'receipt',
     roles: ['ACCOUNTS', 'CONTROLLER', 'FOUNDER', 'ADMIN'],
   },
+  // Seller payments and buyer refunds: built by Accounts, released by the Founder or Admin, paid when the UTR is typed.
+  {
+    label: 'Payouts',
+    path: '/payouts',
+    icon: 'rupee',
+    roles: ['ACCOUNTS', 'CONTROLLER', 'FOUNDER', 'ADMIN'],
+  },
   // The books.
   {
     label: 'Ledgers',

@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { payoutFactsSchema } from '@/features/payouts/api';
 import { apiClient } from '@/services/api/client';
 import {
   FREIGHT_TERMS,
@@ -62,6 +63,8 @@ const rowSchema = z.object({
   totalPaise: z.number(),
   dispatchDueAt: z.string(),
   createdAt: z.string(),
+  /** When the seller was paid (the bank proof was typed); null until then. */
+  paidAt: z.string().nullable(),
 });
 export type PurchaseOrderRow = z.infer<typeof rowSchema>;
 
@@ -90,6 +93,8 @@ const purchaseOrderSchema = rowSchema.extend({
     }),
   ),
   ...dockFactsShape,
+  /** Where the seller's payment is: in a batch, released, or paid with its UTR (Build 5). */
+  payout: payoutFactsSchema.nullable(),
   inspection: z
     .object({
       outcome: z.enum(INSPECTION_OUTCOMES),

@@ -63,6 +63,19 @@ const tradeSchema = z.object({
 
   // Buyer side (Sales and supervisors)
   buyer: party.optional(),
+  /** Reference FAST-ORDER: CREDIT when the order was confirmed on the buyer's credit line. */
+  payMode: z.enum(['PAY_FIRST', 'CREDIT']).nullable().optional(),
+  /** The buyer's credit (at b1, b2 and b5), for "Confirm on credit" and the credit option of "Order on call". */
+  credit: z
+    .object({
+      hasLine: z.boolean(),
+      status: z.string(),
+      availablePaise: z.number(),
+      blocked: z.boolean(),
+      overdueDays: z.number(),
+    })
+    .nullable()
+    .optional(),
   boardOffer: z
     .object({
       buyerRatePaisePerUnit: z.number().nullable(),
@@ -297,7 +310,7 @@ export async function createAsk(input: AskInput): Promise<Trade> {
 /** The input each engine action takes (the server checks it again). */
 export interface ActionInputs {
   wantIt: { boxes: number };
-  orderOnCall: { boxes: number };
+  orderOnCall: { boxes: number; payMode?: 'PAY_FIRST' | 'CREDIT' };
   sendToSeller: Record<string, never>;
   confirmStock: { boxes: number; expiryMonth: string; batchNumber?: string | undefined };
   declineStock: { reason: DeclineReason; note?: string | undefined };
@@ -312,6 +325,7 @@ export interface ActionInputs {
   };
   sendToBuyer: Record<string, never>;
   buyerYes: Record<string, never>;
+  creditConfirm: Record<string, never>;
   buyerNo: { reasonCodeId: string; note?: string | undefined };
   leakAfterOrder: { reasonCodeId: string; note?: string | undefined };
   reopen: Record<string, never>;

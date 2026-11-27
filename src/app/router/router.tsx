@@ -85,6 +85,9 @@ import { GoodsInPage as RefGoodsInPage } from '@/pages/ref/logistics/GoodsInPage
 import { InspectionNoticePage as RefInspectionNoticePage } from '@/pages/ref/logistics/InspectionNoticePage';
 import { TradeQueuePage as RefTradeQueuePage } from '@/pages/ref/logistics/TradeQueuePage';
 import { VehicleOwnersPage as RefVehicleOwnersPage } from '@/pages/ref/logistics/VehicleOwnersPage';
+import { AccountsTodayPage as RefAccountsTodayPage } from '@/pages/ref/accounts/AccountsTodayPage';
+import { ControllerTodayPage as RefControllerTodayPage } from '@/pages/ref/controller/ControllerTodayPage';
+import { CreditLogPage as RefCreditLogPage } from '@/pages/ref/credit/CreditLogPage';
 import { JournalPage as RefJournalPage } from '@/pages/ref/accounts/JournalPage';
 import { LedgerMasterPage as RefLedgerMasterPage } from '@/pages/ref/accounts/LedgerMasterPage';
 import { LedgerPage as RefLedgerPage } from '@/pages/ref/accounts/LedgerPage';
@@ -133,7 +136,7 @@ export const router = createBrowserRouter([
                   { path: '/masters/bank-accounts', element: <RefBankAccountsPage /> },
                   { path: '/masters/staff', element: <RefStaffPage /> },
                   // Desk pages: our existing screen where one already does the job; the rest come in later builds.
-                  { path: '/controller-today', element: <TodayPage /> },
+                  { path: '/controller-today', element: <RefControllerTodayPage /> },
                   // Sales desk (R3): every screen sits under the buyer quick search, as the reference.
                   {
                     element: <SalesDeskLayout />,
@@ -173,8 +176,8 @@ export const router = createBrowserRouter([
                   { path: '/inspection', element: <RefInspectionNoticePage /> },
                   { path: '/logistics-trade-queue', element: <RefTradeQueuePage /> },
                   { path: '/vehicle-owners', element: <RefVehicleOwnersPage /> },
-                  { path: '/accounts-today', element: soon('Accounts — Today', 'R7') },
-                  { path: '/credit-log', element: soon('Credit log', 'R7') },
+                  { path: '/accounts-today', element: <RefAccountsTodayPage /> },
+                  { path: '/credit-log', element: <RefCreditLogPage /> },
                   // ---- Older paths, still reachable ----
                   { path: '/old/today', element: <TodayPage /> },
                   { path: '/old/buyers', element: <BuyersPage /> },

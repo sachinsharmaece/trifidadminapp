@@ -5,6 +5,7 @@ import type { TradeActionName } from '@/types/trade';
 import {
   BuyerNoForm,
   BuyerYesForm,
+  CreditConfirmForm,
   ConfirmPaymentForm,
   ConfirmStockForm,
   EnterPaymentForm,
@@ -44,6 +45,7 @@ const FORMS: Record<TradeActionName, (props: ActionFormProps) => React.JSX.Eleme
   giveQuote: QuoteForm,
   sendToBuyer: SendToBuyerForm,
   buyerYes: BuyerYesForm,
+  creditConfirm: CreditConfirmForm,
   buyerNo: BuyerNoForm,
   leakAfterOrder: LeakAfterOrderForm,
   reopen: ReopenForm,

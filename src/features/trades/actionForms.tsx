@@ -116,6 +116,9 @@ export function OrderOnCallForm({ trade, onDone, onChangedByOthers }: ActionForm
   const moq = trade.boardOffer?.moqBoxes;
   const left = trade.boardOffer?.autoBoxesLeft ?? 0;
   const [boxes, setBoxes] = useState(String(trade.boxesWanted ?? moq ?? ''));
+  const credit = trade.credit;
+  const creditUsable = Boolean(credit?.hasLine && credit.status === 'ACTIVE' && !credit.blocked);
+  const [payMode, setPayMode] = useState<'PAY_FIRST' | 'CREDIT'>('PAY_FIRST');
   const [errors, setErrors] = useState<FormErrors>({});
   const rate = trade.boardOffer?.buyerRatePaisePerUnit ?? null;
   const unitsPerBox = trade.boardOffer?.unitsPerBox ?? 0;
@@ -126,16 +129,19 @@ export function OrderOnCallForm({ trade, onDone, onChangedByOthers }: ActionForm
     const result = validateWantIt({ boxes });
     if (!result.ok) return setErrors(result.errors);
     setErrors({});
-    action.mutate(result.data, {
-      onSuccess: onDone,
-      onError: (e) => setErrors(serverFieldErrors(e)),
-    });
+    action.mutate(
+      { ...result.data, payMode },
+      {
+        onSuccess: onDone,
+        onError: (e) => setErrors(serverFieldErrors(e)),
+      },
+    );
   }
 
   return (
     <ActionFormShell
       title="Order on call"
-      description={`Confirmed at once from the listing (auto-confirm), offered and ordered in one step. Raises the buyer's sales order${total ? ` for ${total} including GST` : ''}; he pays first.`}
+      description={`Confirmed at once from the listing (auto-confirm), offered and ordered in one step. Raises the buyer's sales order${total ? ` for ${total} including GST` : ''}${payMode === 'CREDIT' ? ' on his credit line: the PO opens at once.' : '; he pays first.'}`}
       submitLabel="Raise the order"
       pending={action.isPending}
       error={action.error?.message}
@@ -159,6 +165,32 @@ export function OrderOnCallForm({ trade, onDone, onChangedByOthers }: ActionForm
           />
         )}
       </FormField>
+      {credit?.hasLine && (
+        <FormField
+          label="Payment"
+          hint={
+            creditUsable
+              ? `Credit available: ${formatRupees(credit.availablePaise)}.`
+              : credit.blocked
+                ? `Credit blocked: a bill is ${credit.overdueDays} days overdue.`
+                : 'Credit suspended.'
+          }
+          className="max-w-xs"
+        >
+          {(field) => (
+            <Select
+              {...field}
+              value={payMode}
+              onChange={(event) => setPayMode(event.target.value as 'PAY_FIRST' | 'CREDIT')}
+            >
+              <option value="PAY_FIRST">Pay first</option>
+              <option value="CREDIT" disabled={!creditUsable}>
+                On credit
+              </option>
+            </Select>
+          )}
+        </FormField>
+      )}
     </ActionFormShell>
   );
 }
@@ -495,6 +527,38 @@ export function BuyerYesForm({ trade, onDone, onChangedByOthers }: ActionFormPro
       submitLabel="Raise the order"
       pending={action.isPending}
       error={action.error?.message}
+      onSubmit={() => action.mutate({}, { onSuccess: onDone })}
+      onCancel={onDone}
+    />
+  );
+}
+
+/**
+ * Reference FAST-ORDER "Confirm on credit" (b5): instead of "Buyer says yes". The whole order must fit his available
+ * credit; the PO opens at once (TriFid Stock: straight to To be billed).
+ */
+export function CreditConfirmForm({ trade, onDone, onChangedByOthers }: ActionFormProps) {
+  const action = useTradeAction(trade, 'creditConfirm', onChangedByOthers);
+  const offer = trade.offer;
+  const totalPaise =
+    offer && offer.boxValuePaise !== null ? offer.boxValuePaise * offer.boxes : null;
+  const credit = trade.credit;
+  const reason = !credit?.hasLine
+    ? 'No credit limit'
+    : credit.status === 'SUSPENDED'
+      ? 'Credit suspended'
+      : credit.blocked
+        ? `Credit blocked: bill overdue ${credit.overdueDays} days`
+        : totalPaise !== null && credit.availablePaise < totalPaise
+          ? `Available ${formatRupees(credit.availablePaise)} is less than the order ${formatRupees(totalPaise)}`
+          : null;
+  return (
+    <ActionFormShell
+      title="Confirm on credit"
+      description={`Raises his sales order${totalPaise !== null ? ` for ${formatRupees(totalPaise)} including GST` : ''} on his credit line${credit?.hasLine ? ` (available ${formatRupees(credit.availablePaise)})` : ''}. No payment first: the PO opens at once.`}
+      submitLabel="Confirm on credit"
+      pending={action.isPending}
+      error={action.error?.message ?? reason ?? undefined}
       onSubmit={() => action.mutate({}, { onSuccess: onDone })}
       onCancel={onDone}
     />

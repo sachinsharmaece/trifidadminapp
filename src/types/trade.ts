@@ -99,6 +99,7 @@ export const TRADE_ACTION_NAMES = [
   'declineStock',
   'sendToBuyer',
   'buyerYes',
+  'creditConfirm',
   'buyerNo',
   'leakAfterOrder',
   'reopen',

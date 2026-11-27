@@ -1,5 +1,7 @@
 import { useState } from 'react';
 import { useNavigate, useParams } from 'react-router';
+import { CreditCard } from '@/components/ref/credit/CreditCard';
+import { CreditEditPanel } from '@/components/ref/credit/CreditEditPanel';
 import { useOnMount } from '@/hooks/useOnMount';
 import { refGet } from '@/lib/refApi';
 import { formatDateIST, formatPaiseAsINR } from '@/lib/refMoney';
@@ -8,7 +10,7 @@ import { formatDateIST, formatPaiseAsINR } from '@/lib/refMoney';
  * One party's statement, copied from the reference (app/(accounts)/ledger/[id]). Our API:
  * GET /ledgers/:id/statement?from=&to=. Differences from the reference:
  * - "Download statement" saves a CSV file (opens in Excel) made in the browser, not a PDF.
- * - The credit card and credit edit panel come with the credit work (R7).
+ * - A buyer's statement shows his credit card and the Accounts credit panel (the only place credit is edited).
  */
 interface Balance {
   paise: number;
@@ -24,7 +26,7 @@ interface Line {
   balance: Balance;
 }
 interface Statement {
-  ledger: { id: string; name: string };
+  ledger: { id: string; name: string; buyerId: string | null };
   lines: Line[];
   broughtForward: Balance;
 }
@@ -39,6 +41,7 @@ export function LedgerStatementPage() {
   const [to, setTo] = useState('');
   // The "from" date of the statement on screen (the boxes may have been changed since).
   const [shownFrom, setShownFrom] = useState('');
+  const [creditRefreshKey, setCreditRefreshKey] = useState(0);
 
   async function load() {
     const params: Record<string, string> = {};
@@ -85,6 +88,16 @@ export function LedgerStatementPage() {
       </button>
       <h1 className="mb-1 text-lg font-semibold text-zinc-900">{data?.ledger.name ?? ''}</h1>
       <p className="mb-4 text-sm text-zinc-500">Statement</p>
+
+      {data?.ledger.buyerId && (
+        <div className="mb-4 flex flex-col gap-3">
+          <CreditCard buyerId={data.ledger.buyerId} refreshKey={creditRefreshKey} />
+          <CreditEditPanel
+            buyerId={data.ledger.buyerId}
+            onChanged={() => setCreditRefreshKey((k) => k + 1)}
+          />
+        </div>
+      )}
 
       <div className="mb-3 flex items-end gap-2">
         <label className="flex flex-col text-xs text-zinc-500">

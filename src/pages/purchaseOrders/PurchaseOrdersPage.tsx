@@ -86,6 +86,7 @@ export function PurchaseOrdersPage() {
                     <td className="px-4 py-3 text-xs text-slate-600">
                       <PurchaseOrderStatusBadge status={po.status} />
                       {po.paidAt && <Badge tone="success">Seller paid</Badge>}
+                      {po.onHold && <Badge tone="warning">Payout on hold</Badge>}
                       {po.status === 'RAISED' && (
                         <div className="mt-1">Dispatch {dueText(po.dispatchDueAt)}</div>
                       )}

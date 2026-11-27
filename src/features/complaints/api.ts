@@ -71,9 +71,3 @@ export async function listComplaints(params: ComplaintListParams, signal?: Abort
   const { data } = await apiClient.get<unknown>('/complaints', { params, signal });
   return listSchema.parse(data);
 }
-
-/** Runs the delivery clock now (the server also runs it every 15 minutes). Says how many trades it delivered. */
-export async function runClocks(): Promise<{ delivered: number }> {
-  const { data } = await apiClient.post<unknown>('/clocks/run');
-  return z.object({ delivered: z.number() }).parse(data);
-}

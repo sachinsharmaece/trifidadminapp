@@ -1,4 +1,4 @@
-/** Trade stages and reasons, as the API uses them (server: shared/enums.ts). Built so far: b1–b11, s0–s6. */
+/** Trade stages and reasons, as the API uses them (server: shared/enums.ts). Built so far: b1–b11, s0–s6, the X stages. */
 export const BUYER_STAGES = [
   'B1_VIEWING',
   'B2_INQUIRY',
@@ -13,6 +13,8 @@ export const BUYER_STAGES = [
   'B11_COMPLAINTS',
   'X_LEAKAGE',
   'X_DOCK_REJECTED',
+  'X_LOST_IN_TRANSIT',
+  'X_ARCHIVED',
 ] as const;
 export type BuyerStage = (typeof BUYER_STAGES)[number];
 
@@ -30,6 +32,8 @@ export const BUYER_STAGE_LABELS: Record<BuyerStage, string> = {
   B11_COMPLAINTS: 'b11 Complaint',
   X_LEAKAGE: 'Leakage',
   X_DOCK_REJECTED: 'Dock rejected',
+  X_LOST_IN_TRANSIT: 'Lost in transit',
+  X_ARCHIVED: 'Archived',
 };
 
 export const SELLER_STAGES = [
@@ -84,7 +88,7 @@ export const DECLINE_REASON_LABELS: Record<DeclineReason, string> = {
 
 /**
  * The engine's actions (server: modules/trades/actions.ts). The server says which ones a trade shows.
- * The system's own `silenceDelivery` is never on a card, so it is not listed here.
+ * The system's own `silenceDelivery` and `archiveViewing` are never on a card, so they are not listed here.
  */
 export const TRADE_ACTION_NAMES = [
   'wantIt',
@@ -109,5 +113,8 @@ export const TRADE_ACTION_NAMES = [
   'confirmDelivery',
   'raiseComplaint',
   'resolveComplaint',
+  'closeLostInTransit',
+  'holdPayout',
+  'releaseHold',
 ] as const;
 export type TradeActionName = (typeof TRADE_ACTION_NAMES)[number];

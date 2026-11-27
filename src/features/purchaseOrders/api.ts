@@ -52,6 +52,10 @@ export const dockFactsShape = {
   acceptedBoxes: z.number().nullable(),
   acceptedValuePaise: z.number().nullable(),
   inspectedAt: z.string().nullable(),
+  /** The Controller's hold on paying the seller (Build 7); null when there is none. */
+  hold: z.object({ reason: z.string(), at: z.string() }).nullable(),
+  /** When the Controller closed the shipment as lost in transit; null otherwise. */
+  lostAt: z.string().nullable(),
 };
 
 const rowSchema = z.object({
@@ -65,6 +69,8 @@ const rowSchema = z.object({
   createdAt: z.string(),
   /** When the seller was paid (the bank proof was typed); null until then. */
   paidAt: z.string().nullable(),
+  /** The Controller put the seller's payout on hold (the reason is on the PO). */
+  onHold: z.boolean(),
 });
 export type PurchaseOrderRow = z.infer<typeof rowSchema>;
 

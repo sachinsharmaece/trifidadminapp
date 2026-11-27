@@ -36,6 +36,7 @@ import { PurchaseOrdersPage } from '@/pages/purchaseOrders/PurchaseOrdersPage';
 import { SalesOrderPage } from '@/pages/salesOrders/SalesOrderPage';
 import { SalesOrdersPage } from '@/pages/salesOrders/SalesOrdersPage';
 import { ComplaintsPage } from '@/pages/complaints/ComplaintsPage';
+import { TodayPage } from '@/pages/today/TodayPage';
 import { TradePage } from '@/pages/trades/TradePage';
 import { AppShell } from './AppShell';
 
@@ -70,6 +71,7 @@ export const router = createBrowserRouter([
                   { path: '/sales-orders', element: <SalesOrdersPage /> },
                   { path: '/sales-orders/:id', element: <SalesOrderPage /> },
                   { path: '/complaints', element: <ComplaintsPage /> },
+                  { path: '/today', element: <TodayPage /> },
                   { path: '/payments', element: <PaymentsPage /> },
                   { path: '/purchase-orders', element: <PurchaseOrdersPage /> },
                   { path: '/purchase-orders/:id', element: <PurchaseOrderPage /> },

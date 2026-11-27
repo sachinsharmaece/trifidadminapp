@@ -311,6 +311,9 @@ export interface ActionInputs {
     boxes?: number | undefined;
   };
   resolveComplaint: ResolveComplaintInput;
+  closeLostInTransit: { note: string };
+  holdPayout: { reason: string };
+  releaseHold: Record<string, never>;
 }
 
 /** The Marg invoice as keyed by Accounts. */

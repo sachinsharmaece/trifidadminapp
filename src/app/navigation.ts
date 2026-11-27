@@ -34,6 +34,13 @@ export const NAV_ITEMS: readonly MenuItem[] = [
     icon: 'receipt',
     roles: ['SALES', 'ACCOUNTS', 'CONTROLLER', 'FOUNDER', 'ADMIN'],
   },
+  // The Controller's morning list: what ran past its time, goods that never came, payouts on hold.
+  {
+    label: 'Today',
+    path: '/today',
+    icon: 'clipboard',
+    roles: ['CONTROLLER', 'FOUNDER', 'ADMIN'],
+  },
   // Buyers who say something is wrong after dispatch: Sales raises it on the deal card, the Controller decides.
   {
     label: 'Complaints',

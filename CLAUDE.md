@@ -72,8 +72,13 @@ Full commands, layout and recipes: `README.md`.
 - Complaints live in `features/complaints` (page in `pages/complaints/ComplaintsPage.tsx`) and
   `features/trades/complaintActionForms.tsx` (Raise, and the Resolve form shared with the Complaints list). Buyer side
   only: show a complaint only where the API sent one, and never to Purchase. The credit and refund limits are checked by
-  the server and shown under the field; the admin app does not work them out. The server's own clock action
-  (`silenceDelivery`) is never on a card, so it is not in `TRADE_ACTION_NAMES`.
-- Not yet built: MFA, the SKU ₹/unit matrix, stock for replacements and returns, payout run times, a seller hold, and photos.
+  the server and shown under the field; the admin app does not work them out. The server's own clock actions
+  (`silenceDelivery`, `archiveViewing`) are never on a card, so they are not in `TRADE_ACTION_NAMES`.
+- The Today page (`features/today`, `pages/today/TodayPage.tsx`) and the Controller's forms
+  (`features/trades/controllerActionForms.tsx`: lost in transit, hold, release) are for the Controller, Founder and Admin.
+  The hold is seller side only: show it only where the API sent `purchaseOrder.hold`; Sales never gets it. The close-as-lost
+  form is shared by the deal card and the Today list (it needs only a trade's id and version).
+- Not yet built: MFA, the SKU ₹/unit matrix, stock for replacements and returns, payout run times, registers and
+  dashboards (Build 8), hand-added receipts and bank reconciliation (Build 9), and photos.
 - Do not add: Redux, Zustand, React Hook Form, TanStack Table, analytics, auth/PDF libraries, paid UI kits
   (unless the task says so).

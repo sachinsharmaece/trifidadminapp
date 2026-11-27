@@ -2,13 +2,17 @@
  * Leg 1, the Indore dock and return notes, as the API uses them (server: shared/enums.ts). Build 3, LOCK-40.
  */
 
-/** RAISED at Gate A → DISPATCHED (leg 1) → ARRIVED (at the dock) → CHECKED (Gate B) or REJECTED (nothing passed). */
+/**
+ * RAISED at Gate A → DISPATCHED (leg 1) → ARRIVED (at the dock) → CHECKED (Gate B) or REJECTED (nothing passed).
+ * LOST: the Controller closed a shipment that never reached the dock.
+ */
 export const PURCHASE_ORDER_STATUSES = [
   'RAISED',
   'DISPATCHED',
   'ARRIVED',
   'CHECKED',
   'REJECTED',
+  'LOST',
 ] as const;
 export type PurchaseOrderStatus = (typeof PURCHASE_ORDER_STATUSES)[number];
 
@@ -18,6 +22,7 @@ export const PURCHASE_ORDER_STATUS_LABELS: Record<PurchaseOrderStatus, string> =
   ARRIVED: 'At the dock',
   CHECKED: 'Checked',
   REJECTED: 'Rejected at the dock',
+  LOST: 'Lost in transit',
 };
 
 export const LEG1_MODES = ['TRANSPORT', 'BUS', 'DEPOT'] as const;

@@ -44,6 +44,7 @@ const STATUS_TONES: Record<
   ARRIVED: 'warning',
   CHECKED: 'success',
   REJECTED: 'danger',
+  LOST: 'danger',
 };
 
 export function PurchaseOrderStatusBadge({ status }: { status: PurchaseOrderStatus }) {
@@ -80,6 +81,12 @@ export function purchaseOrderProgressRows(
       'Arrived',
       `${formatDateTime(po.arrival.arrivedAt)} · ${po.arrival.boxesCounted} of ${ordered} boxes counted${po.arrival.billWithGoods ? ' · bill came with the goods' : ''}`,
     ]);
+  }
+  if (po.lostAt) {
+    rows.push(['Lost in transit', `Closed by the Controller on ${formatDateTime(po.lostAt)}`]);
+  }
+  if (po.hold) {
+    rows.push(['Payout on hold', `${po.hold.reason} (since ${formatDateTime(po.hold.at)})`]);
   }
   if (po.outcome && po.inspectedAt) {
     rows.push(

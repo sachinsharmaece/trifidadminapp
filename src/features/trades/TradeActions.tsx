@@ -21,6 +21,7 @@ import {
 import type { Trade } from './api';
 import { ConfirmDeliveryForm, MargBillActionForm, PodForm } from './billingActionForms';
 import { RaiseComplaintForm, ResolveComplaintForm } from './complaintActionForms';
+import { CloseLostInTransitForm, HoldPayoutForm, ReleaseHoldForm } from './controllerActionForms';
 import {
   InspectLotForm,
   RecordArrivalForm,
@@ -51,6 +52,9 @@ const FORMS: Record<TradeActionName, (props: ActionFormProps) => React.JSX.Eleme
   confirmDelivery: ConfirmDeliveryForm,
   raiseComplaint: RaiseComplaintForm,
   resolveComplaint: ResolveComplaintForm,
+  closeLostInTransit: CloseLostInTransitForm,
+  holdPayout: HoldPayoutForm,
+  releaseHold: ReleaseHoldForm,
 };
 
 /** The "no" buttons look quieter than the ones that move the trade forward. */
@@ -61,6 +65,7 @@ const QUIET_BUTTONS: TradeActionName[] = [
   'rejectPayment',
   'recordSellerBill',
   'raiseComplaint',
+  'holdPayout',
 ];
 
 /**

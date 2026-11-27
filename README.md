@@ -322,14 +322,38 @@ entry and the server answers them 403: complaints are buyer side only.
   The server caps a credit or refund by the Marg bill and earlier complaints and says so under the field. A refund then
   waits in Payouts; a credit note is posted to the buyer's account (`JV-` number shown).
 - **The Complaints page**: tabs **Open (n)** and **Decided (n)**, search by complaint number or buyer, one card per
-  complaint (`ComplaintCard.tsx`) with links to its order and deal card. The Controller, Founder and Admin also get
-  **Run delivery clock now**: it marks trades whose 7-day window passed with no complaint as delivered (the server also
-  does this every 15 minutes), and says how many it moved.
+  complaint (`ComplaintCard.tsx`) with links to its order and deal card. (The clocks' "Run now" button moved to the
+  **Today** page in Build 7.)
 - Complaints show on the deal card (`TradeFacts`, buyer side only) and the sales order page, through `ComplaintLines.tsx`.
   The Purchase view of a card carries none.
-- Data: `features/complaints/api.ts` (the complaint schema, list, `runClocks`) and `hooks.ts` (query keys under
+- Data: `features/complaints/api.ts` (the complaint schema and list) and `hooks.ts` (query keys under
   `['trades', 'complaints']`, so any card button refreshes the list); form rules in `schemas/complaintForms.ts`; labels in
   `types/complaint.ts`. `useTradeAction` takes just a trade's id and version, so the list can resolve without opening the card.
+
+## Today, lost in transit and the payout hold (features/today, trades/controllerActionForms.tsx)
+
+The Controller's desk (Build 7). Menu: **Today** (`/today`, `pages/today/TodayPage.tsx`; Controller, Founder, Admin only:
+the server answers everyone else 403). It lists what has run past its time. Nothing here acts by itself except the two
+clocks the server runs (delivery, and archiving a b1 viewing nobody touched for 7 days).
+
+- **Goods that should have arrived**: shipments still on the road after the arrival time, with the buyer, seller, PO and
+  boxes. **Close as lost** opens the same form as the deal card (`LostInTransitForm`; only the trade's id and version are
+  needed): a note is required (250 characters). The buyer is then refunded in full (Accounts pays it from Payouts), the
+  seller gets a strike, and the deal shows under the funnel tab **Lost in transit**; Sales may reopen it.
+- **Complaints**: how many are open and how many are past the 48-hour limit, with a link to the Complaints page.
+- **Other clocks that ran out**: a table of deals whose clock ran out, with what they wait for and the desk that should
+  act (Purchase, Sales, Logistics). They only show: the desk does its job, or the Controller steps in.
+- **Payouts on hold**: seller payouts the Controller stopped, with the reason and a link to the deal card to release.
+- **Run the clocks now** (top right) runs the two clocks and says what they did ("0 trades marked delivered, 1 viewing
+  archived"). The server also runs them every 15 minutes.
+- **The hold** is on the deal card, seller side: **Hold the payout** (a reason is required) and **Release the hold**
+  (`HoldPayoutForm`, `ReleaseHoldForm`); only the one that applies shows. The PO page shows "Payout on hold" with the
+  reason, the PO list has a badge, and To pay shows "On hold: <reason>" with the tick disabled. **Sales never sees any of
+  it**: the server leaves the buttons and the history lines out of the buyer side.
+- New funnel tabs **Lost in transit** and **Archived** come from the stage list in `types/trade.ts` (an archived viewing
+  has no buttons; Sales opens a fresh one from the Rate board). The PO status **Lost in transit** is in `types/dock.ts`.
+- Data: `features/today/api.ts` and `hooks.ts` (query key `['trades', 'today']`, so any card button refreshes it);
+  form rules in `schemas/controllerForms.ts`.
 
 ## Payments, the PO and the books (features/payments, purchaseOrders, ledgers, bankAccounts)
 

@@ -1,14 +1,13 @@
 import { useState } from 'react';
 import { Button } from '@/components/atoms/Button';
 import { Spinner } from '@/components/atoms/Spinner';
-import { ErrorAlert } from '@/components/molecules/ErrorAlert';
 import { ErrorState } from '@/components/molecules/ErrorState';
 import { Pagination } from '@/components/molecules/Pagination';
 import { DataTableToolbar } from '@/components/organisms/DataTableToolbar';
 import { PageLayout } from '@/components/templates/PageLayout';
 import { useCurrentUser } from '@/features/auth/hooks';
 import { ComplaintCard } from '@/features/complaints/ComplaintCard';
-import { useComplaints, useRunClocks } from '@/features/complaints/hooks';
+import { useComplaints } from '@/features/complaints/hooks';
 import { useDebouncedValue } from '@/hooks/useDebouncedValue';
 import {
   COMPLAINT_STATUSES,
@@ -21,8 +20,7 @@ const PAGE_SIZE = 20;
 /**
  * Complaints from buyers (Sales side of the wall). Sales raises one from the deal card inside the 7-day delivery
  * window; the Controller (and Founder or Admin) decides here or on the card. A refund decided here waits in
- * Payouts. "Run delivery clock now" marks trades whose window passed in silence as delivered, without waiting
- * for the server's own 15-minute check.
+ * Payouts. (The delivery clock's "Run now" button is on the Today page.)
  */
 export function ComplaintsPage() {
   const [status, setStatus] = useState<ComplaintStatus>('OPEN');
@@ -32,29 +30,12 @@ export function ComplaintsPage() {
   const complaints = useComplaints({ status, q, page, pageSize: PAGE_SIZE });
   const { data: me } = useCurrentUser();
   const canDecide = me?.role === 'CONTROLLER' || me?.role === 'FOUNDER' || me?.role === 'ADMIN';
-  const clocks = useRunClocks();
 
   return (
     <PageLayout
       title="Complaints"
       description="Buyers who say something is wrong, within 7 days of the proof of dispatch. The Controller decides within 48 hours."
-      actions={
-        canDecide ? (
-          <Button variant="secondary" loading={clocks.isPending} onClick={() => clocks.mutate()}>
-            Run delivery clock now
-          </Button>
-        ) : undefined
-      }
     >
-      {clocks.isSuccess && (
-        <p role="status" className="rounded-md bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
-          {clocks.data.delivered === 0
-            ? 'Clock run: no trade was waiting.'
-            : `Clock run: ${clocks.data.delivered} trade${clocks.data.delivered === 1 ? '' : 's'} marked delivered (no complaint came in 7 days).`}
-        </p>
-      )}
-      <ErrorAlert message={clocks.error?.message} />
-
       <div className="flex gap-2" role="group" aria-label="Complaints view">
         {COMPLAINT_STATUSES.map((value) => (
           <Button

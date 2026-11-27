@@ -80,6 +80,11 @@ import {
   BuyerFunnelsPage as RefBuyerFunnelsPage,
   SellerFunnelsPage as RefSellerFunnelsPage,
 } from '@/pages/ref/orders/FunnelPages';
+import { DockPage as RefDockPage } from '@/pages/ref/logistics/DockPage';
+import { GoodsInPage as RefGoodsInPage } from '@/pages/ref/logistics/GoodsInPage';
+import { InspectionNoticePage as RefInspectionNoticePage } from '@/pages/ref/logistics/InspectionNoticePage';
+import { TradeQueuePage as RefTradeQueuePage } from '@/pages/ref/logistics/TradeQueuePage';
+import { VehicleOwnersPage as RefVehicleOwnersPage } from '@/pages/ref/logistics/VehicleOwnersPage';
 import { AppShell } from './AppShell';
 
 /** A page from the reference that a later build (R2–R10) copies; until then it says so. */
@@ -156,10 +161,10 @@ export const router = createBrowserRouter([
                   { path: '/journal', element: <JournalsPage /> },
                   { path: '/ledger-master', element: <LedgersPage /> },
                   { path: '/seller-leads', element: soon('Seller leads', 'R8') },
-                  { path: '/goods-in', element: soon('Goods-in', 'R5') },
-                  { path: '/inspection', element: soon('Inspection', 'R5') },
-                  { path: '/logistics-trade-queue', element: soon('Trade queue', 'R5') },
-                  { path: '/vehicle-owners', element: soon('Vehicle owners', 'R5') },
+                  { path: '/goods-in', element: <RefGoodsInPage /> },
+                  { path: '/inspection', element: <RefInspectionNoticePage /> },
+                  { path: '/logistics-trade-queue', element: <RefTradeQueuePage /> },
+                  { path: '/vehicle-owners', element: <RefVehicleOwnersPage /> },
                   { path: '/accounts-today', element: soon('Accounts — Today', 'R6') },
                   { path: '/credit-log', element: soon('Credit log', 'R7') },
                   // ---- Older paths, still reachable ----
@@ -179,7 +184,8 @@ export const router = createBrowserRouter([
                   { path: '/trades/:id', element: <TradePage /> },
                   { path: '/complaints', element: <ComplaintsPage /> },
                   { path: '/payments', element: <PaymentsPage /> },
-                  { path: '/dock', element: <DockPage /> },
+                  { path: '/dock', element: <RefDockPage /> },
+                  { path: '/old/dock', element: <DockPage /> },
                   { path: '/return-notes', element: <ReturnNotesPage /> },
                   { path: '/to-be-billed', element: <ToBeBilledPage /> },
                   { path: '/payouts', element: <PayoutsPage /> },

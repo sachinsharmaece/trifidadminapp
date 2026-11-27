@@ -85,7 +85,7 @@ function slaOf(due: TradeRow['due'], now = Date.now()) {
 }
 
 /** The open row's popup: the trade's facts and its buttons (our deal-card forms, one engine for every screen). */
-function TradePopup({ id }: { id: string }) {
+export function TradePopup({ id }: { id: string }) {
   const { data: trade, isLoading } = useTrade(id);
   if (isLoading || !trade) return <p className="text-xs text-zinc-400">Loading…</p>;
   return (

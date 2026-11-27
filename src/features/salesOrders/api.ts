@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { deliveryShape, margBillSchema } from '@/features/billing/api';
+import { complaintSchema } from '@/features/complaints/api';
 import { refundSchema } from '@/features/payouts/api';
 import { apiClient } from '@/services/api/client';
 import { RECEIPT_STATUSES } from '@/types/books';
@@ -92,6 +93,8 @@ const salesOrderSchema = z.object({
   delivery: z.object(deliveryShape),
   // Money owed back to the buyer after the dock check, and whether a payout batch has paid it.
   refunds: z.array(refundSchema),
+  // Complaints on this order (the server leaves them out for the seller side).
+  complaints: z.array(complaintSchema),
   cancel: z
     .object({ at: z.string(), reasonLabel: z.string(), note: z.string().nullable() })
     .nullable(),

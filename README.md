@@ -305,6 +305,32 @@ Controller, Founder, Admin). Two views, **To pay** and **Batches**. Nothing coun
   cards, orders and ledgers); form rules in `schemas/payoutForms.ts`; labels in `types/payouts.ts`. The server's
   `recordSellerPayment` action has no card button (the Payouts screen presses it).
 
+## Complaints (features/complaints, trades/complaintActionForms.tsx)
+
+A buyer may complain for 7 days after the proof of dispatch (Build 6). Menu: **Complaints** (`/complaints`,
+`pages/complaints/ComplaintsPage.tsx`; Sales, Controller, Founder, Admin). Purchase, Accounts and Logistics have no menu
+entry and the server answers them 403: complaints are buyer side only.
+
+- **Raise** (`RaiseComplaintForm`, the deal card button **Buyer complains**, Sales; at b9 Dispatched or b10 Delivered).
+  Fields: what is wrong (damaged on arrival, boxes short, wrong item, quality, other), a **reason** from the reason codes
+  (context "Complaint", turned on, nothing chosen by default), the boxes affected (optional) and what the buyer says.
+  The card goes to **b11 Complaint**. The card also says "the buyer may complain until <date>" (`complaintByAt`); after it
+  the server refuses (409) and the form shows its message.
+- **Resolve** (`DecideForm`, the card button **Resolve the complaint**, or **Resolve** on a row of the Complaints page;
+  Controller, Founder, Admin). One decision: no action, a credit note (rupees, with GST), a replacement, a return or a
+  refund (the last three take boxes). The note is required and **Sales reads it**, so the form says "Do not name the seller".
+  The server caps a credit or refund by the Marg bill and earlier complaints and says so under the field. A refund then
+  waits in Payouts; a credit note is posted to the buyer's account (`JV-` number shown).
+- **The Complaints page**: tabs **Open (n)** and **Decided (n)**, search by complaint number or buyer, one card per
+  complaint (`ComplaintCard.tsx`) with links to its order and deal card. The Controller, Founder and Admin also get
+  **Run delivery clock now**: it marks trades whose 7-day window passed with no complaint as delivered (the server also
+  does this every 15 minutes), and says how many it moved.
+- Complaints show on the deal card (`TradeFacts`, buyer side only) and the sales order page, through `ComplaintLines.tsx`.
+  The Purchase view of a card carries none.
+- Data: `features/complaints/api.ts` (the complaint schema, list, `runClocks`) and `hooks.ts` (query keys under
+  `['trades', 'complaints']`, so any card button refreshes the list); form rules in `schemas/complaintForms.ts`; labels in
+  `types/complaint.ts`. `useTradeAction` takes just a trade's id and version, so the list can resolve without opening the card.
+
 ## Payments, the PO and the books (features/payments, purchaseOrders, ledgers, bankAccounts)
 
 The rule (Q-ACC-01): the PO goes to the seller only when the order is **paid in full**; a smaller payment is kept as
@@ -346,5 +372,5 @@ and parses the result with a Zod schema.
 
 ## Not built yet (on purpose)
 
-MFA, the SKU ₹/unit matrix (P2), complaints after delivery (Q-SAL-05/08), payout run times, a seller hold and the return-freight debit, photos
+MFA, the SKU ₹/unit matrix (P2), stock for replacements and returns, payout run times, a seller hold and the return-freight debit, photos
 at dispatch, the dock and the POD (Q-ARC-02), a vehicle register, journals, and insurance on an order (Q-SAL-04).

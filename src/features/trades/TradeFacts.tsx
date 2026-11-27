@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import { Link } from 'react-router';
 import { billingRows } from '@/features/billing/billingRows';
+import { ComplaintLines } from '@/features/complaints/ComplaintLines';
 import { RefundLine } from '@/features/payouts/RefundLine';
 import { sellerPayoutRows } from '@/features/payouts/payoutText';
 import {
@@ -13,7 +14,7 @@ import { EXPIRY_BAND_LABELS, PROVENANCE_LABELS } from '@/types/listing';
 import { RATE_TIER_LABELS } from '@/types/party';
 import { RECEIPT_STATUS_LABELS, RECEIPT_STATUS_TONES } from '@/types/books';
 import { ASK_REASON_LABELS } from '@/types/trade';
-import { formatDateTime, formatRupees } from '@/utils/format';
+import { formatDate, formatDateTime, formatRupees } from '@/utils/format';
 import type { Trade } from './api';
 
 /** A titled box of label/value rows. */
@@ -180,6 +181,21 @@ export function TradeFacts({ trade }: { trade: Trade }) {
                   <RefundLine key={refund.id} refund={refund} />
                 ))}
               </ul>
+            </div>
+          )}
+          {trade.complaints && (trade.complaints.length > 0 || trade.complaintByAt) && (
+            <div className="mt-4 border-t border-slate-100 pt-3">
+              <h3 className="text-xs font-semibold uppercase text-slate-500">
+                Complaints
+                {trade.complaintByAt
+                  ? ` · the buyer may complain until ${formatDate(trade.complaintByAt)}`
+                  : ''}
+              </h3>
+              {trade.complaints.length === 0 ? (
+                <p className="mt-1 text-sm text-slate-500">None.</p>
+              ) : (
+                <ComplaintLines complaints={trade.complaints} />
+              )}
             </div>
           )}
           {trade.leakage && (

@@ -20,6 +20,7 @@ import {
 } from './actionForms';
 import type { Trade } from './api';
 import { ConfirmDeliveryForm, MargBillActionForm, PodForm } from './billingActionForms';
+import { RaiseComplaintForm, ResolveComplaintForm } from './complaintActionForms';
 import {
   InspectLotForm,
   RecordArrivalForm,
@@ -48,6 +49,8 @@ const FORMS: Record<TradeActionName, (props: ActionFormProps) => React.JSX.Eleme
   recordMargBill: MargBillActionForm,
   recordPod: PodForm,
   confirmDelivery: ConfirmDeliveryForm,
+  raiseComplaint: RaiseComplaintForm,
+  resolveComplaint: ResolveComplaintForm,
 };
 
 /** The "no" buttons look quieter than the ones that move the trade forward. */
@@ -57,6 +60,7 @@ const QUIET_BUTTONS: TradeActionName[] = [
   'leakAfterOrder',
   'rejectPayment',
   'recordSellerBill',
+  'raiseComplaint',
 ];
 
 /**

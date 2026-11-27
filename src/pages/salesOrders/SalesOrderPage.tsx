@@ -6,6 +6,7 @@ import { Spinner } from '@/components/atoms/Spinner';
 import { ErrorState } from '@/components/molecules/ErrorState';
 import { PageLayout } from '@/components/templates/PageLayout';
 import { useCurrentUser } from '@/features/auth/hooks';
+import { ComplaintLines } from '@/features/complaints/ComplaintLines';
 import { RefundLine } from '@/features/payouts/RefundLine';
 import { useSalesOrder } from '@/features/salesOrders/hooks';
 import { billingRows } from '@/features/billing/billingRows';
@@ -226,6 +227,19 @@ export function SalesOrderPage() {
               </div>
             ))}
           </dl>
+        </section>
+      )}
+
+      {data.complaints.length > 0 && (
+        <section className="rounded-lg border border-slate-200 bg-white p-5">
+          <h2 className="text-sm font-semibold text-slate-900">Complaints</h2>
+          <p className="mt-1 text-xs text-slate-500">
+            Raised by Sales inside the delivery window; the Controller decides. A credit note or a
+            refund is posted to the buyer&apos;s account.
+          </p>
+          <div className="mt-3">
+            <ComplaintLines complaints={data.complaints} />
+          </div>
         </section>
       )}
 

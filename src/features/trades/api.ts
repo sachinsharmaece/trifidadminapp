@@ -13,8 +13,10 @@ import {
 import { RECEIPT_STATUSES } from '@/types/books';
 import { PURCHASE_ORDER_STATUSES, type FreightTerms, type Leg1Mode } from '@/types/dock';
 import { payoutFactsSchema, refundSchema } from '@/features/payouts/api';
+import { complaintSchema } from '@/features/complaints/api';
 import { dockFactsShape } from '@/features/purchaseOrders/api';
 import { acceptedSchema, deliveryShape, margBillSchema } from '@/features/billing/api';
+import type { ComplaintCategory, ResolveComplaintInput } from '@/types/complaint';
 import { SALES_ORDER_STATUSES } from '@/types/salesOrder';
 
 /**
@@ -127,6 +129,9 @@ const tradeSchema = z.object({
     .optional(),
   // Money owed back to the buyer after the dock check, and whether a payout batch has paid it (buyer side).
   refunds: z.array(refundSchema).optional(),
+  // Complaints raised on the order (buyer side only: Purchase never gets them), and the last day to complain.
+  complaints: z.array(complaintSchema).optional(),
+  complaintByAt: z.string().nullable().optional(),
   leakage: z
     .object({
       context: z.string(),
@@ -299,6 +304,13 @@ export interface ActionInputs {
   recordMargBill: MargBillInput;
   recordPod: { ref: string; date: string };
   confirmDelivery: Record<string, never>;
+  raiseComplaint: {
+    category: ComplaintCategory;
+    reasonCodeId: string;
+    description?: string | undefined;
+    boxes?: number | undefined;
+  };
+  resolveComplaint: ResolveComplaintInput;
 }
 
 /** The Marg invoice as keyed by Accounts. */

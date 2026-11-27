@@ -69,6 +69,11 @@ Full commands, layout and recipes: `README.md`.
   through `useReleaseBatch` (`confirmPassword` first, like the margin form); the server also refuses the person who built
   the batch, and `builtByMe` only hides the button. Refunds and seller payment facts come from the shared
   `refundSchema` and `payoutFactsSchema` in `features/payouts/api.ts`. Sales never sees seller payout facts.
-- Not yet built: MFA, the SKU ₹/unit matrix, complaints after delivery, payout run times, a seller hold, and photos.
+- Complaints live in `features/complaints` (page in `pages/complaints/ComplaintsPage.tsx`) and
+  `features/trades/complaintActionForms.tsx` (Raise, and the Resolve form shared with the Complaints list). Buyer side
+  only: show a complaint only where the API sent one, and never to Purchase. The credit and refund limits are checked by
+  the server and shown under the field; the admin app does not work them out. The server's own clock action
+  (`silenceDelivery`) is never on a card, so it is not in `TRADE_ACTION_NAMES`.
+- Not yet built: MFA, the SKU ₹/unit matrix, stock for replacements and returns, payout run times, a seller hold, and photos.
 - Do not add: Redux, Zustand, React Hook Form, TanStack Table, analytics, auth/PDF libraries, paid UI kits
   (unless the task says so).

@@ -58,11 +58,12 @@ export function isChangedByOthers(error: unknown): boolean {
 }
 
 /**
- * One engine button on one trade. `onChangedByOthers` runs when someone else acted first (409): the card then
+ * One engine button on one trade (the card, or a list row that knows only the trade's id and version).
+ * `onChangedByOthers` runs when someone else acted first (409): the card then
  * reloads and shows the new stage.
  */
 export function useTradeAction<A extends keyof ActionInputs>(
-  trade: Trade,
+  trade: Pick<Trade, 'id' | 'version'>,
   action: A,
   onChangedByOthers?: () => void,
 ) {

@@ -34,6 +34,13 @@ export const NAV_ITEMS: readonly MenuItem[] = [
     icon: 'receipt',
     roles: ['SALES', 'ACCOUNTS', 'CONTROLLER', 'FOUNDER', 'ADMIN'],
   },
+  // Buyers who say something is wrong after dispatch: Sales raises it on the deal card, the Controller decides.
+  {
+    label: 'Complaints',
+    path: '/complaints',
+    icon: 'alert',
+    roles: ['SALES', 'CONTROLLER', 'FOUNDER', 'ADMIN'],
+  },
   // The Accounts desk queue: confirm payments Sales entered (the same engine buttons as the deal card).
   {
     label: 'Payments to confirm',

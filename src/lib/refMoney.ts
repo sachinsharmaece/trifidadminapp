@@ -45,3 +45,8 @@ export function formatDateIST(value: string | Date, withTime = false): string {
   const day = `${get('day')}/${get('month')}/${get('year')}`;
   return withTime ? `${day} ${get('hour')}:${get('minute')}` : day;
 }
+
+/** Today's date in Indian time as YYYY-MM-DD (the date fields our API takes). */
+export function todayIST(): string {
+  return new Intl.DateTimeFormat('en-CA', { timeZone: IST }).format(new Date());
+}

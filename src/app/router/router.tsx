@@ -85,6 +85,13 @@ import { GoodsInPage as RefGoodsInPage } from '@/pages/ref/logistics/GoodsInPage
 import { InspectionNoticePage as RefInspectionNoticePage } from '@/pages/ref/logistics/InspectionNoticePage';
 import { TradeQueuePage as RefTradeQueuePage } from '@/pages/ref/logistics/TradeQueuePage';
 import { VehicleOwnersPage as RefVehicleOwnersPage } from '@/pages/ref/logistics/VehicleOwnersPage';
+import { JournalPage as RefJournalPage } from '@/pages/ref/accounts/JournalPage';
+import { LedgerMasterPage as RefLedgerMasterPage } from '@/pages/ref/accounts/LedgerMasterPage';
+import { LedgerPage as RefLedgerPage } from '@/pages/ref/accounts/LedgerPage';
+import { LedgerStatementPage as RefLedgerStatementPage } from '@/pages/ref/accounts/LedgerStatementPage';
+import { PaymentPage as RefPaymentPage } from '@/pages/ref/accounts/PaymentPage';
+import { ToBeBilledPage as RefToBeBilledPage } from '@/pages/ref/accounts/ToBeBilledPage';
+import { UpcomingPaymentsPage as RefUpcomingPaymentsPage } from '@/pages/ref/accounts/UpcomingPaymentsPage';
 import { AppShell } from './AppShell';
 
 /** A page from the reference that a later build (R2–R10) copies; until then it says so. */
@@ -155,17 +162,18 @@ export const router = createBrowserRouter([
                   { path: '/purchase-orders/new', element: <RefNewPurchaseOrderPage /> },
                   { path: '/purchase-orders/:id', element: <RefPurchaseOrderDetailPage /> },
                   { path: '/dispatch-leg2', element: <TripsPage /> },
-                  { path: '/upcoming-payments', element: <PaymentsPage /> },
-                  { path: '/ledger', element: <LedgersPage /> },
-                  { path: '/payment', element: <PayoutsPage /> },
-                  { path: '/journal', element: <JournalsPage /> },
-                  { path: '/ledger-master', element: <LedgersPage /> },
+                  { path: '/upcoming-payments', element: <RefUpcomingPaymentsPage /> },
+                  { path: '/ledger', element: <RefLedgerPage /> },
+                  { path: '/ledger/:id', element: <RefLedgerStatementPage /> },
+                  { path: '/payment', element: <RefPaymentPage /> },
+                  { path: '/journal', element: <RefJournalPage /> },
+                  { path: '/ledger-master', element: <RefLedgerMasterPage /> },
                   { path: '/seller-leads', element: soon('Seller leads', 'R8') },
                   { path: '/goods-in', element: <RefGoodsInPage /> },
                   { path: '/inspection', element: <RefInspectionNoticePage /> },
                   { path: '/logistics-trade-queue', element: <RefTradeQueuePage /> },
                   { path: '/vehicle-owners', element: <RefVehicleOwnersPage /> },
-                  { path: '/accounts-today', element: soon('Accounts — Today', 'R6') },
+                  { path: '/accounts-today', element: soon('Accounts — Today', 'R7') },
                   { path: '/credit-log', element: soon('Credit log', 'R7') },
                   // ---- Older paths, still reachable ----
                   { path: '/old/today', element: <TodayPage /> },
@@ -187,7 +195,8 @@ export const router = createBrowserRouter([
                   { path: '/dock', element: <RefDockPage /> },
                   { path: '/old/dock', element: <DockPage /> },
                   { path: '/return-notes', element: <ReturnNotesPage /> },
-                  { path: '/to-be-billed', element: <ToBeBilledPage /> },
+                  { path: '/to-be-billed', element: <RefToBeBilledPage /> },
+                  { path: '/old/to-be-billed', element: <ToBeBilledPage /> },
                   { path: '/payouts', element: <PayoutsPage /> },
                   { path: '/trips', element: <TripsPage /> },
                   { path: '/ledgers', element: <LedgersPage /> },

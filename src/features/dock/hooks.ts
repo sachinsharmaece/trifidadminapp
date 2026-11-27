@@ -3,6 +3,7 @@ import type { ArrivalInput, InspectionInput } from '@/features/trades/api';
 import { queryClient } from '@/services/query/queryClient';
 import {
   closeReturnNote,
+  correctInspection,
   inspect,
   listDock,
   listReturnNotes,
@@ -41,6 +42,14 @@ export function useInspect() {
   return useMutation({
     mutationFn: (input: { row: DockRow; inspection: InspectionInput }) =>
       inspect(input.row, input.inspection),
+    onSettled: refresh,
+  });
+}
+
+export function useCorrectInspection() {
+  return useMutation({
+    mutationFn: (input: { row: DockRow; inspection: InspectionInput }) =>
+      correctInspection(input.row, input.inspection),
     onSettled: refresh,
   });
 }

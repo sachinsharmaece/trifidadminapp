@@ -125,6 +125,26 @@ export function TradeFacts({ trade }: { trade: Trade }) {
                 : []),
           ]}
         >
+          {trade.advance && trade.advance.totalPaise > 0 && (
+            <div className="mt-4 border-t border-slate-100 pt-3" data-testid="advance-panel">
+              <h3 className="text-xs font-semibold uppercase text-slate-500">
+                Advance waiting · {formatRupees(trade.advance.totalPaise)}
+              </h3>
+              <p className="mt-1 text-sm text-slate-600">
+                This buyer paid ahead. Accounts can use it on this order.
+              </p>
+              <ul className="mt-2 space-y-1 text-sm">
+                {trade.advance.payments.map((payment) => (
+                  <li key={payment.number}>
+                    <span className="font-medium">{formatRupees(payment.unspentPaise)}</span>{' '}
+                    <span className="text-xs text-slate-500">
+                      {payment.number} · UTR {payment.utr} · {payment.receivedOn}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
           {trade.payments !== undefined && trade.salesOrder && (
             <div className="mt-4 border-t border-slate-100 pt-3">
               <h3 className="text-xs font-semibold uppercase text-slate-500">
@@ -141,6 +161,12 @@ export function TradeFacts({ trade }: { trade: Trade }) {
                         <Badge tone={RECEIPT_STATUS_TONES[payment.status]}>
                           {RECEIPT_STATUS_LABELS[payment.status]}
                         </Badge>
+                        {payment.isAdvance && <Badge tone="info">From advance</Badge>}
+                        {payment.receiptPaise !== payment.amountPaise && (
+                          <span className="text-xs text-slate-500">
+                            of {formatRupees(payment.receiptPaise)} received
+                          </span>
+                        )}
                       </div>
                       <div className="text-xs text-slate-500">
                         {payment.number} · UTR {payment.utr} · {payment.bankName} ·{' '}

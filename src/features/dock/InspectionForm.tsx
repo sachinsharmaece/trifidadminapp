@@ -19,8 +19,20 @@ export interface DockLine {
   shortExpiryAgreed: boolean;
 }
 
+/** What the first check found, when the form is used to correct it. */
+export interface EarlierCheckLine {
+  lineNo: number;
+  batchFound: string | null;
+  expiryFound: string | null;
+  boxesDamaged: number;
+  boxesLeaking: number;
+  boxesExcess: number;
+}
+
 interface InspectionFormProps {
   lines: DockLine[];
+  /** Set to correct a saved check: the boxes start from what was typed the first time. */
+  earlier?: EarlierCheckLine[] | undefined;
   /** From the arrival. */
   boxesCounted: number;
   pending: boolean;
@@ -37,16 +49,20 @@ interface InspectionFormProps {
 export function InspectionForm(props: InspectionFormProps) {
   const ordered = props.lines.reduce((sum, line) => sum + line.boxes, 0);
   const extra = Math.max(0, props.boxesCounted - ordered);
+  const correcting = Boolean(props.earlier);
   const [values, setValues] = useState<InspectionValues>({
-    lines: props.lines.map((line, index) => ({
-      lineNo: line.lineNo,
-      batchFound: line.batchDeclared ?? line.batchNumber ?? '',
-      expiryFound: line.expiryDeclared ?? line.expiryMonth,
-      damaged: '0',
-      leaking: '0',
-      // Extra boxes are offered on the first line; move them if they belong to another.
-      excess: index === 0 ? String(extra) : '0',
-    })),
+    lines: props.lines.map((line, index) => {
+      const before = props.earlier?.find((item) => item.lineNo === line.lineNo);
+      return {
+        lineNo: line.lineNo,
+        batchFound: before?.batchFound ?? line.batchDeclared ?? line.batchNumber ?? '',
+        expiryFound: before?.expiryFound ?? line.expiryDeclared ?? line.expiryMonth,
+        damaged: String(before?.boxesDamaged ?? 0),
+        leaking: String(before?.boxesLeaking ?? 0),
+        // Extra boxes are offered on the first line; move them if they belong to another.
+        excess: String(before?.boxesExcess ?? (index === 0 ? extra : 0)),
+      };
+    }),
     note: '',
   });
   const [errors, setErrors] = useState<FormErrors>({});
@@ -67,9 +83,13 @@ export function InspectionForm(props: InspectionFormProps) {
 
   return (
     <ActionFormShell
-      title="Check the goods"
-      description={`${props.boxesCounted} boxes counted for ${ordered} ordered. Accepted boxes are paid to the seller; short, damaged and leaking boxes are refunded to the buyer. A saved check cannot be changed.`}
-      submitLabel="Save the check"
+      title={correcting ? 'Correct the check' : 'Check the goods'}
+      description={
+        correcting
+          ? `${props.boxesCounted} boxes counted for ${ordered} ordered. The first check stays in the history; its entries in the books are undone and posted again from this one. At least one box must stay accepted.`
+          : `${props.boxesCounted} boxes counted for ${ordered} ordered. Accepted boxes are paid to the seller; short, damaged and leaking boxes are refunded to the buyer. A saved check can only be corrected until the Marg bill is saved or the seller's payout starts.`
+      }
+      submitLabel={correcting ? 'Save the correction' : 'Save the check'}
       pending={props.pending}
       error={props.error}
       onSubmit={submit}

@@ -57,6 +57,12 @@ Full commands, layout and recipes: `README.md`.
   `features/bankAccounts`, with pages in `pages/books/` and `pages/purchaseOrders/`. A payment is entered on the deal
   card and confirmed from the Payments to confirm queue: both press engine actions (`runTradeAction` on the server).
   POs and ledgers are read only; the admin app never works out a balance or a GST split itself.
+- Build 9 books live in `features/journals` (journals and opening balances, `LedgerPicker`), `features/vouchers`
+  (list and `ReverseForm`: `confirmPassword()` then the call), `features/reconciliation` and the new parts of
+  `features/payments` (`HandPaymentForm`, `AdvancesTab`) and `features/ledgers` (`LedgerForm`). Pages are in
+  `pages/books/`. After a write that changes the books call `refreshBooks()`. Maker ≠ checker: show "You typed it /
+  entered it" from the server's `typedByMe` / `enteredByMe`, never by comparing names. The Controller gets no write
+  button here except Reverse.
 - Dispatch and the dock live in `features/dock` (Dock and Return notes pages in `pages/dock/`) and
   `features/trades/dockActionForms.tsx`. The arrival and check forms are shared by the Dock screen and the deal card.
   Dock screens never show firm names or money (the API leaves them out). Short and accepted boxes in the check form

@@ -10,7 +10,7 @@ import { PageLayout } from '@/components/templates/PageLayout';
 import { useCurrentUser } from '@/features/auth/hooks';
 import type { DockLane, DockRow } from '@/features/dock/api';
 import { ArrivalForm } from '@/features/dock/ArrivalForm';
-import { useDock, useInspect, useRecordArrival } from '@/features/dock/hooks';
+import { useCorrectInspection, useDock, useInspect, useRecordArrival } from '@/features/dock/hooks';
 import { InspectionForm } from '@/features/dock/InspectionForm';
 import { leg1Text } from '@/features/purchaseOrders/PurchaseOrderProgress';
 import { isChangedByOthers } from '@/features/trades/hooks';
@@ -44,6 +44,7 @@ function DockCard({ row, canAct }: { row: DockRow; canAct: boolean }) {
   const [notice, setNotice] = useState<string>();
   const arrival = useRecordArrival();
   const inspect = useInspect();
+  const correct = useCorrectInspection();
   const onError = (error: unknown) => {
     if (isChangedByOthers(error)) {
       setOpen(false);
@@ -104,8 +105,8 @@ function DockCard({ row, canAct }: { row: DockRow; canAct: boolean }) {
       {row.result && (
         <div className="rounded-md bg-slate-50 px-3 py-2">
           <p>
-            Checked {formatDateTime(row.result.savedAt)}: {row.result.acceptedBoxes} of {row.boxes}{' '}
-            accepted
+            {row.result.corrected ? 'Corrected' : 'Checked'} {formatDateTime(row.result.savedAt)}:{' '}
+            {row.result.acceptedBoxes} of {row.boxes} accepted
             {row.result.note ? ` · ${row.result.note}` : ''}
           </p>
           {row.result.lines.map((line) => (
@@ -138,6 +139,14 @@ function DockCard({ row, canAct }: { row: DockRow; canAct: boolean }) {
         <Button size="sm" onClick={() => setOpen(true)}>
           Check the goods
         </Button>
+      )}
+      {canAct && !open && row.status === 'CHECKED' && row.correctionBlock === null && (
+        <Button size="sm" variant="secondary" onClick={() => setOpen(true)}>
+          Correct the check
+        </Button>
+      )}
+      {row.result && row.correctionBlock && (
+        <p className="text-xs text-slate-500">{row.correctionBlock}</p>
       )}
       {!canAct && (row.status === 'DISPATCHED' || row.status === 'ARRIVED') && (
         <p className="text-xs text-slate-500">Logistics does this.</p>
@@ -177,6 +186,25 @@ function DockCard({ row, canAct }: { row: DockRow; canAct: boolean }) {
           onCancel={() => setOpen(false)}
         />
       )}
+      {open && row.status === 'CHECKED' && row.arrival && row.result && (
+        <InspectionForm
+          lines={row.lines}
+          boxesCounted={row.arrival.boxesCounted}
+          earlier={row.result.lines}
+          pending={correct.isPending}
+          error={correct.error?.message}
+          onSave={(input) =>
+            correct.mutateAsync({ row, inspection: input }).then(
+              () => setOpen(false),
+              (error: unknown) => {
+                onError(error);
+                throw error;
+              },
+            )
+          }
+          onCancel={() => setOpen(false)}
+        />
+      )}
     </li>
   );
 }
@@ -184,7 +212,7 @@ function DockCard({ row, canAct }: { row: DockRow; canAct: boolean }) {
 /**
  * The Indore dock (Logistics; LOCK-40 Part A). Coming: dispatched by the seller, not here yet (red after 4 days
  * on the road). Arrived: counted in, to be checked within a day. Checked: done. No firm names or money here.
- * "Goods arrived" and "Check the goods" press the same engine actions as the deal card.
+ * "Goods arrived", "Check the goods" and (Build 9) "Correct the check" press engine actions, as the deal card does.
  */
 export function DockPage() {
   const [lane, setLane] = useState<DockLane>('COMING');

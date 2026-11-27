@@ -107,7 +107,12 @@ const tradeSchema = z.object({
         id: z.string(),
         number: z.string(),
         status: z.enum(RECEIPT_STATUSES),
+        /** What this payment counts for on THIS order (part of a bigger advance may be used here). */
         amountPaise: z.number(),
+        /** The payment's full amount. */
+        receiptPaise: z.number(),
+        /** Money Accounts added by hand with no order, then used on this one. */
+        isAdvance: z.boolean(),
         utr: z.string(),
         bankName: z.string(),
         receivedOn: z.string(),
@@ -115,6 +120,21 @@ const tradeSchema = z.object({
         rejectNote: z.string().nullable(),
       }),
     )
+    .optional(),
+  // The buyer's advance not yet used (buyer side, while the order waits for payment).
+  advance: z
+    .object({
+      totalPaise: z.number(),
+      payments: z.array(
+        z.object({
+          number: z.string(),
+          utr: z.string(),
+          receivedOn: z.string(),
+          unspentPaise: z.number(),
+        }),
+      ),
+    })
+    .nullable()
     .optional(),
   balanceDuePaise: z.number().nullable().optional(),
   openPaise: z.number().nullable().optional(),
@@ -297,6 +317,7 @@ export interface ActionInputs {
   };
   confirmPayment: { receiptId: string };
   rejectPayment: { receiptId: string; note: string };
+  useAdvance: Record<string, never>;
   recordDispatch: DispatchInput;
   recordSellerBill: { number: string; amountPaise: number; billDate: string };
   recordArrival: ArrivalInput;

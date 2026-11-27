@@ -4,7 +4,7 @@ import { FormField } from '@/components/molecules/FormField';
 import { MargBillForm } from '@/features/billing/MargBillForm';
 import { serverFieldErrors, type FormErrors } from '@/schemas/fields';
 import { validatePod, type PodValues } from '@/schemas/billingForms';
-import { todayInIndia } from '@/utils/format';
+import { formatRupees, todayInIndia } from '@/utils/format';
 import type { ActionFormProps } from './actionForms';
 import { ActionFormShell } from './ActionFormShell';
 import { useTradeAction } from './hooks';
@@ -118,6 +118,28 @@ export function ConfirmDeliveryForm({ trade, onDone, onChangedByOthers }: Action
       title="Delivered"
       description="Confirm the buyer has received the goods. The order becomes Delivered."
       submitLabel="Confirm delivery"
+      pending={action.isPending}
+      error={action.error?.message}
+      onSubmit={() => action.mutate({}, { onSuccess: onDone })}
+      onCancel={onDone}
+    />
+  );
+}
+
+/**
+ * "Use the buyer's advance" (Accounts' action; Founder and Admin may press it on the card too). Money the buyer paid
+ * ahead, with no order, goes to this order: the oldest payment first, never more than the order still needs.
+ * If that pays it in full, the PO goes out to the seller.
+ */
+export function UseAdvanceForm({ trade, onDone, onChangedByOthers }: ActionFormProps) {
+  const action = useTradeAction(trade, 'useAdvance', onChangedByOthers);
+  const advance = trade.advance?.totalPaise ?? 0;
+  const open = trade.openPaise ?? 0;
+  return (
+    <ActionFormShell
+      title="Use the buyer's advance"
+      description={`${formatRupees(advance)} is waiting as this buyer's advance; the order still needs ${formatRupees(open)}. The oldest payment is used first, and never more than the order needs.`}
+      submitLabel="Use the advance"
       pending={action.isPending}
       error={action.error?.message}
       onSubmit={() => action.mutate({}, { onSuccess: onDone })}

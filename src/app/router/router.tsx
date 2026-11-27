@@ -24,8 +24,11 @@ import { BuyerFunnelsPage } from '@/pages/trades/BuyerFunnelsPage';
 import { SellerFunnelsPage } from '@/pages/trades/SellerFunnelsPage';
 import { BankAccountsPage } from '@/pages/books/BankAccountsPage';
 import { LedgerPage } from '@/pages/books/LedgerPage';
+import { BankReconciliationPage } from '@/pages/books/BankReconciliationPage';
+import { JournalsPage } from '@/pages/books/JournalsPage';
 import { LedgersPage } from '@/pages/books/LedgersPage';
 import { PaymentsPage } from '@/pages/books/PaymentsPage';
+import { VouchersPage } from '@/pages/books/VouchersPage';
 import { DockPage } from '@/pages/dock/DockPage';
 import { ReturnNotesPage } from '@/pages/dock/ReturnNotesPage';
 import { PayoutsPage } from '@/pages/books/PayoutsPage';
@@ -87,6 +90,9 @@ export const router = createBrowserRouter([
                   { path: '/ledgers', element: <LedgersPage /> },
                   { path: '/ledgers/:id', element: <LedgerPage /> },
                   { path: '/bank-accounts', element: <BankAccountsPage /> },
+                  { path: '/journals', element: <JournalsPage /> },
+                  { path: '/vouchers', element: <VouchersPage /> },
+                  { path: '/bank-reconciliation', element: <BankReconciliationPage /> },
                   { path: '/reports/sales-register', element: <SalesRegisterPage /> },
                   { path: '/reports/purchase-register', element: <PurchaseRegisterPage /> },
                   { path: '/reports/trial-balance', element: <TrialBalancePage /> },

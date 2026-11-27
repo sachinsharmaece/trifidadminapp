@@ -407,6 +407,43 @@ an advance. Sales enters a payment on the deal card; Accounts confirms it. Nobod
 - Data: `api.ts` (Zod schemas) and `hooks.ts` in each folder; the payment and PO query keys sit under `['trades']`, so a
   confirm also refreshes the deal card, the order and the lists. Money is typed in rupees and sent as paise.
 
+## The rest of the books (features/journals, vouchers, reconciliation, payments, ledgers, dock)
+
+Build 9. The server keeps every rule (`trifidserverapp` README, "The rest of the books"); these screens type, show and
+press. The Controller only looks everywhere here, except that he may reverse a voucher.
+
+- **Ledgers** (`/ledgers`): Accounts, Founder and Admin see **Add a ledger** (a name and one of seven groups: expenses,
+  income, duties and taxes, capital, loans, cash) and, on a ledger made by hand, **Rename** and **Turn off** (only when
+  its balance is zero; it can be turned on again). Buyer, seller, bank and system ledgers say "Kept by the system".
+- **Journals** (`/journals`, `pages/books/JournalsPage.tsx`; Accounts, Controller, Founder, Admin): **New entry** types a
+  journal or the opening balances (Kind), with a date, what it is for, and two or more lines. Each line's ledger is
+  picked with `LedgerPicker` (type a few letters; a buyer or seller with no ledger yet is offered too). The live totals
+  say when debits and credits differ. The entry then waits: **someone other than the person who typed it** presses
+  **Approve** (it is posted) or **Reject** (with a note); the person who typed it sees "You typed it: someone else
+  approves" and may **Cancel entry**. Click an entry's number to see its lines.
+- **Vouchers** (`/vouchers`): every voucher, with type, date range and search; click a number to see its lines.
+  Controller, Founder and Admin see **Reverse** on the vouchers that can be undone here (a posted journal, an unused
+  hand-added payment): a reason and the password again (`confirmPassword()` first, then the call). Every other voucher
+  says in plain words where it is corrected; a reversed one says "Reversed by RX-…".
+- **Payments** (`/payments`): **Add a payment** is money that came with no order (bank, buyer picked with a search, UTR,
+  amount, date, note). A different person confirms it. **Advances to use** lists each buyer's unused money and his
+  orders waiting for payment, with **Use the advance** (oldest money first, never more than the order needs). The deal
+  card shows the advance too, and Founder and Admin may press "Use the buyer's advance" there; Sales sees it greyed.
+  A payment that came from an advance says "From advance" on the card and the order.
+- **Bank reconciliation** (`/bank-reconciliation`): each bank account with the day it is reconciled up to, the entries
+  since and what the books say. **Check against statement** takes the statement's closing balance for a day; the
+  history shows the difference, and only a difference of zero gets **Mark reconciled**. After that the day is locked
+  for that bank account: an entry dated on or before it is refused with a plain message.
+- **Dock** (`/dock`, Checked lane): **Correct the check** opens the check form filled with what was typed the first
+  time; saving replaces the check (the card then says "Corrected"). When it is too late (the Marg bill is saved, the
+  payout started, a return note is closed or its refund is in a payout) the card says why instead. A refund the
+  correction replaced shows "Cancelled: the check was corrected".
+- Dashboard (Accounts): **Journals waiting for approval**, **Advances not yet used** and **Banks to reconcile** open
+  their pages.
+- Data: `features/journals`, `features/vouchers`, `features/reconciliation` (and `payments`, `ledgers`, `dock`):
+  `api.ts` with Zod schemas and `hooks.ts`. `refreshBooks()` (`features/journals/hooks.ts`) refreshes every list that
+  reads the books after a journal or a reversal. Form rules are in `schemas/booksForms.ts`.
+
 ## Recipes
 
 **Add a page**: create it in `pages/` (or `features/<name>/` if it belongs to a module), add a route in
@@ -428,4 +465,5 @@ and parses the result with a Zod schema.
 ## Not built yet (on purpose)
 
 MFA, the SKU ₹/unit matrix (P2), stock for replacements and returns, payout run times, a seller hold and the return-freight debit, photos
-at dispatch, the dock and the POD (Q-ARC-02), a vehicle register, journals, and insurance on an order (Q-SAL-04).
+at dispatch, the dock and the POD (Q-ARC-02), a vehicle register, refunding an unused advance, un-reconciling a day,
+and insurance on an order (Q-SAL-04).

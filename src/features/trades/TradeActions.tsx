@@ -19,7 +19,12 @@ import {
   type ActionFormProps,
 } from './actionForms';
 import type { Trade } from './api';
-import { ConfirmDeliveryForm, MargBillActionForm, PodForm } from './billingActionForms';
+import {
+  ConfirmDeliveryForm,
+  MargBillActionForm,
+  PodForm,
+  UseAdvanceForm,
+} from './billingActionForms';
 import { RaiseComplaintForm, ResolveComplaintForm } from './complaintActionForms';
 import { CloseLostInTransitForm, HoldPayoutForm, ReleaseHoldForm } from './controllerActionForms';
 import {
@@ -43,6 +48,7 @@ const FORMS: Record<TradeActionName, (props: ActionFormProps) => React.JSX.Eleme
   enterPayment: EnterPaymentForm,
   confirmPayment: ConfirmPaymentForm,
   rejectPayment: RejectPaymentForm,
+  useAdvance: UseAdvanceForm,
   recordDispatch: RecordDispatchForm,
   recordSellerBill: SellerBillForm,
   recordArrival: RecordArrivalForm,

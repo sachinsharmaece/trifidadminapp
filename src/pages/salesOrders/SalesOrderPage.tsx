@@ -228,6 +228,12 @@ export function SalesOrderPage() {
                 <Badge tone={RECEIPT_STATUS_TONES[payment.status]}>
                   {RECEIPT_STATUS_LABELS[payment.status]}
                 </Badge>
+                {payment.isAdvance && <Badge tone="info">From advance</Badge>}
+                {payment.receiptPaise !== payment.amountPaise && (
+                  <span className="text-xs text-slate-500">
+                    of {formatRupees(payment.receiptPaise)} received
+                  </span>
+                )}
                 {payment.rejectNote && (
                   <span className="text-xs text-red-700">{payment.rejectNote}</span>
                 )}

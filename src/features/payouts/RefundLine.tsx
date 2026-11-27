@@ -2,7 +2,8 @@ import { Badge } from '@/components/atoms/Badge';
 import { formatRupees } from '@/utils/format';
 import type { Refund } from './api';
 
-/** One refund due to a buyer: the amount, why, and where its payment is (Due, in a batch, or paid with its UTR). */
+/** One refund due to a buyer: the amount, why, and where its payment is (Due, in a batch, or paid with its UTR). A
+ * refund the dock correction replaced shows as Cancelled. */
 export function RefundLine({ refund }: { refund: Refund }) {
   const payout = refund.payout;
   return (
@@ -13,6 +14,8 @@ export function RefundLine({ refund }: { refund: Refund }) {
       </span>
       {refund.status === 'PAID' ? (
         <Badge tone="success">Paid</Badge>
+      ) : refund.status === 'CANCELLED' ? (
+        <Badge tone="neutral">Cancelled: the check was corrected</Badge>
       ) : (
         <Badge tone="warning">Due</Badge>
       )}

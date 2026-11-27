@@ -110,6 +110,26 @@ export const NAV_ITEMS: readonly MenuItem[] = [
     icon: 'bank',
     roles: ['ACCOUNTS', 'CONTROLLER', 'FOUNDER', 'ADMIN'],
   },
+  // Build 9: entries typed by hand (approved by a different person), every voucher with its reversal, and the
+  // check of each bank account against its statement.
+  {
+    label: 'Journals',
+    path: '/journals',
+    icon: 'clipboard',
+    roles: ['ACCOUNTS', 'CONTROLLER', 'FOUNDER', 'ADMIN'],
+  },
+  {
+    label: 'Vouchers',
+    path: '/vouchers',
+    icon: 'receipt',
+    roles: ['ACCOUNTS', 'CONTROLLER', 'FOUNDER', 'ADMIN'],
+  },
+  {
+    label: 'Bank reconciliation',
+    path: '/bank-reconciliation',
+    icon: 'bank',
+    roles: ['ACCOUNTS', 'CONTROLLER', 'FOUNDER', 'ADMIN'],
+  },
   {
     label: 'Sellers',
     path: '/sellers',

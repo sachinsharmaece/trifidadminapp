@@ -104,6 +104,7 @@ export const TRADE_ACTION_NAMES = [
   'enterPayment',
   'confirmPayment',
   'rejectPayment',
+  'useAdvance',
   'recordDispatch',
   'recordSellerBill',
   'recordArrival',

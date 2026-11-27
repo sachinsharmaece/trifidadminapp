@@ -81,7 +81,12 @@ const salesOrderSchema = z.object({
       id: z.string(),
       number: z.string(),
       status: z.enum(RECEIPT_STATUSES),
+      /** What this payment counts for on THIS order (part of a bigger advance may be used here). */
       amountPaise: z.number(),
+      /** The payment's full amount. */
+      receiptPaise: z.number(),
+      /** Money Accounts added by hand with no order, then used on this one. */
+      isAdvance: z.boolean(),
       utr: z.string(),
       bankName: z.string(),
       receivedOn: z.string(),

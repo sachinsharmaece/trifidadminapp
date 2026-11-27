@@ -58,6 +58,8 @@ const dockRowSchema = z.object({
   arrival: z
     .object({ arrivedAt: z.string(), boxesCounted: z.number(), billWithGoods: z.boolean() })
     .nullable(),
+  /** Why the check can no longer be corrected (null = Logistics may still correct it). Only set on checked lots. */
+  correctionBlock: z.string().nullable(),
   inspectBy: z.string().nullable(),
   inspectionOverdue: z.boolean(),
   result: z
@@ -66,6 +68,8 @@ const dockRowSchema = z.object({
       acceptedBoxes: z.number(),
       savedAt: z.string(),
       note: z.string().nullable(),
+      /** This result replaced an earlier check. */
+      corrected: z.boolean(),
       lines: z.array(
         z.object({
           lineNo: z.number(),
@@ -126,6 +130,15 @@ export async function recordArrival(row: DockRow, input: ArrivalInput) {
 /** The engine action "Check the goods" for this PO's trade. */
 export async function inspect(row: DockRow, input: InspectionInput) {
   const { data } = await apiClient.post<unknown>(`/dock/${row.purchaseOrderId}/inspection`, {
+    version: row.tradeVersion,
+    ...input,
+  });
+  return oneRow.parse(data).row;
+}
+
+/** The engine action "Correct the check" (Build 9): the first check stays in the history, the new one replaces it. */
+export async function correctInspection(row: DockRow, input: InspectionInput) {
+  const { data } = await apiClient.post<unknown>(`/dock/${row.purchaseOrderId}/correction`, {
     version: row.tradeVersion,
     ...input,
   });

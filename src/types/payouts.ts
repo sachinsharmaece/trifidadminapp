@@ -36,5 +36,6 @@ export const PAYOUT_LINE_STATUS_TONES = {
   PAID: 'success',
 } as const;
 
-export const REFUND_STATUSES = ['DUE', 'PAID'] as const;
+/** Due to the buyer, paid, or cancelled (a dock correction replaced it with a new one). */
+export const REFUND_STATUSES = ['DUE', 'PAID', 'CANCELLED'] as const;
 export type RefundStatus = (typeof REFUND_STATUSES)[number];

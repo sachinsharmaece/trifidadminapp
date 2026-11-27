@@ -14,7 +14,8 @@ export async function refGet<T = Record<string, unknown>>(
 }
 
 export type RefResult<T> =
-  { ok: true; data: T } | { ok: false; status: number; field: string | null; message: string };
+  | { ok: true; data: T }
+  | { ok: false; status: number; code: string; field: string | null; message: string };
 
 /** A write. On failure: the first field the server named (if any) and a message to show under it. */
 export async function refSend<T = Record<string, unknown>>(
@@ -34,10 +35,17 @@ export async function refSend<T = Record<string, unknown>>(
       return {
         ok: false,
         status: error.status,
+        code: error.code,
         field: first ? (String(first.path).split('.')[0] ?? null) : null,
         message: first && typeof first.message === 'string' ? first.message : error.message,
       };
     }
-    return { ok: false, status: 0, field: null, message: 'Something went wrong. Try again.' };
+    return {
+      ok: false,
+      status: 0,
+      code: 'NETWORK',
+      field: null,
+      message: 'Something went wrong. Try again.',
+    };
   }
 }

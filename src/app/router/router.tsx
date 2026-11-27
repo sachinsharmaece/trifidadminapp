@@ -57,6 +57,15 @@ import { SettingsPage as RefSettingsPage } from '@/pages/ref/masters/SettingsPag
 import { StaffPage as RefStaffPage } from '@/pages/ref/masters/StaffPage';
 import { TechnicalsPage as RefTechnicalsPage } from '@/pages/ref/masters/TechnicalsPage';
 import { TehsilsPage as RefTehsilsPage } from '@/pages/ref/masters/TehsilsPage';
+import { ConfirmationsPage as RefConfirmationsPage } from '@/pages/ref/purchase/ConfirmationsPage';
+import { NewListingPage as RefNewListingPage } from '@/pages/ref/purchase/NewListingPage';
+import { NewPurchaseOrderPage as RefNewPurchaseOrderPage } from '@/pages/ref/purchase/NewPurchaseOrderPage';
+import { NewSellerPage as RefNewSellerPage } from '@/pages/ref/purchase/NewSellerPage';
+import { PurchaseOrderDetailPage as RefPurchaseOrderDetailPage } from '@/pages/ref/purchase/PurchaseOrderDetailPage';
+import { PurchaseOrdersPage as RefPurchaseOrdersPage } from '@/pages/ref/purchase/PurchaseOrdersPage';
+import { PurchaseTodayPage as RefPurchaseTodayPage } from '@/pages/ref/purchase/PurchaseTodayPage';
+import { SellerDetailPage as RefSellerDetailPage } from '@/pages/ref/purchase/SellerDetailPage';
+import { SellersPage as RefSellersPage } from '@/pages/ref/purchase/SellersPage';
 import { AppShell } from './AppShell';
 
 /** A page from the reference that a later build (R2–R10) copies; until then it says so. */
@@ -99,7 +108,16 @@ export const router = createBrowserRouter([
                   { path: '/masters/staff', element: <RefStaffPage /> },
                   // Desk pages: our existing screen where one already does the job; the rest come in later builds.
                   { path: '/controller-today', element: <TodayPage /> },
-                  { path: '/listings/new', element: <ListingsPage /> },
+                  // Purchase desk (R2)
+                  { path: '/purchase-today', element: <RefPurchaseTodayPage /> },
+                  { path: '/sellers', element: <RefSellersPage /> },
+                  { path: '/sellers/new', element: <RefNewSellerPage /> },
+                  { path: '/sellers/:id', element: <RefSellerDetailPage /> },
+                  { path: '/listings/new', element: <RefNewListingPage /> },
+                  { path: '/confirmations', element: <RefConfirmationsPage /> },
+                  { path: '/purchase-orders', element: <RefPurchaseOrdersPage /> },
+                  { path: '/purchase-orders/new', element: <RefNewPurchaseOrderPage /> },
+                  { path: '/purchase-orders/:id', element: <RefPurchaseOrderDetailPage /> },
                   { path: '/call-screen', element: <RateBoardPage /> },
                   { path: '/dispatch-leg2', element: <TripsPage /> },
                   { path: '/upcoming-payments', element: <PaymentsPage /> },
@@ -107,8 +125,6 @@ export const router = createBrowserRouter([
                   { path: '/payment', element: <PayoutsPage /> },
                   { path: '/journal', element: <JournalsPage /> },
                   { path: '/ledger-master', element: <LedgersPage /> },
-                  { path: '/purchase-today', element: soon('Purchase — Today', 'R2') },
-                  { path: '/confirmations', element: soon('Confirmations', 'R2') },
                   { path: '/seller-leads', element: soon('Seller leads', 'R8') },
                   { path: '/asks', element: soon('Asks', 'R3') },
                   { path: '/goods-in', element: soon('Goods-in', 'R5') },
@@ -118,8 +134,10 @@ export const router = createBrowserRouter([
                   { path: '/accounts-today', element: soon('Accounts — Today', 'R6') },
                   { path: '/credit-log', element: soon('Credit log', 'R7') },
                   // ---- Older paths, still reachable ----
+                  { path: '/old/sellers', element: <SellersPage /> },
+                  { path: '/old/purchase-orders', element: <PurchaseOrdersPage /> },
+                  { path: '/old/purchase-orders/:id', element: <PurchaseOrderPage /> },
                   { path: '/buyers', element: <BuyersPage /> },
-                  { path: '/sellers', element: <SellersPage /> },
                   { path: '/listings', element: <ListingsPage /> },
                   { path: '/rate-board', element: <RateBoardPage /> },
                   { path: '/buyer-funnels', element: <BuyerFunnelsPage /> },
@@ -130,8 +148,6 @@ export const router = createBrowserRouter([
                   { path: '/complaints', element: <ComplaintsPage /> },
                   { path: '/today', element: <TodayPage /> },
                   { path: '/payments', element: <PaymentsPage /> },
-                  { path: '/purchase-orders', element: <PurchaseOrdersPage /> },
-                  { path: '/purchase-orders/:id', element: <PurchaseOrderPage /> },
                   { path: '/dock', element: <DockPage /> },
                   { path: '/return-notes', element: <ReturnNotesPage /> },
                   { path: '/to-be-billed', element: <ToBeBilledPage /> },

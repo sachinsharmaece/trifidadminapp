@@ -16,7 +16,7 @@ export function useCurrentUser() {
  */
 export function useCanEditMasters(): boolean {
   const { data: me } = useCurrentUser();
-  return me?.role === 'FOUNDER' || me?.role === 'ADMIN';
+  return me?.role === 'FOUNDER' || me?.role === 'ADMIN' || me?.role === 'CONTROLLER';
 }
 
 export function useLogin() {

@@ -6,16 +6,16 @@ type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger';
 type ButtonSize = 'sm' | 'md';
 
 const VARIANT_CLASSES: Record<ButtonVariant, string> = {
-  primary: 'bg-brand-600 text-white hover:bg-brand-700 disabled:hover:bg-brand-600',
+  primary: 'bg-zinc-900 text-white hover:bg-zinc-800 disabled:hover:bg-zinc-900',
   secondary:
-    'border border-slate-300 bg-white text-slate-700 hover:bg-slate-50 disabled:hover:bg-white',
-  ghost: 'text-slate-700 hover:bg-slate-100 disabled:hover:bg-transparent',
+    'border border-zinc-300 bg-white text-zinc-700 hover:bg-zinc-50 disabled:hover:bg-white',
+  ghost: 'text-zinc-600 hover:bg-zinc-100 disabled:hover:bg-transparent',
   danger: 'bg-red-600 text-white hover:bg-red-700 disabled:hover:bg-red-600',
 };
 
 const SIZE_CLASSES: Record<ButtonSize, string> = {
-  sm: 'h-8 gap-1.5 px-3 text-sm',
-  md: 'h-10 gap-2 px-4 text-sm',
+  sm: 'min-h-8 gap-1.5 px-3 py-1 text-xs',
+  md: 'min-h-10 gap-2 px-3 py-2 text-sm',
 };
 
 interface ButtonStyleOptions {
@@ -31,8 +31,8 @@ export function buttonStyles({
   className,
 }: ButtonStyleOptions = {}): string {
   return cn(
-    'inline-flex items-center justify-center rounded-md font-medium transition-colors',
-    'disabled:cursor-not-allowed disabled:opacity-60',
+    'inline-flex items-center justify-center rounded font-medium transition-colors',
+    'disabled:cursor-not-allowed disabled:opacity-50',
     VARIANT_CLASSES[variant],
     SIZE_CLASSES[size],
     className,

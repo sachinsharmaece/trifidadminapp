@@ -45,7 +45,22 @@ import { SalesRegisterPage } from '@/pages/reports/SalesRegisterPage';
 import { TrialBalancePage } from '@/pages/reports/TrialBalancePage';
 import { TodayPage } from '@/pages/today/TodayPage';
 import { TradePage } from '@/pages/trades/TradePage';
+import { ComingSoonPage } from '@/pages/ComingSoonPage';
+import { BankAccountsPage as RefBankAccountsPage } from '@/pages/ref/masters/BankAccountsPage';
+import { CompanyPage as RefCompanyPage } from '@/pages/ref/masters/CompanyPage';
+import { HsnPage as RefHsnPage } from '@/pages/ref/masters/HsnPage';
+import { ManufacturersPage as RefManufacturersPage } from '@/pages/ref/masters/ManufacturersPage';
+import { MarginMatrixPage as RefMarginMatrixPage } from '@/pages/ref/masters/MarginMatrixPage';
+import { ProductsPage as RefProductsPage } from '@/pages/ref/masters/ProductsPage';
+import { ReasonCodesPage as RefReasonCodesPage } from '@/pages/ref/masters/ReasonCodesPage';
+import { SettingsPage as RefSettingsPage } from '@/pages/ref/masters/SettingsPage';
+import { StaffPage as RefStaffPage } from '@/pages/ref/masters/StaffPage';
+import { TechnicalsPage as RefTechnicalsPage } from '@/pages/ref/masters/TechnicalsPage';
+import { TehsilsPage as RefTehsilsPage } from '@/pages/ref/masters/TehsilsPage';
 import { AppShell } from './AppShell';
+
+/** A page from the reference that a later build (R2–R10) copies; until then it says so. */
+const soon = (title: string, build: string) => <ComingSoonPage title={title} build={build} />;
 
 /** Every route of the app. Menu entries are configured separately in app/navigation.ts. */
 export const router = createBrowserRouter([
@@ -68,6 +83,41 @@ export const router = createBrowserRouter([
                 errorElement: <RouteErrorPage />,
                 children: [
                   { index: true, element: <DashboardPage /> },
+                  // ---- Reference paths (reference-copy branch) ----
+                  { path: '/dashboard', element: <DashboardPage /> },
+                  { path: '/settings', element: <RefSettingsPage /> },
+                  { path: '/masters/company', element: <RefCompanyPage /> },
+                  { path: '/masters/products', element: <RefProductsPage /> },
+                  { path: '/masters/margin-matrix', element: <RefMarginMatrixPage /> },
+                  { path: '/masters/sku-margins', element: soon('SKU price matrix', 'R8') },
+                  { path: '/masters/tehsils', element: <RefTehsilsPage /> },
+                  { path: '/masters/manufacturers', element: <RefManufacturersPage /> },
+                  { path: '/masters/technicals', element: <RefTechnicalsPage /> },
+                  { path: '/masters/hsn', element: <RefHsnPage /> },
+                  { path: '/masters/reason-codes', element: <RefReasonCodesPage /> },
+                  { path: '/masters/bank-accounts', element: <RefBankAccountsPage /> },
+                  { path: '/masters/staff', element: <RefStaffPage /> },
+                  // Desk pages: our existing screen where one already does the job; the rest come in later builds.
+                  { path: '/controller-today', element: <TodayPage /> },
+                  { path: '/listings/new', element: <ListingsPage /> },
+                  { path: '/call-screen', element: <RateBoardPage /> },
+                  { path: '/dispatch-leg2', element: <TripsPage /> },
+                  { path: '/upcoming-payments', element: <PaymentsPage /> },
+                  { path: '/ledger', element: <LedgersPage /> },
+                  { path: '/payment', element: <PayoutsPage /> },
+                  { path: '/journal', element: <JournalsPage /> },
+                  { path: '/ledger-master', element: <LedgersPage /> },
+                  { path: '/purchase-today', element: soon('Purchase — Today', 'R2') },
+                  { path: '/confirmations', element: soon('Confirmations', 'R2') },
+                  { path: '/seller-leads', element: soon('Seller leads', 'R8') },
+                  { path: '/asks', element: soon('Asks', 'R3') },
+                  { path: '/goods-in', element: soon('Goods-in', 'R5') },
+                  { path: '/inspection', element: soon('Inspection', 'R5') },
+                  { path: '/logistics-trade-queue', element: soon('Trade queue', 'R5') },
+                  { path: '/vehicle-owners', element: soon('Vehicle owners', 'R5') },
+                  { path: '/accounts-today', element: soon('Accounts — Today', 'R6') },
+                  { path: '/credit-log', element: soon('Credit log', 'R7') },
+                  // ---- Older paths, still reachable ----
                   { path: '/buyers', element: <BuyersPage /> },
                   { path: '/sellers', element: <SellersPage /> },
                   { path: '/listings', element: <ListingsPage /> },

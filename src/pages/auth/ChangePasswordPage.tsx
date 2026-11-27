@@ -52,11 +52,11 @@ export function ChangePasswordPage() {
 
   return (
     <AuthLayout
-      title="Change password"
+      title="Change your password"
       subtitle={
         forced
-          ? 'You are using a temporary password. Choose your own to continue.'
-          : 'Use at least 10 characters.'
+          ? 'Your password was set by an admin. Choose your own before continuing.'
+          : 'Use at least 8 characters.'
       }
     >
       <form onSubmit={handleSubmit} noValidate className="space-y-4">

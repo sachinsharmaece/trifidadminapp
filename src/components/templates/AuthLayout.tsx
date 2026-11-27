@@ -1,5 +1,4 @@
 import type { ReactNode } from 'react';
-import logoUrl from '@/assets/logo.svg';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 
 interface AuthLayoutProps {
@@ -8,19 +7,16 @@ interface AuthLayoutProps {
   children: ReactNode;
 }
 
-/** Centered card on a plain background, for pages shown before sign-in (login, and later password reset). */
+/** The reference's sign-in card: a white box in the middle of a zinc page (app/login/page.tsx). */
 export function AuthLayout({ title, subtitle, children }: AuthLayoutProps) {
   useDocumentTitle(title);
 
   return (
-    <main className="flex min-h-screen items-center justify-center px-4 py-12">
-      <div className="w-full max-w-sm">
-        <div className="mb-8 flex flex-col items-center gap-3 text-center">
-          <img src={logoUrl} alt="TriFid" className="h-12 w-12" />
-          <h1 className="text-2xl font-semibold tracking-tight">{title}</h1>
-          {subtitle && <p className="text-sm text-slate-600">{subtitle}</p>}
-        </div>
-        <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">{children}</div>
+    <main className="flex min-h-screen flex-1 items-center justify-center bg-zinc-50 px-4">
+      <div className="w-full max-w-sm rounded-lg border border-zinc-200 bg-white p-8 shadow-sm">
+        <h1 className="mb-1 text-xl font-semibold text-zinc-900">{title}</h1>
+        {subtitle && <p className="mb-6 text-sm text-zinc-500">{subtitle}</p>}
+        {children}
       </div>
     </main>
   );

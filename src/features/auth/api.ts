@@ -11,6 +11,8 @@ const userSchema = z.object({
   role: z.enum(ROLES),
   /** true while the person is still on a temporary password. */
   mustChangePassword: z.boolean(),
+  /** LOCK-37 position; null for Controller, Admin and Founder. */
+  position: z.string().nullable().optional(),
 });
 const userResponseSchema = z.object({ user: userSchema });
 

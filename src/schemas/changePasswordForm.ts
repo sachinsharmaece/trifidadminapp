@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
 /** The server also checks the length (PASSWORD_MIN_LENGTH in trifidserverapp). Keep the two numbers equal. */
-const PASSWORD_MIN_LENGTH = 10;
+const PASSWORD_MIN_LENGTH = 8;
 
 /** UI-only validation for the change-password form. */
 const changePasswordFormSchema = z

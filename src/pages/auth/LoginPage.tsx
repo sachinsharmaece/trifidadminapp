@@ -35,13 +35,13 @@ export function LoginPage() {
   }
 
   return (
-    <AuthLayout title="Sign in" subtitle="Use your TriFid staff account to continue.">
+    <AuthLayout title="TriFid Admin" subtitle="Staff sign in.">
       {/* noValidate: we show our own messages instead of the browser's pop-ups. */}
       <form onSubmit={handleSubmit} noValidate className="space-y-4">
         {login.isError && (
           <div
             role="alert"
-            className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800"
+            className="rounded border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700"
           >
             {login.error.message}
           </div>
@@ -78,7 +78,7 @@ export function LoginPage() {
           )}
         </FormField>
 
-        <Button type="submit" className="w-full" loading={login.isPending}>
+        <Button type="submit" className="mt-2 w-full" loading={login.isPending}>
           Sign in
         </Button>
       </form>

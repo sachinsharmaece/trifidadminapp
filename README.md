@@ -17,7 +17,7 @@ npm run lint         # ESLint            (npm run lint:fix  fixes what it can)
 npm run format       # Prettier, rewrites files   (npm run format:check  only reports)
 ```
 
-Start `trifidserverapp` too (`npm run dev` in that folder). The Dashboard's **API status** card shows whether the
+Start `trifidserverapp` too (`npm run dev` in that folder). The Dashboard's **API status** card (Founder and Admin) shows whether the
 app can reach the API and whether the API is connected to MongoDB.
 
 Copy `.env.example` to `.env` only if you need to change a value:
@@ -56,7 +56,7 @@ src/
     molecules/    FormField, SearchInput, PasswordField, Pagination, ErrorState, ErrorAlert, PageSpinner
     organisms/    Header, Sidebar, NavigationMenu, DataTableToolbar
     templates/    AuthLayout, DashboardLayout, PageLayout
-  pages/        Thin screens: login, staff, masters/ (company, manufacturers, technicals, HSN codes, tehsils, reason codes), parties/ (sellers, buyers), listings/, products/, board/, trades/, salesOrders/, purchaseOrders/, books/ (payments, to be billed, ledgers, bank accounts), dock/ (dock, return notes), trips/, dashboard
+  pages/        Thin screens: login, staff, masters/ (company, manufacturers, technicals, HSN codes, tehsils, reason codes), parties/ (sellers, buyers), listings/, products/, board/, trades/, salesOrders/, purchaseOrders/, books/ (payments, to be billed, ledgers, bank accounts), dock/ (dock, return notes), trips/, reports/ (registers, trial balance, integrity), dashboard
   features/     Business modules, one folder each (auth, staff, company, manufacturers, technicals, hsnCodes, products, tehsils, reasonCodes, sellers, buyers, listings, margins, board, trades, salesOrders, payments, purchaseOrders, ledgers, bankAccounts, dock, billing, trips)
   services/     api/ (Axios client, ApiError, error envelope, system status)  query/ (QueryClient)
   schemas/      UI-only form validation (Zod)
@@ -354,6 +354,37 @@ clocks the server runs (delivery, and archiving a b1 viewing nobody touched for 
   has no buttons; Sales opens a fresh one from the Rate board). The PO status **Lost in transit** is in `types/dock.ts`.
 - Data: `features/today/api.ts` and `hooks.ts` (query key `['trades', 'today']`, so any card button refreshes it);
   form rules in `schemas/controllerForms.ts`.
+
+## Registers, dashboards and the integrity check (features/reports, features/system)
+
+Build 8. Everything here only reads; the server works the numbers out (`trifidserverapp` README, "Registers, reports,
+dashboards and the integrity check") and these screens only draw them.
+
+- **Sales register** (`/reports/sales-register`; Accounts, Controller, Founder, Admin) and **Purchase register**
+  (`/reports/purchase-register`; those and Purchase). Pick **From** and **To** (the default is the first of this month to
+  today), search (debounced), page through the rows, read the **totals of the whole range** in the footer, and press
+  **Download CSV** for the same range and search. The sales register shows the buyer and his GSTIN; the purchase register
+  shows the seller and his GSTIN, with "Bill awaited" until Purchase has entered the seller's bill. They are two pages on
+  purpose: no screen shows a buyer and a seller on the same row, and Accounts never sees a rate or the word "margin".
+  A tax column that does not apply shows a dash (CGST + SGST inside Madhya Pradesh, IGST outside). Both tables sit in a
+  scrolling box so a phone does not scroll sideways.
+- **Trial balance** (`/reports/trial-balance`): pick **As on**; every ledger with its Debit or Credit balance, a Total
+  line and a **Balanced** badge. "Does not balance: tell the Controller" means the books are wrong. It has a CSV too.
+- **Integrity check** (`/integrity`; Controller, Founder, Admin): the last run (when, who or "nightly", what it looked at,
+  and each finding with the record to look at), **Run the check now**, and the earlier runs. The check only reads and
+  runs by itself every night; a finding is for a person to correct. The goal is zero.
+- **Dashboard** (`/`, `pages/dashboard/DashboardPage.tsx`, `features/reports/DashboardView.tsx`): one view per role. The
+  server decides what each role gets, so this page only draws what came back: number tiles (amber when something is
+  waiting, red when it is late; most are links to the queue behind them), the funnel counts (a title opens the funnel
+  page) and, for Controller, Founder and Admin, the lost deals of the month. Founder and Admin also keep the **API status**
+  card. Margin shows only for Controller, Founder and Admin because the server sends it only to them.
+- **Proforma (PDF)** on a sales order and **Purchase order (PDF)** on a PO (not for a cancelled order). If the company
+  details have not been saved yet, the page says "Add the company details first" (Masters, Company).
+- Downloads: `features/reports/download.ts` (`downloadFile`) fetches with the signed-in session as a file and saves it
+  with the name the server gave; `useDownload()` gives a button its busy state and error. The API client turns an error
+  that arrives as a file into the same plain message as any other (`services/api/client.ts`, `readErrorBody`).
+- Data: `features/reports/api.ts` (Zod schemas) and `hooks.ts`, `features/system/api.ts` and `hooks.ts`. The query keys
+  sit under `['trades']`, so any deal card button also refreshes the registers, the dashboard and the integrity tile.
 
 ## Payments, the PO and the books (features/payments, purchaseOrders, ledgers, bankAccounts)
 

@@ -36,6 +36,10 @@ import { PurchaseOrdersPage } from '@/pages/purchaseOrders/PurchaseOrdersPage';
 import { SalesOrderPage } from '@/pages/salesOrders/SalesOrderPage';
 import { SalesOrdersPage } from '@/pages/salesOrders/SalesOrdersPage';
 import { ComplaintsPage } from '@/pages/complaints/ComplaintsPage';
+import { IntegrityPage } from '@/pages/reports/IntegrityPage';
+import { PurchaseRegisterPage } from '@/pages/reports/PurchaseRegisterPage';
+import { SalesRegisterPage } from '@/pages/reports/SalesRegisterPage';
+import { TrialBalancePage } from '@/pages/reports/TrialBalancePage';
 import { TodayPage } from '@/pages/today/TodayPage';
 import { TradePage } from '@/pages/trades/TradePage';
 import { AppShell } from './AppShell';
@@ -83,6 +87,10 @@ export const router = createBrowserRouter([
                   { path: '/ledgers', element: <LedgersPage /> },
                   { path: '/ledgers/:id', element: <LedgerPage /> },
                   { path: '/bank-accounts', element: <BankAccountsPage /> },
+                  { path: '/reports/sales-register', element: <SalesRegisterPage /> },
+                  { path: '/reports/purchase-register', element: <PurchaseRegisterPage /> },
+                  { path: '/reports/trial-balance', element: <TrialBalancePage /> },
+                  { path: '/integrity', element: <IntegrityPage /> },
                   { path: '/products', element: <ProductsPage /> },
                   { path: '/products/new', element: <NewProductPage /> },
                   { path: '/products/:id', element: <ProductPage /> },

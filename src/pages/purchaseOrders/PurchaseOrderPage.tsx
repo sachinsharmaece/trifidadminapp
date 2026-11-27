@@ -2,11 +2,13 @@ import { Link, useParams } from 'react-router';
 import { Badge } from '@/components/atoms/Badge';
 import { Button } from '@/components/atoms/Button';
 import { Spinner } from '@/components/atoms/Spinner';
+import { ErrorAlert } from '@/components/molecules/ErrorAlert';
 import { ErrorState } from '@/components/molecules/ErrorState';
 import { PageLayout } from '@/components/templates/PageLayout';
 import { useCurrentUser } from '@/features/auth/hooks';
 import { sellerPayoutRows } from '@/features/payouts/payoutText';
 import { usePurchaseOrder } from '@/features/purchaseOrders/hooks';
+import { useDownload } from '@/features/reports/hooks';
 import {
   PurchaseOrderStatusBadge,
   purchaseOrderProgressRows,
@@ -25,6 +27,7 @@ export function PurchaseOrderPage() {
   const { id = '' } = useParams();
   const po = usePurchaseOrder(id);
   const { data: me } = useCurrentUser();
+  const document = useDownload();
 
   if (po.isPending) return <Spinner label="Loading PO" className="h-6 w-6 text-brand-600" />;
   if (po.isError) {
@@ -42,7 +45,22 @@ export function PurchaseOrderPage() {
     <PageLayout
       title={data.number}
       description={`${data.seller.number} · ${data.seller.firmName} · raised ${formatDateTime(data.createdAt)}`}
+      actions={
+        <Button
+          variant="secondary"
+          loading={document.isPending}
+          onClick={() =>
+            document.mutate({
+              path: `/purchase-orders/${data.id}/document`,
+              fallbackName: `${data.number}.pdf`,
+            })
+          }
+        >
+          Purchase order (PDF)
+        </Button>
+      }
     >
+      <ErrorAlert message={document.error?.message} />
       <div className="flex flex-wrap items-center gap-3 text-sm">
         <PurchaseOrderStatusBadge status={data.status} />
         {data.paidAt && <Badge tone="success">Seller paid</Badge>}

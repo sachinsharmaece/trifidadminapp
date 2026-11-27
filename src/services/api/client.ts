@@ -63,9 +63,19 @@ function apiErrorFromResponse(status: number, data: unknown): ApiError {
   return new ApiError({ status, code: `HTTP_${status}`, message: messageForStatus(status) });
 }
 
+/** A download asks for a Blob, so even the server's error message arrives as one: read it back as JSON. */
+async function readErrorBody(data: unknown): Promise<unknown> {
+  if (!(data instanceof Blob)) return data;
+  try {
+    return JSON.parse(await data.text()) as unknown;
+  } catch {
+    return undefined;
+  }
+}
+
 apiClient.interceptors.response.use(
   (response) => response,
-  (error: unknown) => {
+  async (error: unknown) => {
     // A request cancelled on purpose (e.g. by TanStack Query) is not a failure: pass it through.
     if (isCancel(error)) {
       return Promise.reject(error);
@@ -89,6 +99,8 @@ apiClient.interceptors.response.use(
       );
     }
 
-    return Promise.reject(apiErrorFromResponse(error.response.status, error.response.data));
+    return Promise.reject(
+      apiErrorFromResponse(error.response.status, await readErrorBody(error.response.data)),
+    );
   },
 );

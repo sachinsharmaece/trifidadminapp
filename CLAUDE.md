@@ -78,7 +78,14 @@ Full commands, layout and recipes: `README.md`.
   (`features/trades/controllerActionForms.tsx`: lost in transit, hold, release) are for the Controller, Founder and Admin.
   The hold is seller side only: show it only where the API sent `purchaseOrder.hold`; Sales never gets it. The close-as-lost
   form is shared by the deal card and the Today list (it needs only a trade's id and version).
-- Not yet built: MFA, the SKU ₹/unit matrix, stock for replacements and returns, payout run times, registers and
-  dashboards (Build 8), hand-added receipts and bank reconciliation (Build 9), and photos.
+- Registers, dashboards and the integrity check (`features/reports`, `features/system`, `pages/reports/`,
+  `pages/dashboard/`): read only, the server decides what a role may see, so draw only what came back and never work out
+  a total, a margin or a balance in the browser. Keep the sales and purchase registers on separate pages (SRS-ACC-07: no
+  buyer beside a seller, no rate, no word "margin" on an Accounts screen). A download goes through `useDownload()`
+  (`features/reports/download.ts`): it asks for the file with the signed-in session, so never link to the file by address.
+  A table that is wider than a phone goes in an `overflow-x-auto` box.
+- Not yet built: MFA, the SKU ₹/unit matrix, stock for replacements and returns, payout run times, the dashboard's
+  Marg-queries tile and day-close status, a ledger statement with a date range and CSV, hand-added receipts and bank
+  reconciliation (Build 9), and photos.
 - Do not add: Redux, Zustand, React Hook Form, TanStack Table, analytics, auth/PDF libraries, paid UI kits
   (unless the task says so).

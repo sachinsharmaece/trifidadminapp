@@ -130,6 +130,33 @@ export const NAV_ITEMS: readonly MenuItem[] = [
     icon: 'funnel',
     roles: ['PURCHASE', 'CONTROLLER', 'FOUNDER', 'ADMIN'],
   },
+  // The registers: read from the vouchers, one CSV away from the tax filing. Two screens, so no row shows a buyer
+  // and a seller together. The API enforces the same roles (modules/reports/reports.routes.ts).
+  {
+    label: 'Sales register',
+    path: '/reports/sales-register',
+    icon: 'book',
+    roles: ['ACCOUNTS', 'CONTROLLER', 'FOUNDER', 'ADMIN'],
+  },
+  {
+    label: 'Purchase register',
+    path: '/reports/purchase-register',
+    icon: 'book',
+    roles: ['PURCHASE', 'ACCOUNTS', 'CONTROLLER', 'FOUNDER', 'ADMIN'],
+  },
+  {
+    label: 'Trial balance',
+    path: '/reports/trial-balance',
+    icon: 'percent',
+    roles: ['ACCOUNTS', 'CONTROLLER', 'FOUNDER', 'ADMIN'],
+  },
+  // The nightly check that the records agree with each other.
+  {
+    label: 'Integrity check',
+    path: '/integrity',
+    icon: 'check',
+    roles: ['CONTROLLER', 'FOUNDER', 'ADMIN'],
+  },
   // The masters: everyone can look, only Founder and Admin see the add / edit buttons.
   { label: 'Products', path: '/products', icon: 'box' },
   { label: 'Manufacturers', path: '/manufacturers', icon: 'briefcase' },

@@ -3,11 +3,13 @@ import { Link, useParams } from 'react-router';
 import { Badge } from '@/components/atoms/Badge';
 import { Button } from '@/components/atoms/Button';
 import { Spinner } from '@/components/atoms/Spinner';
+import { ErrorAlert } from '@/components/molecules/ErrorAlert';
 import { ErrorState } from '@/components/molecules/ErrorState';
 import { PageLayout } from '@/components/templates/PageLayout';
 import { useCurrentUser } from '@/features/auth/hooks';
 import { ComplaintLines } from '@/features/complaints/ComplaintLines';
 import { RefundLine } from '@/features/payouts/RefundLine';
+import { useDownload } from '@/features/reports/hooks';
 import { useSalesOrder } from '@/features/salesOrders/hooks';
 import { billingRows } from '@/features/billing/billingRows';
 import { SalesOrderStatusBadge } from '@/features/salesOrders/SalesOrderStatusBadge';
@@ -35,6 +37,7 @@ export function SalesOrderPage() {
   const { id = '' } = useParams();
   const order = useSalesOrder(id);
   const { data: me } = useCurrentUser();
+  const proforma = useDownload();
 
   if (order.isPending) return <Spinner label="Loading order" className="h-6 w-6 text-brand-600" />;
   if (order.isError) {
@@ -57,7 +60,25 @@ export function SalesOrderPage() {
     <PageLayout
       title={data.number}
       description={`${data.buyer.number} · ${data.buyer.firmName} · raised ${formatDateTime(data.createdAt)}`}
+      actions={
+        // A cancelled order has no proforma: the server refuses it too.
+        data.status !== 'CANCELLED' && (
+          <Button
+            variant="secondary"
+            loading={proforma.isPending}
+            onClick={() =>
+              proforma.mutate({
+                path: `/sales-orders/${data.id}/proforma`,
+                fallbackName: `${data.number}-proforma.pdf`,
+              })
+            }
+          >
+            Proforma (PDF)
+          </Button>
+        )
+      }
     >
+      <ErrorAlert message={proforma.error?.message} />
       <div className="flex flex-wrap items-center gap-3 text-sm">
         <SalesOrderStatusBadge status={data.status} />
         {awaiting && (

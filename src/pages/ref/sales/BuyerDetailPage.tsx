@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Link, useParams } from 'react-router';
+import { PushToPurchaseButton } from '@/components/ref/sellLeads/PushToPurchaseButton';
 import { useOnMount } from '@/hooks/useOnMount';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { refGet, refSend } from '@/lib/refApi';
@@ -14,8 +15,8 @@ interface Manufacturer {
 }
 
 /**
- * Sales → a buyer, as the reference (app/(sales)/buyers/[id]): his details and his companies (dealerships). The
- * reference's "Push to Purchase" sell-lead button comes with build R8 and the portal login panel with build R9.
+ * Sales → a buyer, as the reference (app/(sales)/buyers/[id]): his details and his companies (dealerships), with
+ * "Push to purchase" (a seller lead) and chips for his own pushes. The portal login panel comes with build R9.
  */
 export function BuyerDetailPage() {
   const { id = '' } = useParams();
@@ -24,6 +25,16 @@ export function BuyerDetailPage() {
   const [allManufacturers, setAllManufacturers] = useState<Manufacturer[]>([]);
   const [dealershipError, setDealershipError] = useState<string | null>(null);
   const [adding, setAdding] = useState<string | null>(null);
+  const [ownSellLeads, setOwnSellLeads] = useState<
+    { id: string; productText: string; status: string; rejectCode: string | null }[]
+  >([]);
+
+  async function loadOwnSellLeads() {
+    const data = await refGet<{ sellLeads: typeof ownSellLeads }>('/sell-leads', {
+      firmId: id,
+    }).catch(() => ({ sellLeads: [] }));
+    setOwnSellLeads(data.sellLeads ?? []);
+  }
   useDocumentTitle(buyer?.firmName ?? 'Buyer');
 
   useOnMount(async () => {
@@ -35,6 +46,7 @@ export function BuyerDetailPage() {
     const m = await refGet<{ manufacturers: Manufacturer[] }>('/manufacturers');
     setBuyer(res.buyer);
     setAllManufacturers((m.manufacturers ?? []).filter((x) => x.active));
+    await loadOwnSellLeads();
   });
 
   if (notFound) return <div className="p-8 text-sm text-zinc-500">Buyer not found.</div>;
@@ -62,13 +74,35 @@ export function BuyerDetailPage() {
     <div className="mx-auto max-w-3xl p-8">
       <div className="mb-4 flex items-center justify-between">
         <h1 className="text-lg font-semibold text-zinc-900">{buyer.firmName}</h1>
-        <Link
-          to={`/buyer-funnels/${buyer.id}`}
-          className="rounded border border-zinc-300 px-3 py-2 text-sm text-zinc-700"
-        >
-          Open funnel
-        </Link>
+        <div className="flex items-center gap-2">
+          <PushToPurchaseButton
+            firmId={buyer.id}
+            firmName={buyer.firmName}
+            onPushed={() => void loadOwnSellLeads()}
+          />
+          <Link
+            to={`/buyer-funnels/${buyer.id}`}
+            className="rounded border border-zinc-300 px-3 py-2 text-sm text-zinc-700"
+          >
+            Open funnel
+          </Link>
+        </div>
       </div>
+
+      {ownSellLeads.length > 0 && (
+        <div className="mb-4 flex flex-wrap gap-2">
+          {ownSellLeads.map((l) => (
+            <span
+              key={l.id}
+              className="rounded-full border border-zinc-300 px-3 py-1 text-xs text-zinc-700"
+              data-testid="sell-lead-chip"
+            >
+              {l.productText}: {l.status}
+              {l.rejectCode ? ` (${l.rejectCode})` : ''}
+            </span>
+          ))}
+        </div>
+      )}
 
       <dl className="mb-6 grid grid-cols-[160px_1fr] gap-y-2 rounded border border-zinc-200 p-4 text-sm">
         <dt className="text-zinc-500">Contact person</dt>

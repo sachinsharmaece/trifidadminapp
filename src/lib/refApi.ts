@@ -15,7 +15,15 @@ export async function refGet<T = Record<string, unknown>>(
 
 export type RefResult<T> =
   | { ok: true; data: T }
-  | { ok: false; status: number; code: string; field: string | null; message: string };
+  | {
+      ok: false;
+      status: number;
+      code: string;
+      field: string | null;
+      message: string;
+      /** The server's extra details, e.g. { existingLeadId } on a duplicate seller lead. */
+      details?: unknown;
+    };
 
 /** A write. On failure: the first field the server named (if any) and a message to show under it. */
 export async function refSend<T = Record<string, unknown>>(
@@ -38,6 +46,7 @@ export async function refSend<T = Record<string, unknown>>(
         code: error.code,
         field: first ? (String(first.path).split('.')[0] ?? null) : null,
         message: first && typeof first.message === 'string' ? first.message : error.message,
+        details: error.details,
       };
     }
     return {

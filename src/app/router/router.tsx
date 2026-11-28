@@ -45,7 +45,6 @@ import { SalesRegisterPage } from '@/pages/reports/SalesRegisterPage';
 import { TrialBalancePage } from '@/pages/reports/TrialBalancePage';
 import { TodayPage } from '@/pages/today/TodayPage';
 import { TradePage } from '@/pages/trades/TradePage';
-import { ComingSoonPage } from '@/pages/ComingSoonPage';
 import { BankAccountsPage as RefBankAccountsPage } from '@/pages/ref/masters/BankAccountsPage';
 import { CompanyPage as RefCompanyPage } from '@/pages/ref/masters/CompanyPage';
 import { HsnPage as RefHsnPage } from '@/pages/ref/masters/HsnPage';
@@ -89,6 +88,10 @@ import { AccountsTodayPage as RefAccountsTodayPage } from '@/pages/ref/accounts/
 import { ControllerTodayPage as RefControllerTodayPage } from '@/pages/ref/controller/ControllerTodayPage';
 import { CreditLogPage as RefCreditLogPage } from '@/pages/ref/credit/CreditLogPage';
 import { JournalPage as RefJournalPage } from '@/pages/ref/accounts/JournalPage';
+import { SkuMarginsPage as RefSkuMarginsPage } from '@/pages/ref/masters/SkuMarginsPage';
+import { NewSellerLeadPage as RefNewSellerLeadPage } from '@/pages/ref/sellLeads/NewSellerLeadPage';
+import { SellerLeadDetailPage as RefSellerLeadDetailPage } from '@/pages/ref/sellLeads/SellerLeadDetailPage';
+import { SellerLeadsPage as RefSellerLeadsPage } from '@/pages/ref/sellLeads/SellerLeadsPage';
 import { LedgerMasterPage as RefLedgerMasterPage } from '@/pages/ref/accounts/LedgerMasterPage';
 import { LedgerPage as RefLedgerPage } from '@/pages/ref/accounts/LedgerPage';
 import { LedgerStatementPage as RefLedgerStatementPage } from '@/pages/ref/accounts/LedgerStatementPage';
@@ -96,9 +99,6 @@ import { PaymentPage as RefPaymentPage } from '@/pages/ref/accounts/PaymentPage'
 import { ToBeBilledPage as RefToBeBilledPage } from '@/pages/ref/accounts/ToBeBilledPage';
 import { UpcomingPaymentsPage as RefUpcomingPaymentsPage } from '@/pages/ref/accounts/UpcomingPaymentsPage';
 import { AppShell } from './AppShell';
-
-/** A page from the reference that a later build (R2–R10) copies; until then it says so. */
-const soon = (title: string, build: string) => <ComingSoonPage title={title} build={build} />;
 
 /** Every route of the app. Menu entries are configured separately in app/navigation.ts. */
 export const router = createBrowserRouter([
@@ -127,7 +127,7 @@ export const router = createBrowserRouter([
                   { path: '/masters/company', element: <RefCompanyPage /> },
                   { path: '/masters/products', element: <RefProductsPage /> },
                   { path: '/masters/margin-matrix', element: <RefMarginMatrixPage /> },
-                  { path: '/masters/sku-margins', element: soon('SKU price matrix', 'R8') },
+                  { path: '/masters/sku-margins', element: <RefSkuMarginsPage /> },
                   { path: '/masters/tehsils', element: <RefTehsilsPage /> },
                   { path: '/masters/manufacturers', element: <RefManufacturersPage /> },
                   { path: '/masters/technicals', element: <RefTechnicalsPage /> },
@@ -171,7 +171,9 @@ export const router = createBrowserRouter([
                   { path: '/payment', element: <RefPaymentPage /> },
                   { path: '/journal', element: <RefJournalPage /> },
                   { path: '/ledger-master', element: <RefLedgerMasterPage /> },
-                  { path: '/seller-leads', element: soon('Seller leads', 'R8') },
+                  { path: '/seller-leads', element: <RefSellerLeadsPage /> },
+                  { path: '/seller-leads/new', element: <RefNewSellerLeadPage /> },
+                  { path: '/seller-leads/:id', element: <RefSellerLeadDetailPage /> },
                   { path: '/goods-in', element: <RefGoodsInPage /> },
                   { path: '/inspection', element: <RefInspectionNoticePage /> },
                   { path: '/logistics-trade-queue', element: <RefTradeQueuePage /> },

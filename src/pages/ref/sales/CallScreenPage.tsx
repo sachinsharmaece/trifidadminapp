@@ -1,3 +1,4 @@
+import { PushToPurchaseButton } from '@/components/ref/sellLeads/PushToPurchaseButton';
 import { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router';
 import { NamePicker, type NamePickerOption } from '@/components/ref/NamePicker';
@@ -67,7 +68,7 @@ const REASON_CODES = [
  * for him at his rate, then: Take (our "He wants it" + "Send to seller", so it lands on Purchase's Confirmations),
  * Start funnel (opens a viewing and goes to his buyer funnel), or Record a demand when nothing is listed (an ask).
  * In our system a funnel for an unlisted pack starts as an ask, so "start a funnel" there opens the demand form.
- * Every call can be logged. The reference's "Push to Purchase" sell-lead button comes with build R8.
+ * Every call can be logged, and the buyer can be pushed to Purchase as a seller lead ("Push to purchase").
  */
 export function CallScreenPage() {
   useDocumentTitle('Call screen');
@@ -288,13 +289,16 @@ export function CallScreenPage() {
             <p className="text-sm text-zinc-900">
               Calling: <strong>{selectedBuyer.firmName}</strong>
             </p>
-            <button
-              type="button"
-              onClick={changeBuyer}
-              className="text-xs text-zinc-500 underline hover:text-zinc-900"
-            >
-              Change buyer
-            </button>
+            <div className="flex items-center gap-3">
+              <PushToPurchaseButton firmId={selectedBuyer.id} firmName={selectedBuyer.firmName} />
+              <button
+                type="button"
+                onClick={changeBuyer}
+                className="text-xs text-zinc-500 underline hover:text-zinc-900"
+              >
+                Change buyer
+              </button>
+            </div>
           </div>
         ) : (
           <Field label="Buyer">

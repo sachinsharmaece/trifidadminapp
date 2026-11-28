@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router';
+import { useNavigate, useSearchParams } from 'react-router';
 import { useOnMount } from '@/hooks/useOnMount';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { refGet, refSend } from '@/lib/refApi';
@@ -28,10 +28,15 @@ const FIELD_OF: Record<string, string> = {
   bank: 'ifsc',
 };
 
-/** Purchase → Register seller, as the reference (app/(purchase)/sellers/new). */
+/**
+ * Purchase → Register seller, as the reference (app/(purchase)/sellers/new). From a seller lead ("Start seller
+ * onboarding", ?sellLeadId=) the form starts filled from the firm, and saving marks the lead ONBOARDED.
+ */
 export function NewSellerPage() {
   useDocumentTitle('Register seller');
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const sellLeadId = searchParams.get('sellLeadId') ?? undefined;
   const [tehsils, setTehsils] = useState<Tehsil[]>([]);
   const [form, setForm] = useState(EMPTY);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
@@ -40,6 +45,21 @@ export function NewSellerPage() {
   useOnMount(async () => {
     const data = await refGet<{ tehsils: Tehsil[] }>('/tehsils', { pageSize: 100 });
     setTehsils(data.tehsils ?? []);
+    if (sellLeadId) {
+      const res = await refSend<{
+        prefill: { name: string; gstin: string; mobile: string; tehsilId: string };
+      }>('POST', `/sell-leads/${sellLeadId}/onboard`, {});
+      if (res.ok) {
+        const p = res.data.prefill;
+        setForm((f) => ({
+          ...f,
+          name: p.name,
+          gstin: p.gstin,
+          mobile: p.mobile,
+          tehsilId: p.tehsilId,
+        }));
+      }
+    }
   });
 
   function set<K extends keyof typeof form>(key: K, value: (typeof form)[K]) {
@@ -58,6 +78,7 @@ export function NewSellerPage() {
         tehsilId: form.tehsilId,
         dispatchCutoff: form.dispatchCutoffTime,
         bank: { accountNumber: form.bankAccountNumber, ifsc: form.ifsc },
+        ...(sellLeadId ? { sellLeadId } : {}),
       });
       if (!res.ok) {
         const field = res.field ? (FIELD_OF[res.field] ?? res.field) : '_form';
@@ -65,7 +86,7 @@ export function NewSellerPage() {
         setFieldErrors({ [res.status === 409 ? 'gstin' : field]: res.message });
         return;
       }
-      void navigate('/sellers');
+      void navigate(sellLeadId ? `/seller-leads/${sellLeadId}` : '/sellers');
     } finally {
       setLoading(false);
     }
@@ -73,7 +94,9 @@ export function NewSellerPage() {
 
   return (
     <div className="mx-auto max-w-xl p-8">
-      <h1 className="mb-4 text-lg font-semibold text-zinc-900">Register seller</h1>
+      <h1 className="mb-4 text-lg font-semibold text-zinc-900">
+        {sellLeadId ? 'Onboard seller from lead' : 'Register seller'}
+      </h1>
 
       <form
         onSubmit={(e) => void handleSubmit(e)}

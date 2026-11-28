@@ -95,3 +95,16 @@ Full commands, layout and recipes: `README.md`.
   reconciliation (Build 9), and photos.
 - Do not add: Redux, Zustand, React Hook Form, TanStack Table, analytics, auth/PDF libraries, paid UI kits
   (unless the task says so).
+
+## The `reference-copy` branch
+
+This branch copies the reference admin's screens (`D:\trifid\trifid_reference\Admin`, **read only: never change it**).
+Read `docs/REFERENCE_COPY.md` first. On this branch the reference wins over the older notes above when they disagree
+(for example the SKU price matrix in "Not yet built" is built here).
+
+- Copied screens: `src/pages/ref/<desk>/` at the reference's paths, shared pieces in `src/components/ref/`, the sidebar
+  in `app/navigation.ts`; the portals in `src/pages/portal/` and `src/components/ref/portal/` (outside `RequireAuth`).
+- These pages call the API through `refGet` / `refSend` (`lib/refApi.ts`) and load with `useOnMount`, as the reference
+  pages fetch directly. Keep that pattern inside `pages/ref`, `pages/portal` and `components/ref` only.
+- Copy the reference's markup, words and Tailwind classes as they are; a difference goes in `docs/REFERENCE_COPY.md`
+  and in the page's doc comment.

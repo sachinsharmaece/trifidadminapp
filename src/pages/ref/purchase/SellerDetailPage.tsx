@@ -43,8 +43,8 @@ const QUICK_ADD_DEFAULTS = {
 /**
  * Purchase → a seller, as the reference (app/(purchase)/sellers/[id]): his details and tier, his companies
  * (dealerships), "His products" to list a pack in one line, and his listings with their auto-confirm switch
- * (Fast order: ON asks the boxes, OFF asks a reason; not for New sellers; TriFid Stock is always on). The portal
- * login panel comes with the portals (build R9).
+ * (Fast order: ON asks the boxes, OFF asks a reason; not for New sellers; TriFid Stock is always on), and the
+ * seller portal's "Portal login" panel.
  */
 export function SellerDetailPage() {
   const { id = '' } = useParams();

@@ -17,7 +17,7 @@ interface Manufacturer {
 
 /**
  * Sales → a buyer, as the reference (app/(sales)/buyers/[id]): his details and his companies (dealerships), with
- * "Push to purchase" (a seller lead) and chips for his own pushes. The portal login panel comes with build R9.
+ * "Push to purchase" (a seller lead), chips for his own pushes, and the buyer portal's "Portal login" panel.
  */
 export function BuyerDetailPage() {
   const { id = '' } = useParams();

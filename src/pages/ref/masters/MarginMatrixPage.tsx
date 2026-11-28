@@ -18,7 +18,7 @@ interface Cell {
 /**
  * Masters → Margin matrix, as the reference (app/(admin)/masters/margin-matrix): edit any cells, then save once;
  * each changed cell is saved as a new row that starts now (history is never overwritten).
- * "SKUs override this class" counts SKU price matrix cells, which come in build R8 (0 until then).
+ * "N SKUs override this class" counts the SKUs with an active SKU price matrix cell (the server counts them).
  */
 export function MarginMatrixPage() {
   useDocumentTitle('Margin matrix');
@@ -27,11 +27,14 @@ export function MarginMatrixPage() {
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
-  const overridesByClass: Record<string, number> = {};
+  const [overridesByClass, setOverridesByClass] = useState<Record<string, number>>({});
 
   async function load() {
-    const data = await refGet<{ cells: Cell[] }>('/margin-cells');
+    const data = await refGet<{ cells: Cell[]; overridesByClass?: Record<string, number> }>(
+      '/margin-cells',
+    );
     setGrid((data.cells ?? []).filter((c) => c.status === 'CURRENT'));
+    setOverridesByClass(data.overridesByClass ?? {});
   }
 
   useOnMount(load);

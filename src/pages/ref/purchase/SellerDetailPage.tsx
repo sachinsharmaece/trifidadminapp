@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Link, useParams } from 'react-router';
+import { PortalLoginPanel } from '@/components/ref/PortalLoginPanel';
 import { CurrencyInput } from '@/components/ref/CurrencyInput';
 import { QuantityStepper } from '@/components/ref/QuantityStepper';
 import { useOnMount } from '@/hooks/useOnMount';
@@ -511,6 +512,9 @@ export function SellerDetailPage() {
           ))}
           {listings.length === 0 && <p className="py-2 text-sm text-zinc-400">No listings yet.</p>}
         </div>
+      </div>
+      <div className="mt-4">
+        <PortalLoginPanel partyType="SELLER" partyId={id} defaultMobile={seller.mobile} />
       </div>
     </div>
   );

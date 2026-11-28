@@ -98,6 +98,10 @@ import { LedgerStatementPage as RefLedgerStatementPage } from '@/pages/ref/accou
 import { PaymentPage as RefPaymentPage } from '@/pages/ref/accounts/PaymentPage';
 import { ToBeBilledPage as RefToBeBilledPage } from '@/pages/ref/accounts/ToBeBilledPage';
 import { UpcomingPaymentsPage as RefUpcomingPaymentsPage } from '@/pages/ref/accounts/UpcomingPaymentsPage';
+import { PortalLayout } from '@/components/ref/portal/PortalLayout';
+import { BuyerPortalDashboardPage } from '@/pages/portal/BuyerPortalDashboardPage';
+import { PortalLoginPage } from '@/pages/portal/PortalLoginPage';
+import { SellerPortalDashboardPage } from '@/pages/portal/SellerPortalDashboardPage';
 import { AppShell } from './AppShell';
 
 /** Every route of the app. Menu entries are configured separately in app/navigation.ts. */
@@ -107,6 +111,29 @@ export const router = createBrowserRouter([
     errorElement: <RouteErrorPage />,
     children: [
       { path: '/login', element: <LoginPage /> },
+      // Buyer and seller portals (R9): their own sign-in by mobile code, no staff sign-in, no staff menu.
+      { path: '/portal/buyer/login', element: <PortalLoginPage partyType="BUYER" /> },
+      { path: '/portal/seller/login', element: <PortalLoginPage partyType="SELLER" /> },
+      {
+        element: (
+          <PortalLayout
+            partyType="BUYER"
+            title="TriFid — Buyer Portal"
+            loginPath="/portal/buyer/login"
+          />
+        ),
+        children: [{ path: '/portal/buyer/dashboard', element: <BuyerPortalDashboardPage /> }],
+      },
+      {
+        element: (
+          <PortalLayout
+            partyType="SELLER"
+            title="TriFid — Seller Portal"
+            loginPath="/portal/seller/login"
+          />
+        ),
+        children: [{ path: '/portal/seller/dashboard', element: <SellerPortalDashboardPage /> }],
+      },
       {
         // Everything below needs a signed-in user; anyone else is sent to /login.
         element: <RequireAuth />,

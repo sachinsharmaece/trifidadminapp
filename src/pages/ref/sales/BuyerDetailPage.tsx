@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Link, useParams } from 'react-router';
+import { PortalLoginPanel } from '@/components/ref/PortalLoginPanel';
 import { PushToPurchaseButton } from '@/components/ref/sellLeads/PushToPurchaseButton';
 import { useOnMount } from '@/hooks/useOnMount';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
@@ -162,6 +163,9 @@ export function BuyerDetailPage() {
           )}
         </div>
         {dealershipError && <p className="mt-1 text-xs text-red-600">{dealershipError}</p>}
+      </div>
+      <div className="mt-4">
+        <PortalLoginPanel partyType="BUYER" partyId={id} defaultMobile={mobile} />
       </div>
     </div>
   );
